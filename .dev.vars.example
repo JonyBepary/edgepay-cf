@@ -26,10 +26,10 @@ APP_KEY=
 # AES-256-GCM key for at-rest encryption (base64-encoded 32 bytes).
 ENCRYPTION_KEY=
 
-# --- OPTIONAL secrets (stay masked •) --------------------------------------
-
-# Emergency service token secret paired with non-secret BREAK_GLASS_CLIENT_ID.
-BREAK_GLASS_CLIENT_SECRET=
-
-# Cloudflare API token for custom hostnames (Cloudflare for SaaS).
-CF_API_TOKEN=
+# --- OPTIONAL secrets (configure after deploy via Dashboard / wrangler secret put)
+#
+# Emergency service token secret paired with non-secret BREAK_GLASS_CLIENT_ID:
+# BREAK_GLASS_CLIENT_SECRET=
+#
+# Cloudflare API token for custom hostnames (Cloudflare for SaaS):
+# CF_API_TOKEN=
