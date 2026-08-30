@@ -42,7 +42,7 @@ Full walkthrough incl. what gets provisioned and troubleshooting:
 Prerequisites: Node.js 20+ and a free Cloudflare account.
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf && cd edgepay-cf
+git clone https://github.com/JonyBepary/edgepay-cf && cd edgepay-cf
 npm install
 npx wrangler login                       # opens the browser
 

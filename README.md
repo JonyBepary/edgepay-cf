@@ -1,8 +1,8 @@
 # EdgePay-CF — Self-hosted payment gateway on Cloudflare Workers
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
 
-A HonoJS + Cloudflare Workers port of [OwnPay](https://github.com/own-pay/OwnPay) (now EdgePay) —
+A HonoJS + Cloudflare Workers port —
 the open-source, self-hosted payment gateway automation platform for BD/AF mobile-payment
 merchants (bKash, Nagad, Rocket, Razorpay, Stripe, PayPal…). EdgePay-CF runs entirely on
 Cloudflare's edge network (Workers + D1 + Durable Objects + KV + R2 + Queues + Workflows),
@@ -98,7 +98,7 @@ edgepay-cf/
 ### Option A — Deploy to Cloudflare button (recommended)
 
 1. Push this repo to **your public GitHub** (the button needs a public repo) and
-   replace `YOUR_GITHUB_USERNAME` in the badge URL above and in
+   replace `JonyBepary` in the badge URL above and in
    `package.json → cloudflare.docs_url`.
 2. Generate the three required secrets locally:
    ```bash

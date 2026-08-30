@@ -37,7 +37,7 @@
       "fintech",
       "saas"
     ],
-    "docs_url": "https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf/tree/main/docs",
+    "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
     "bindings": {
       "ENABLED_GATEWAYS": {
         "description": "**Gateway plugins to enable.** Comma-separated list from the 123-provider catalog — e.g. `bkash,nagad,rocket,sslcommerz` (Bangladesh MFS set), `stripe,paypal,razorpay` (global cards), or `all`. Short aliases work (`bkash` = `bkash-api`). The full list ships in [docs/GATEWAYS.md](docs/GATEWAYS.md) and is queryable at `GET /api/v1/gateways` after deploy. Leave empty to enable the entire catalog. Per-gateway credentials are configured after deploy; unported gateways are marked `planned` in the catalog and reject payments with a clear error until their port lands."

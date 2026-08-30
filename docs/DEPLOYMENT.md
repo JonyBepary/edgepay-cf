@@ -24,12 +24,12 @@ The badge at the top of the README is a one-click deployment path built on
 Cloudflare's [Deploy to Cloudflare buttons](https://developers.cloudflare.com/workers/platform/deploy-buttons/):
 
 ```md
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
 ```
 
 Before sharing it, make two edits in your fork:
 
-1. Replace `YOUR_GITHUB_USERNAME` in the badge URL (README) with your actual
+1. Replace `JonyBepary` in the badge URL (README) with your actual
    GitHub user/org, so the button points at **your** public repo. The button only
    supports public github.com / gitlab.com repositories.
 2. Update `package.json → cloudflare.docs_url` to the same repo (used by the

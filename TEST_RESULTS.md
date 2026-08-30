@@ -19,7 +19,7 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 ### Deploy to Cloudflare button
 
 - README badge + `deploy.workers.cloudflare.com/?url=<repo>` (template URL:
-  replace `YOUR_GITHUB_USERNAME`).
+  replace `JonyBepary`).
 - `package.json → cloudflare` metadata (label/products/categories/docs_url) +
   `cloudflare.bindings` descriptions for every setup-page field — including
   the gateway-plugin selector `ENABLED_GATEWAYS` and the three required

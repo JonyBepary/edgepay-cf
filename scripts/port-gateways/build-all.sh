@@ -2,7 +2,7 @@
 # Full gateway-port pipeline: analyze -> catalog -> generate -> clean -> fix -> repair -> finalize.
 # Usage: bash scripts/port-gateways/build-all.sh [plugin_repo_dir]
 set -euo pipefail
-REPO="${1:-/home/z/my-project/ownpay-gateway-plugin}"
+REPO="${1:-/home/z/my-project/edgepay-gateway-plugin}"
 cd "$(dirname "$0")/../.."
 python3 scripts/port-gateways/analyze.py "$REPO" scripts/port-gateways/analysis.json scripts/port-gateways/analysis-report.txt > /dev/null
 python3 scripts/port-gateways/build-catalog.py scripts/port-gateways/analysis.json src/gateways/catalog.data.ts 0.3.0
