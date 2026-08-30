@@ -33,7 +33,7 @@
       "Workers Static Assets"
     ],
     "categories": ["payments", "fintech", "saas"],
-    "docs_url": "https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf/tree/main/docs",
+    "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
     "bindings": {
       "ENABLED_GATEWAYS": {
         "description": "**Gateway plugins to enable.** Comma-separated list from: `stripe`, `paypal`, `bkash`, `razorpay`, `nagad` (aliases like `bkash-api`/`nagad-merchant-api` also work). Example: `stripe,bkash`. Leave the default to enable all five. Per-gateway API keys are entered later in the admin UI — see [docs/GATEWAYS.md](docs/GATEWAYS.md)."

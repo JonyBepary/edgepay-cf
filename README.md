@@ -1,6 +1,6 @@
 # EdgePay-CF — Self-hosted payment gateway on Cloudflare Workers
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
 
 A HonoJS + Cloudflare Workers port —
 the open-source, self-hosted payment gateway automation platform for BD/AF mobile-payment
@@ -94,9 +94,7 @@ edgepay-cf/
 
 ### Option A — Deploy to Cloudflare button (recommended)
 
-1. Push this repo to **your public GitHub** (the button needs a public repo) and
-   replace `YOUR_GITHUB_USERNAME` in the badge URL above and in
-   `package.json → cloudflare.docs_url`.
+1. This repo is already public at **`JonyBepary/edgepay-cf`** — the badge above and `package.json → cloudflare.docs_url` already point to it. Fork it if you want your own copy.
 2. Generate the three required secrets locally:
    ```bash
    openssl rand -hex 32        # JWT_SECRET
