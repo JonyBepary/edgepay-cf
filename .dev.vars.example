@@ -1,34 +1,21 @@
-# EdgePay Worker secrets & deploy-time settings — example file.
+# EdgePay Worker secrets — example file.
 #
 # Copy to `.dev.vars` for local development (`wrangler dev` auto-loads it).
-# In production set the same values via `wrangler secret put <NAME>` — never
-# commit real values.
+# In production set these values via `wrangler secret put <NAME>` or via the
+# Deploy to Cloudflare button setup page.
 #
-# Deploy to Cloudflare button: every key below becomes a field on the setup
-# page (order = file order), with descriptions from
-# package.json > cloudflare.bindings. Generate the three required values
-# BEFORE deploying:
+# Deploy to Cloudflare button: only the 5 real secrets below are prompted as
+# secure masked fields (•). All 8 harmless variables (ENABLED_GATEWAYS,
+# ALLOWED_ORIGINS, CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD_TAG, BREAK_GLASS_CLIENT_ID,
+# CF_ACCOUNT_ID, CF_ZONE_ID, PBKDF2_ITERATIONS) are defined in wrangler.jsonc "vars"
+# as normal text inputs with default values.
 #
+# Generate the 3 required secrets before deploying:
 #   JWT_SECRET:      openssl rand -hex 32
 #   APP_KEY:         openssl rand -base64 32
 #   ENCRYPTION_KEY:  openssl rand -base64 32
-#
-# (ENCRYPTION_KEY encrypts gateway credentials + PII at rest with AES-256-GCM.
-#  Losing it makes every stored credential unrecoverable — keep a copy in a
-#  password manager.)
 
-# --- Gateway plugin selection (v0.3.0 — the 123-provider catalog) ---------
-# Comma-separated gateway slugs this deployment may use. Pick any of the 123
-# catalog gateways — the full list is in docs/GATEWAYS.md, or query
-# GET /api/v1/gateways after deploy. Examples:
-#   bkash,nagad,rocket,sslcommerz     (Bangladesh MFS set)
-#   stripe,paypal,razorpay            (global cards)
-#   all                               (everything — the default)
-# Leave empty for the full catalog. Unknown tokens are reported (not fatal).
-# Merchants still configure per-gateway credentials AFTER deploy.
-ENABLED_GATEWAYS=
-
-# --- REQUIRED secrets ------------------------------------------------------
+# --- REQUIRED secrets (stay masked •) --------------------------------------
 
 # Signs mobile-companion JWTs (HS256). Min 32 chars.
 JWT_SECRET=
@@ -39,35 +26,10 @@ APP_KEY=
 # AES-256-GCM key for at-rest encryption (base64-encoded 32 bytes).
 ENCRYPTION_KEY=
 
-# --- Cloudflare Access (admin surface) -----------------------------------
-# Leave empty at deploy time if you don't have them yet — the /api/admin/*
-# surface stays CLOSED (503) until both are set. Configure at
-# https://one.dash.cloudflare.com (free for up to 50 users):
-CF_ACCESS_TEAM_DOMAIN=
-CF_ACCESS_AUD_TAG=
+# --- OPTIONAL secrets (stay masked •) --------------------------------------
 
-# --- OPTIONAL: break-glass admin access ----------------------------------
-# Emergency service token for when Access is unreachable. Every use emits a
-# page-level audit alarm. Leave empty unless you need it.
-BREAK_GLASS_CLIENT_ID=
+# Emergency service token secret paired with non-secret BREAK_GLASS_CLIENT_ID.
 BREAK_GLASS_CLIENT_SECRET=
 
-# --- OPTIONAL: custom hostnames (Cloudflare for SaaS) --------------------
-# Only needed for per-brand custom checkout domains.
+# Cloudflare API token for custom hostnames (Cloudflare for SaaS).
 CF_API_TOKEN=
-CF_ACCOUNT_ID=
-CF_ZONE_ID=
-
-# --- OPTIONAL: tuning -----------------------------------------------------
-
-# PBKDF2 iterations for NEW password hashes. The 600K default exceeds the
-# free plan's 10ms CPU budget — strictly-free deployments use 100000.
-# Stored hashes self-describe their cost, so existing hashes keep verifying.
-#PBKDF2_ITERATIONS=100000
-
-# --- OPTIONAL: SMTP (email receipts via Resend/relay) ---------------------
-#SMTP_HOST=
-#SMTP_PORT=
-#SMTP_USERNAME=
-#SMTP_PASSWORD=
-#SMTP_FROM=

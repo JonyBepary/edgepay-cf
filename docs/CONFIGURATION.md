@@ -36,19 +36,20 @@ Every knob EdgePay-CF exposes, where it lives, and what it does. Three layers:
 | `CF_ACCESS_TEAM_DOMAIN` | *(empty)* | Zero Trust team domain for the admin surface. Empty = admin API 503 (fail closed). |
 | `CF_ACCESS_AUD_TAG` | *(empty)* | AUD tag of the Access application covering `/api/admin/*`. |
 | `ALLOWED_ORIGINS` | *(empty)* | CORS origin allowlist, comma-separated. Empty = no cross-origin browser calls (fail closed); server-to-server and same-origin checkout are unaffected. |
-| `ENABLED_GATEWAYS` | all five | **Gateway-plugin selector** — comma-separated slugs/aliases (`stripe,paypal,bkash,razorpay,nagad`). Unset/`all` = every adapter; unknown-only lists enable nothing (fail closed). See [GATEWAYS.md](GATEWAYS.md). |
+| `ENABLED_GATEWAYS` | `bkash,nagad,rocket,bkash-api,nagad-merchant-api,sslcommerz,stripe,paypal,razorpay` | **Gateway-plugin selector** — comma-separated slugs/aliases. Enables selected adapters out of the 123-provider catalog. |
+| `BREAK_GLASS_CLIENT_ID` | *(empty)* | Emergency admin service token client ID (paired with secret `BREAK_GLASS_CLIENT_SECRET`). |
+| `CF_ACCOUNT_ID` / `CF_ZONE_ID` | *(empty)* | Cloudflare account and zone IDs for custom-hostnames (paired with secret `CF_API_TOKEN`). |
+| `PBKDF2_ITERATIONS` | *(empty)* | Iterations for NEW password hashes. Default 600K; strictly-free deployments set `100000`. |
 
-## Secrets
+## Secrets (stay masked • on Deploy button)
 
 | Secret | Required | Purpose |
 |--------|----------|---------|
 | `JWT_SECRET` | ✅ | HS256 key for mobile JWTs. ≥32 chars, enforced at runtime. `openssl rand -hex 32`. |
 | `APP_KEY` | ✅ | HMAC signing key. `openssl rand -base64 32`. |
 | `ENCRYPTION_KEY` | ✅ | AES-256-GCM key encrypting gateway credentials + PII. **Back it up — loss is unrecoverable.** `openssl rand -base64 32`. |
-| `BREAK_GLASS_CLIENT_ID` / `_SECRET` | optional | Emergency admin service token; every use pages an audit alarm. |
-| `CF_API_TOKEN` / `CF_ACCOUNT_ID` / `CF_ZONE_ID` | optional | Custom-hostname provisioning (Cloudflare for SaaS). |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | optional | Outbound email (consumer also speaks Resend). |
-| `PBKDF2_ITERATIONS` | situational | Iterations for NEW password hashes. Default 600K exceeds the free plan's 10ms CPU — strictly-free deployments set `100000`. Stored hashes self-describe their cost. |
+| `BREAK_GLASS_CLIENT_SECRET` | optional | Emergency admin service token secret; every use pages an audit alarm. |
+| `CF_API_TOKEN` | optional | Cloudflare API token for custom-hostname provisioning (Cloudflare for SaaS). |
 
 Locally, secrets live in `.dev.vars` (template: `.dev.vars.example`; `wrangler
 dev` loads it automatically). In production use `wrangler secret put NAME` or

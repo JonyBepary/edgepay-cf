@@ -143,11 +143,10 @@ describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = full catalog de
       };
     };
     expect(body.success).toBe(true);
-    // v0.3.0: ENABLED_GATEWAYS is UNSET in wrangler.jsonc (the deploy-button
-    // field supplies it) — the default posture enables the full catalog.
-    expect(body.data.gateways.all_enabled).toBe(true);
-    expect(body.data.gateways.enabled).toEqual(ALL);
-    expect(ALL.length).toBeGreaterThanOrEqual(123);
+    // GET /install surfaces the configured gateway selection
+    expect(body.data.gateways.enabled.length).toBeGreaterThan(0);
+    expect(body.data.gateways.enabled).toContain('stripe');
+    expect(body.data.gateways.enabled).toContain('bkash-api');
     expect(body.data.gateways.dropped_aliases).toEqual([]);
     // Secret posture reports length CLASS only, never content
     for (const key of ['jwt_secret', 'app_key', 'encryption_key']) {
