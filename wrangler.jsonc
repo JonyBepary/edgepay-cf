@@ -225,12 +225,12 @@
 
   // ============================================================
   // Analytics Engine — per-merchant metrics without touching D1
-  //   (parse-miss rate, webhook lag, reconciliation runs, paging events)
-  //   Free: 100K datapoints/day
+  //   (opt-in after first deploy: enable at https://dash.cloudflare.com/
+  //    under Workers & Pages > Analytics Engine, then uncomment here)
   // ============================================================
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
-  ],
+  // "analytics_engine_datasets": [
+  //   { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
+  // ],
 
   // ============================================================
   // Workers Static Assets — serves checkout CSS/JS with zero subrequests

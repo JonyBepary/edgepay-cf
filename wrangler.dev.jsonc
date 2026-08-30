@@ -111,9 +111,9 @@
       "simple": { "limit": 30, "period": 60 }
     }
   ],
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
-  ],
+  // "analytics_engine_datasets": [
+  //   { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
+  // ],
   "assets": {
     "directory": "./public/assets",
     "binding": "ASSETS",
