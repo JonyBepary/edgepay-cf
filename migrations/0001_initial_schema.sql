@@ -1,7 +1,8 @@
 -- ============================================================
 -- EdgePay-CF v0.1.0 — D1 (SQLite) Schema
--- Ported from upstream PHP v0.1.0 (database/schema.sql — MySQL)
--- Table prefix `op_` retained for backwards compatibility.
+-- Ported from OwnPay PHP v0.1.0 (database/schema.sql — MySQL)
+-- Table prefix `op_` retained from original OwnPay schema for
+-- backwards compatibility (now EdgePay).
 -- ============================================================
 --
 -- Mapping notes (MySQL → D1/SQLite):

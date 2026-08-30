@@ -1,8 +1,8 @@
 # EdgePay-CF — Self-hosted payment gateway on Cloudflare Workers
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf)
 
-A HonoJS + Cloudflare Workers port —
+A HonoJS + Cloudflare Workers port of [OwnPay](https://github.com/own-pay/OwnPay) (now EdgePay) —
 the open-source, self-hosted payment gateway automation platform for BD/AF mobile-payment
 merchants (bKash, Nagad, Rocket, Razorpay, Stripe, PayPal…). EdgePay-CF runs entirely on
 Cloudflare's edge network (Workers + D1 + Durable Objects + KV + R2 + Queues + Workflows),
@@ -16,8 +16,11 @@ and runs **fully on the free tier** (~3.3K payments/day practical ceiling — se
 
 ## What's included
 
-- **5 fully implemented gateway adapters**: Stripe, PayPal, bKash, Razorpay, Nagad —
-  selectable per deployment via the `ENABLED_GATEWAYS` plugin gate
+- **123-gateway catalog** (v0.3.0): the full port of the OwnPay-Gateway-Plugin
+  suite — 86 adapters with working payment flows (BD MFS complete: bKash, Nagad,
+  Rocket, SSLCommerz, Aamarpay, ShurjoPay, PortWallet, CellFin, NexusPay, OK
+  Wallet, Upay + global/regional rails) and 37 `planned` entries, all selectable
+  per deployment via the `ENABLED_GATEWAYS` plugin gate
   ([docs/GATEWAYS.md](docs/GATEWAYS.md))
 - **Interactive API reference** — OpenAPI 3.1 served at `/api/openapi.json`,
   rendered by [Scalar](https://scalar.com) at `/api/reference` on your own deployment
@@ -94,7 +97,9 @@ edgepay-cf/
 
 ### Option A — Deploy to Cloudflare button (recommended)
 
-1. This repo is already public at **`JonyBepary/edgepay-cf`** — the badge above and `package.json → cloudflare.docs_url` already point to it. Fork it if you want your own copy.
+1. Push this repo to **your public GitHub** (the button needs a public repo) and
+   replace `YOUR_GITHUB_USERNAME` in the badge URL above and in
+   `package.json → cloudflare.docs_url`.
 2. Generate the three required secrets locally:
    ```bash
    openssl rand -hex 32        # JWT_SECRET
@@ -102,7 +107,8 @@ edgepay-cf/
    openssl rand -base64 32     # ENCRYPTION_KEY  (back this up!)
    ```
 3. Click **Deploy to Cloudflare**. On the setup page: pick a Worker name, set
-   **ENABLED_GATEWAYS** to the plugins you want (e.g. `stripe,bkash`), paste the
+   **ENABLED_GATEWAYS** to the plugins you want (e.g. `bkash,nagad,rocket,sslcommerz`
+   — pick any of the 123 catalog gateways), paste the
    secrets, deploy. D1/KV/R2/Queues/Workflows/DO are provisioned automatically and
    migrations run as part of the deploy script.
 4. Open `https://<your-worker>.workers.dev/install` → create the super-admin →

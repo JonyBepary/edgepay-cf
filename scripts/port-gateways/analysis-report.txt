@@ -1,0 +1,50 @@
+Analyzed 123 gateway modules
+
+Categories: {'global': 70, 'mfs': 30, 'bank': 6, 'europe': 5, 'express': 2, 'latam': 2, 'mena': 2, 'apac': 2, 'mobile': 2, 'crypto': 1, 'africa': 1}
+
+Structure signatures (30 distinct):
+   31  form+plain+curl2+refund+nohash
+   20  api+plain+curl2+norefund+nohash
+   13  api+plain+curl2+norefund+hmac
+    7  form+plain+curl2+norefund+nohash
+    6  api+plain+curl1+norefund+nohash
+    5  api+plain+curl1+norefund+hmac
+    5  api+token+curl2+norefund+nohash
+    4  api+token+curl1+norefund+nohash
+    3  api+plain+curl3+norefund+nohash
+    3  form+plain+curl0+norefund+nohash
+    2  form+plain+curl2+refund+hmac
+    2  api+plain+curl2+refund+hmac
+    2  form+plain+curl0+norefund+hmac
+    2  api+token+curl2+norefund+hmac
+    2  form+plain+curl1+norefund+nohash
+    2  api+plain+curl3+refund+nohash
+    1  none+plain+curl0+norefund+nohash
+    1  form+plain+curl2+norefund+hmac
+    1  form+plain+curl3+refund+nohash
+    1  form+plain+curl3+refund+hmac
+    1  form+plain+curl1+norefund+md5
+    1  api+token+curl3+norefund+nohash
+    1  form+token+curl1+norefund+nohash
+    1  api+plain+curl2+norefund+md5
+    1  form+plain+curl1+norefund+hmac
+    1  form+plain+curl0+norefund+md5
+    1  api+plain+curl3+refund+hmac
+    1  api+plain+curl2+refund+nohash
+    1  form+plain+curl1+refund+nohash
+    1  api+token+curl4+norefund+nohash
+
+Flags: {'form+api-mixed': 46, 'webhook-stub-true': 31, 'no-urls-found': 5, 'rsa-signature': 4, 'no-initiate-call': 3, 'manual-crypto': 2}
+
+Low-confidence (<0.7): 5
+  0.00  alipay                       no-urls-found,no-initiate-call,rsa-signature,webhook-stub-true
+  0.30  cashmaal                     no-initiate-call,manual-crypto
+  0.50  binance-personal             no-initiate-call,webhook-stub-true
+  0.50  trustly                      form+api-mixed,rsa-signature
+  0.60  paytm                        form+api-mixed,manual-crypto
+
+Webhook return-true stubs: affirm, afterpay, alipay, bancontact, binance-personal, bitpay, blik, braintree, ccavenue, dana, easypaisa, ebanx, gcash, giropay, ideal, jazzcash, kushki, maya, mollie, mtn-momo, opennode, orange-money, ovo, phonepe, promptpay, przelewy24, rocket, sofort, toss, upay, worldline
+MD5 users: payfast, portwallet, rocket
+Token-grant flows: airtel-money, bkash-api, gocardless, instamojo, mercadolibre-wallet, mercadopago, mpesa, mtn-momo, orange-money, payme, paypal-checkout, pix, square, upay
+RSA signatures: alipay, nagad-merchant-api, trustly, wechat-pay
+Refund implemented: 42

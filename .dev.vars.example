@@ -46,6 +46,17 @@ CF_API_TOKEN=
 CF_ACCOUNT_ID=
 CF_ZONE_ID=
 
+# --- Gateway plugin selection (v0.3.0 — the 123-provider catalog) ---------
+# Comma-separated gateway slugs this deployment may use. Pick any of the 123
+# catalog gateways — the full list is in docs/GATEWAYS.md, or query
+# GET /api/v1/gateways after deploy. Examples:
+#   bkash,nagad,rocket,sslcommerz     (Bangladesh MFS set)
+#   stripe,paypal,razorpay            (global cards)
+#   all                               (everything — the default)
+# Leave empty for the full catalog. Unknown tokens are reported (not fatal).
+# Merchants still configure per-gateway credentials AFTER deploy.
+ENABLED_GATEWAYS=
+
 # --- OPTIONAL: tuning -----------------------------------------------------
 
 # PBKDF2 iterations for NEW password hashes. The 600K default exceeds the

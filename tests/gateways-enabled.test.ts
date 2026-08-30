@@ -116,7 +116,7 @@ describe('isGatewayEnabled / assertGatewayEnabled', () => {
   });
 });
 
-describe('route wiring (SELF worker — ENABLED_GATEWAYS = all five in wrangler.toml)', () => {
+describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = full catalog default)', () => {
   it('GET /api/v1/gateways requires bearer auth (401 envelope)', async () => {
     const res = await SELF.fetch('http://localhost/api/v1/gateways');
     expect(res.status).toBe(401);
@@ -143,17 +143,17 @@ describe('route wiring (SELF worker — ENABLED_GATEWAYS = all five in wrangler.
       };
     };
     expect(body.success).toBe(true);
-    // wrangler.toml lists all five gateways EXPLICITLY (the deploy-button
-    // default) — an explicit full list yields enabled=all but
-    // all_enabled=false (that flag is reserved for the unset/"all" posture).
-    expect(body.data.gateways.all_enabled).toBe(false);
+    // v0.3.0: ENABLED_GATEWAYS is UNSET in wrangler.toml (the deploy-button
+    // field supplies it) — the default posture enables the full catalog.
+    expect(body.data.gateways.all_enabled).toBe(true);
     expect(body.data.gateways.enabled).toEqual(ALL);
+    expect(ALL.length).toBeGreaterThanOrEqual(123);
     expect(body.data.gateways.dropped_aliases).toEqual([]);
     // Secret posture reports length CLASS only, never content
     for (const key of ['jwt_secret', 'app_key', 'encryption_key']) {
       expect(['ok', 'weak', 'missing']).toContain(body.data.secrets[key]);
     }
-    expect(body.data.version).toBe('0.2.3');
+    expect(body.data.version).toBe('0.3.0');
   });
 
   it('POST /webhook/{unregistered} stays a clean 404 UNKNOWN_GATEWAY', async () => {

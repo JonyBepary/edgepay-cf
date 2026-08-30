@@ -25,6 +25,23 @@
 import type { Money } from '../lib/money';
 
 // ---------------------------------------------------------------
+// Gateway context — optional runtime services threaded to adapters
+// ---------------------------------------------------------------
+
+/**
+ * Services the platform makes available to adapters. Optional in every
+ * signature so adapters stay unit-testable with plain objects.
+ *
+ * kv: cross-isolate cache backing store. Used by TokenCache for
+ *     OAuth-style token grants (bKash, MTN MoMo, MPesa, ...). Adapters
+ *     MUST treat it as an optimization — a missing KV degrades to
+ *     per-request token grants, never a hard failure.
+ */
+export interface GatewayContext {
+  kv?: import('../types/env').Env['KV'];
+}
+
+// ---------------------------------------------------------------
 // Initiate payment parameters
 // ---------------------------------------------------------------
 export interface InitiateParams {
@@ -85,6 +102,8 @@ export interface VerifyWebhookInput {
   rawBody: string;
   headers: Record<string, string>;
   credentials: Credentials;
+  /** Optional platform services (unused by most webhook verifiers). */
+  ctx?: GatewayContext;
 }
 
 // ---------------------------------------------------------------
@@ -139,12 +158,20 @@ export abstract class BaseGatewayAdapter {
 
   /**
    * Initiate a payment. Implementations should make outbound HTTP calls
-   * via fetch() (Web Crypto API + global fetch are available in Workers).
+   * via the kit (src/gateways/kit/http.ts) so timeouts are enforced.
    */
-  abstract initiate(params: InitiateParams, credentials: Credentials): Promise<InitiateResult>;
+  abstract initiate(
+    params: InitiateParams,
+    credentials: Credentials,
+    ctx?: GatewayContext,
+  ): Promise<InitiateResult>;
 
   /** Verify a synchronous callback (gateway redirects customer back here) */
-  abstract verify(callbackData: Record<string, unknown>, credentials: Credentials): Promise<VerifyResult>;
+  abstract verify(
+    callbackData: Record<string, unknown>,
+    credentials: Credentials,
+    ctx?: GatewayContext,
+  ): Promise<VerifyResult>;
 
   /**
    * Verify an asynchronous webhook (gateway POSTs to /webhook/{slug}).
@@ -158,7 +185,7 @@ export abstract class BaseGatewayAdapter {
    * Issue a refund. Default: throw — gateways that don't support refunds
    * return error rather than throwing, so admin UI can show "unsupported".
    */
-  refund(_gatewayTrxId: string, _amount: Money, _credentials: Credentials): Promise<RefundResult> {
+  refund(_gatewayTrxId: string, _amount: Money, _credentials: Credentials, _ctx?: GatewayContext): Promise<RefundResult> {
     return Promise.resolve({
       success: false,
       error: 'refund_not_supported',

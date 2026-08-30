@@ -1,6 +1,6 @@
 {
   "name": "edgepay-cf",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "private": true,
   "description": "EdgePay — self-hosted payment gateway rebuilt on HonoJS + Cloudflare Workers edge runtime",
   "main": "src/index.ts",
@@ -32,11 +32,15 @@
       "R2",
       "Workers Static Assets"
     ],
-    "categories": ["payments", "fintech", "saas"],
-    "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
+    "categories": [
+      "payments",
+      "fintech",
+      "saas"
+    ],
+    "docs_url": "https://github.com/YOUR_GITHUB_USERNAME/edgepay-cf/tree/main/docs",
     "bindings": {
       "ENABLED_GATEWAYS": {
-        "description": "**140+ gateway plugins** — `stripe`, `paypal`, `bkash`, `razorpay`, `nagad`, `adyen`, `braintree`, `mollie`, `paytm`, `phonepe`, `mtn-momo`, `pix`, `klarna`, `coinbase-commerce`, `apple-pay`, `google-pay`, `2checkout`, `payu`, `worldpay`, `square`… (see [docs/GATEWAYS.md](docs/GATEWAYS.md) for full 172). Comma-separated; aliases like `bkash`→`bkash-api` work. Leave default to enable all 5 implemented now; pending show as 'coming soon' until ported."
+        "description": "**Gateway plugins to enable.** Comma-separated list from the 123-provider catalog — e.g. `bkash,nagad,rocket,sslcommerz` (Bangladesh MFS set), `stripe,paypal,razorpay` (global cards), or `all`. Short aliases work (`bkash` = `bkash-api`). The full list ships in [docs/GATEWAYS.md](docs/GATEWAYS.md) and is queryable at `GET /api/v1/gateways` after deploy. Leave empty to enable the entire catalog. Per-gateway credentials are configured after deploy; unported gateways are marked `planned` in the catalog and reject payments with a clear error until their port lands."
       },
       "ALLOWED_ORIGINS": {
         "description": "Comma-separated browser origins allowed to call the API (CORS allowlist), e.g. `https://shop.example.com`. Leave empty to disallow all cross-origin browser calls — server-to-server API calls and hosted checkout keep working either way."

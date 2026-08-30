@@ -13,7 +13,7 @@ import { rateLimitMiddleware } from '../middleware/rate-limit';
 import { PaymentService } from '../services/payment';
 import { ValidationError } from '../lib/error';
 import { createPaymentSchema, createRefundSchema } from '../lib/validation';
-import { gatewayRegistry, gatewaySelection, PENDING_GATEWAYS } from '../gateways';
+import { gatewayRegistry, gatewaySelection, catalogCounts, catalogFind } from '../gateways';
 import { zValidator } from '@hono/zod-validator';
 
 export const apiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
@@ -208,7 +208,7 @@ apiRoutes.post(
     } catch { /* skip */ }
   }
 
-  const refundResult = await adapter.refund(tx.gateway_trx_id, refundAmount, credentials);
+  const refundResult = await adapter.refund(tx.gateway_trx_id, refundAmount, credentials, { kv: c.env.KV });
   if (!refundResult.success) {
     return c.json({
       success: false,
@@ -373,6 +373,9 @@ apiRoutes.get('/gateways', async (c) => {
         description: meta.description,
         supported_currencies: meta.supported_currencies,
         capabilities: meta.capabilities,
+        // catalog status: implemented | ported | planned (planned adapters
+        // reject payments with a clear error until their port lands)
+        status: catalogFind(slug)?.status ?? 'ported',
         config_fields: adapter.fields().map((f) => ({
           name: f.name,
           label: f.label,
@@ -388,7 +391,7 @@ apiRoutes.get('/gateways', async (c) => {
       enabled,
       all_enabled: selection.allEnabled,
       dropped_aliases: selection.dropped,
-      pending_count: PENDING_GATEWAYS.length,
+      catalog: catalogCounts(),
     },
   });
 });

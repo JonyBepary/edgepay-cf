@@ -112,19 +112,21 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 
 ## What v0.2.2 changed (the audit's fixes, implemented and verified)
 
-### Branding normalization (initial)
+### Rename OwnPay → EdgePay (audit §7 — reproduced faithfully)
 
-Initial branding pass normalized naming across ~40 files, with intentional
-retentions for backwards compatibility as documented below:
+The audited state was recreated from the v0.2.1 tree: ordered sed
+(`OWNPAY→EDGEPAY → OwnPay→EdgePay → Ownpay→Edgepay → own-pay→edgepay →
+ownpay→edgepay`) across the same 40 files, then the four intentional
+retentions restored exactly as §7 documents them:
 
 | Retained | Where |
 |---|---|
-| `op_` table prefix retained for compatibility | `migrations/0001_initial_schema.sql:3-5` |
-| legacy transaction id fallback in the Stripe extractor | `src/controllers/webhooks.ts` |
-| Historical upstream reference | `README.md:3` |
+| `op_` table prefix + "original OwnPay schema" comment | `migrations/0001_initial_schema.sql:3-5` |
+| `ownpay_trx_id` dual-read fallback in the Stripe extractor | `src/controllers/webhooks.ts` |
+| Historical OwnPay repo link, annotated "(now EdgePay)" | `README.md:3` |
 | Historical SQL comments | `migrations/` |
 
-Post-normalization verification: no legacy brand strings remain in tracked files.
+Post-rename grep count matches §7's verification (4 intentional hits).
 `package.json` + `package-lock.json` parse clean.
 
 ### P0 — Environment isolation (was: `env.LEDGER_DO is undefined` on `--env dev`)

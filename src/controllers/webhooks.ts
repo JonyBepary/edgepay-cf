@@ -117,7 +117,7 @@ webhookRoutes.post('/:gateway', async (c) => {
   c.req.raw.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
 
   // ---- Layer 3: signature verification (ALWAYS) ----
-  const verified = await adapter.verifyWebhook({ rawBody, headers, credentials });
+  const verified = await adapter.verifyWebhook({ rawBody, headers, credentials, ctx: { kv: c.env.KV } });
   if (!verified) {
     metric(c.env, 'webhook_signature_rejected', { merchant_id: merchantId as number, gateway: slug });
     await c.env.DB
@@ -208,12 +208,12 @@ webhookRoutes.post('/:gateway', async (c) => {
 function extractTransactionId(gatewaySlug: string, payload: Record<string, unknown>): string | null {
   switch (gatewaySlug) {
     case 'stripe': {
-      // metadata.edgepay_trx_id is set during initiate(); legacy
-      // payments embedded legacy transaction id — dual-read so webhooks still in
-      // flight reconcile.
+      // metadata.edgepay_trx_id is set during initiate(); pre-rename
+      // payments embedded ownpay_trx_id — dual-read so webhooks still in
+      // flight after the rename keep reconciling.
       const metadata = (payload.data as { object?: { metadata?: Record<string, string> } } | undefined)
         ?.object?.metadata;
-      return metadata?.edgepay_trx_id ?? (metadata as any)?.legacy_trx_id ?? (metadata as any)?.trx_id ?? null;
+      return metadata?.edgepay_trx_id ?? metadata?.ownpay_trx_id ?? null;
     }
     case 'paypal': {
       // resource.custom is a JSON string we set during initiate()

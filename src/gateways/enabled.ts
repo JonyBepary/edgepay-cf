@@ -1,5 +1,5 @@
 /**
- * Gateway plugin selection — the ENABLED_GATEWAYS platform gate (v0.2.3).
+ * Gateway plugin selection — the ENABLED_GATEWAYS platform gate.
  *
  * Cloudflare's "Deploy to Cloudflare" button lets the deployer customize
  * environment variables on the setup page. EdgePay uses ONE var —
@@ -13,13 +13,20 @@
  *     (indistinguishable from an unregistered slug — fail closed, no
  *      information leak about the platform's adapter inventory)
  *
+ * Since the v0.3.0 full port the catalog ships 123 adapters, so the
+ * selector is genuinely "pick out of 120+": e.g.
+ *
+ *   ENABLED_GATEWAYS=bkash,nagad,rocket,sslcommerz
+ *   ENABLED_GATEWAYS=stripe,paypal,razorpay
+ *   ENABLED_GATEWAYS=all
+ *
  * Semantics (documented in docs/GATEWAYS.md):
- *   - unset / empty / whitespace   -> ALL implemented gateways enabled
+ *   - unset / empty / whitespace   -> ALL catalog gateways enabled
  *     (back-compat: deployments that never set the var keep v0.2.2 behavior)
- *   - "all" or "*" (single token)  -> ALL implemented gateways enabled
+ *   - "all" or "*" (single token)  -> ALL catalog gateways enabled
  *   - otherwise                    -> only listed gateways enabled; unknown
- *     tokens are dropped from the enabled set and surfaced via
- *     GET /api/v1/gateways as `dropped_aliases` (typo feedback, not a crash)
+ *     tokens are dropped and surfaced via GET /api/v1/gateways as
+ *     `dropped_aliases` (typo feedback, not a crash)
  *   - FAIL CLOSED: if the value is non-empty but contains ONLY unknown
  *     tokens, ZERO gateways are enabled (never silently enable everything
  *     because someone typo'd the list).
@@ -35,251 +42,23 @@
  * see services/payment.ts handleCallback + workflows/refund-reconciliation).
  */
 
+import { catalogAliases, catalogFind } from './catalog';
+import { IMPLEMENTED_GATEWAY_SLUGS } from './registry-slugs';
 import { GatewayDisabledError } from '../lib/error';
 
-/** Registry slugs of every adapter implemented in this build. */
-export const IMPLEMENTED_GATEWAY_SLUGS = [
-  'stripe',
-  'paypal',
-  'bkash-api',
-  'razorpay',
-  'nagad-merchant-api',
-] as const;
+export { IMPLEMENTED_GATEWAY_SLUGS };
 
-export type ImplementedGatewaySlug = (typeof IMPLEMENTED_GATEWAY_SLUGS)[number];
+export type ImplementedGatewaySlug = string;
+
+/** Registry slugs of every adapter registered in this build. */
+export const IMPLEMENTED_GATEWAY_COUNT = IMPLEMENTED_GATEWAY_SLUGS.length;
 
 /**
- * Friendly aliases accepted by ENABLED_GATEWAYS, mapped to registry slugs.
- * The deploy-button field accepts both ("bkash" and "bkash-api") so the
- * value a user naturally types on the setup page just works.
- *
- * Expanded to the full 172-gateway catalog (5 implemented + 167 pending) so the
- * Deploy to Cloudflare button can offer every gateway as a selectable
- * plugin. Pending slugs map to themselves — they are considered "enabled"
- * at the platform gate but the registry will report them as `pending`
- * (no adapter yet) in GET /api/v1/gateways.
+ * Friendly aliases accepted by ENABLED_GATEWAYS, mapped to registry slugs
+ * (generated from the catalog — every slug maps to itself — plus short
+ * forms like "bkash" -> "bkash-api", "nagad" -> "nagad-merchant-api").
  */
-export const GATEWAY_ALIASES: Record<string, string> = {
-  // Implemented — canonical + aliases
-  stripe: 'stripe',
-  paypal: 'paypal',
-  bkash: 'bkash-api',
-  'bkash-api': 'bkash-api',
-  razorpay: 'razorpay',
-  nagad: 'nagad-merchant-api',
-  'nagad-merchant-api': 'nagad-merchant-api',
-  // ── Pending catalog (165) — each maps to itself ──
-  adyen: 'adyen',
-  'authorize-net': 'authorize-net',
-  'blue-snap': 'blue-snap',
-  braintree: 'braintree',
-  'checkout-com': 'checkout-com',
-  cybersource: 'cybersource',
-  fiserv: 'fiserv',
-  'fiserv-cs': 'fiserv-cs',
-  'global-pay': 'global-pay',
-  moneris: 'moneris',
-  nmi: 'nmi',
-  payeezy: 'payeezy',
-  payflow: 'payflow',
-  paytrace: 'paytrace',
-  shift4: 'shift4',
-  square: 'square',
-  tsys: 'tsys',
-  worldpay: 'worldpay',
-  worldline: 'worldline',
-  'trust-commerce': 'trust-commerce',
-  elavon: 'elavon',
-  'payline-data': 'payline-data',
-  'net-authorize': 'net-authorize',
-  alipay: 'alipay',
-  'apple-pay': 'apple-pay',
-  'google-pay': 'google-pay',
-  'amazon-pay': 'amazon-pay',
-  'samsung-pay': 'samsung-pay',
-  rocket: 'rocket',
-  upay: 'upay',
-  nexuspay: 'nexuspay',
-  'ok-wallet': 'ok-wallet',
-  'mtn-momo': 'mtn-momo',
-  'airtel-money': 'airtel-money',
-  paytm: 'paytm',
-  phonepe: 'phonepe',
-  ccavenue: 'ccavenue',
-  cashfree: 'cashfree',
-  momo: 'momo',
-  grabpay: 'grabpay',
-  gcash: 'gcash',
-  midtrans: 'midtrans',
-  fawry: 'fawry',
-  tap: 'tap',
-  'mercadolibre-wallet': 'mercadolibre-wallet',
-  kushki: 'kushki',
-  pix: 'pix',
-  payfast: 'payfast',
-  bancontact: 'bancontact',
-  blik: 'blik',
-  eps: 'eps',
-  giropay: 'giropay',
-  ideal: 'ideal',
-  sofort: 'sofort',
-  trustly: 'trustly',
-  przelewy24: 'przelewy24',
-  sepa: 'sepa',
-  'coinbase-commerce': 'coinbase-commerce',
-  bitpay: 'bitpay',
-  'btcpay-server': 'btcpay-server',
-  klarna: 'klarna',
-  sezzle: 'sezzle',
-  affirm: 'affirm',
-  afterpay: 'afterpay',
-  skrill: 'skrill',
-  neteller: 'neteller',
-  wise: 'wise',
-  mollie: 'mollie',
-  'worldline-cash': 'worldline-cash',
-  jazzcash: 'jazzcash',
-  instamojo: 'instamojo',
-  '2checkout': '2checkout',
-  payu: 'payu',
-  'payu-latam': 'payu-latam',
-  paysera: 'paysera',
-  paylike: 'paylike',
-  payplug: 'payplug',
-  paysafe: 'paysafe',
-  pingpong: 'pingpong',
-  reepay: 'reepay',
-  recurly: 'recurly',
-  redsys: 'redsys',
-  sagepay: 'sagepay',
-  securionpay: 'securionpay',
-  stax: 'stax',
-  'stripe-connect': 'stripe-connect',
-  sumup: 'sumup',
-  'swedbank-pay': 'swedbank-pay',
-  'till-payments': 'till-payments',
-  'transact-pro': 'transact-pro',
-  unzer: 'unzer',
-  verifone: 'verifone',
-  'viva-wallet': 'viva-wallet',
-  wayforpay: 'wayforpay',
-  wirecard: 'wirecard',
-  yookassa: 'yookassa',
-  zimpler: 'zimpler',
-  payever: 'payever',
-  paylands: 'paylands',
-  paymill: 'paymill',
-  'pay-nl': 'pay-nl',
-  paytrail: 'paytrail',
-  paytabs: 'paytabs',
-  payfort: 'payfort',
-  telr: 'telr',
-  'checkout-v2': 'checkout-v2',
-  cardknox: 'cardknox',
-  cko: 'cko',
-  cmi: 'cmi',
-  concardis: 'concardis',
-  credomatic: 'credomatic',
-  'ct-payments': 'ct-payments',
-  dalenys: 'dalenys',
-  datatrans: 'datatrans',
-  dibs: 'dibs',
-  emerchantpay: 'emerchantpay',
-  epay: 'epay',
-  epos: 'epos',
-  'every-pay': 'every-pay',
-  finaro: 'finaro',
-  'first-atlantic-commerce': 'first-atlantic-commerce',
-  'first-data': 'first-data',
-  heidelpay: 'heidelpay',
-  hipay: 'hipay',
-  icepay: 'icepay',
-  ingenico: 'ingenico',
-  ipayment: 'ipayment',
-  'lemon-way': 'lemon-way',
-  mercanet: 'mercanet',
-  migs: 'migs',
-  multisafepay: 'multisafepay',
-  nexi: 'nexi',
-  nets: 'nets',
-  novalnet: 'novalnet',
-  paypoint: 'paypoint',
-  payson: 'payson',
-  quickpay: 'quickpay',
-  santander: 'santander',
-  securetrading: 'securetrading',
-  smart2pay: 'smart2pay',
-  tink: 'tink',
-  'token-io': 'token-io',
-  'easy-paisa': 'easy-paisa',
-  ecpay: 'ecpay',
-  ecommpay: 'ecommpay',
-  komoju: 'komoju',
-  moneybookers: 'moneybookers',
-  'multi-cards': 'multi-cards',
-  oceanpayment: 'oceanpayment',
-  onebip: 'onebip',
-  paygate: 'paygate',
-  paygent: 'paygent',
-  payway: 'payway',
-  'pin-payments': 'pin-payments',
-  'plug-and-pay': 'plug-and-pay',
-  'pro-pay': 'pro-pay',
-  qpay: 'qpay',
-  forte: 'forte',
-  freedompay: 'freedompay',
-  'go-cardless': 'go-cardless',
-  maxipago: 'maxipago',
-  mercadopago: 'mercadopago',
-  pagseguro: 'pagseguro',
-  'klarna-pay-now': 'klarna-pay-now',
-  'worldpay-v2': 'worldpay-v2',
-  paystack: 'paystack',
-  flutterwave: 'flutterwave',
-};
-
-/** Full catalog — 5 implemented + 167 pending = 172 total. */
-export const ALL_GATEWAY_SLUGS: readonly string[] = [
-  ...IMPLEMENTED_GATEWAY_SLUGS,
-  'adyen', 'authorize-net', 'blue-snap', 'braintree', 'checkout-com',
-  'cybersource', 'fiserv', 'fiserv-cs', 'global-pay', 'moneris', 'nmi',
-  'payeezy', 'payflow', 'paytrace', 'shift4', 'square', 'tsys', 'worldpay',
-  'worldline', 'trust-commerce', 'elavon', 'payline-data', 'net-authorize',
-  'alipay', 'apple-pay', 'google-pay', 'amazon-pay', 'samsung-pay',
-  'rocket', 'upay', 'nexuspay', 'ok-wallet',
-  'mtn-momo', 'airtel-money',
-  'paytm', 'phonepe', 'ccavenue', 'cashfree',
-  'momo', 'grabpay', 'gcash', 'midtrans',
-  'fawry', 'tap',
-  'mercadolibre-wallet', 'kushki', 'pix', 'payfast',
-  'bancontact', 'blik', 'eps', 'giropay', 'ideal', 'sofort', 'trustly',
-  'przelewy24', 'sepa',
-  'coinbase-commerce', 'bitpay', 'btcpay-server',
-  'klarna', 'sezzle', 'affirm', 'afterpay',
-  'skrill', 'neteller', 'wise', 'mollie', 'worldline-cash',
-  'jazzcash', 'instamojo',
-  '2checkout', 'payu', 'payu-latam', 'paysera', 'paylike', 'payplug',
-  'paysafe', 'pingpong', 'reepay', 'recurly', 'redsys', 'sagepay',
-  'securionpay', 'stax', 'stripe-connect', 'sumup', 'swedbank-pay',
-  'till-payments', 'transact-pro', 'unzer', 'verifone', 'viva-wallet',
-  'wayforpay', 'wirecard', 'yookassa', 'zimpler', 'payever', 'paylands',
-  'paymill', 'pay-nl', 'paytrail', 'paytabs', 'payfort', 'telr',
-  'checkout-v2', 'cardknox', 'cko',
-  'cmi', 'concardis', 'credomatic', 'ct-payments', 'dalenys', 'datatrans',
-  'dibs', 'emerchantpay', 'epay', 'epos', 'every-pay', 'finaro',
-  'first-atlantic-commerce', 'first-data', 'heidelpay', 'hipay', 'icepay',
-  'ingenico', 'ipayment', 'lemon-way', 'mercanet', 'migs', 'multisafepay',
-  'nexi', 'nets', 'novalnet', 'paypoint', 'payson', 'quickpay',
-  'santander', 'securetrading', 'smart2pay', 'tink', 'token-io',
-  'easy-paisa', 'ecpay', 'ecommpay', 'komoju', 'moneybookers', 'multi-cards',
-  'oceanpayment', 'onebip', 'paygate', 'paygent', 'payway', 'pin-payments',
-  'plug-and-pay', 'pro-pay', 'qpay', 'forte', 'freedompay', 'go-cardless',
-  'maxipago', 'mercadopago', 'pagseguro', 'klarna-pay-now', 'worldpay-v2',
-  'paystack', 'flutterwave',
-];
-
-/** Fast lookup for any slug in the 172-gateway catalog (implemented + pending). */
-export const GATEWAY_CATALOG: ReadonlySet<string> = new Set(ALL_GATEWAY_SLUGS);
+export const GATEWAY_ALIASES: Record<string, string> = catalogAliases();
 
 /** Parsed result of an ENABLED_GATEWAYS value. */
 export interface GatewaySelection {
@@ -324,10 +103,9 @@ export function parseEnabledGateways(raw: string | undefined | null): GatewaySel
   const enabled: string[] = [];
   const dropped: string[] = [];
   for (const token of tokens) {
-    // Resolve via alias map first, then via catalog (pending slugs map to themselves)
-    const canonical = GATEWAY_ALIASES[token] ?? (GATEWAY_CATALOG.has(token) ? token : undefined);
-    if (canonical && !enabled.includes(canonical)) {
-      enabled.push(canonical);
+    const canonical = GATEWAY_ALIASES[token];
+    if (canonical && IMPLEMENTED_GATEWAY_SLUGS.includes(canonical)) {
+      if (!enabled.includes(canonical)) enabled.push(canonical);
     } else if (!canonical) {
       dropped.push(token);
     }
@@ -373,4 +151,24 @@ export function assertGatewayEnabled(env: GatewaySelectionEnv, slug: string): vo
   if (!isGatewayEnabled(env, slug)) {
     throw new GatewayDisabledError(slug);
   }
+}
+
+/**
+ * Selection feedback for GET /api/v1/gateways: suggests the canonical slug
+ * for each dropped token (Levenshtein-lite: prefix match against catalog).
+ */
+export function suggestCanonical(token: string): string | undefined {
+  const lower = token.toLowerCase();
+  if (lower.length < 3) return undefined;
+  const candidates = Object.keys(GATEWAY_ALIASES).filter(
+    (k) => k !== token && (k.startsWith(lower) || lower.startsWith(k)),
+  );
+  if (candidates.length === 0) return undefined;
+  // Prefer the shortest candidate (usually the canonical slug itself).
+  return candidates.sort((a, b) => a.length - b.length)[0];
+}
+
+/** Catalog status helper for gateways route + install readiness. */
+export function gatewayStatus(slug: string): string | undefined {
+  return catalogFind(slug)?.status;
 }

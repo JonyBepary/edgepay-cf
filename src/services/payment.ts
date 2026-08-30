@@ -191,6 +191,7 @@ export class PaymentService {
         cancel_url: cancelUrl,
       },
       credentials,
+      { kv: this.env.KV },
     );
 
     // Update transaction to processing
@@ -252,7 +253,7 @@ export class PaymentService {
       } catch { /* skip */ }
     }
 
-    const verifyResult = await adapter.verify(callbackData, credentials);
+    const verifyResult = await adapter.verify(callbackData, credentials, { kv: this.env.KV });
 
     if (verifyResult.success) {
       await this.completeTransaction(intent.trx_db_id, intent.id, verifyResult.gateway_trx_id);

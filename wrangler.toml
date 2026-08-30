@@ -25,7 +25,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "production"
 APP_NAME = "EdgePay"
-APP_VERSION = "0.2.3"
+APP_VERSION = "0.3.0"
 APP_URL = "https://your-worker.your-subdomain.workers.dev"
 APP_DOMAIN = "your-worker.your-subdomain.workers.dev"
 LOG_LEVEL = "info"
@@ -57,7 +57,9 @@ CF_ACCESS_AUD_TAG = ""              # the Access application's AUD tag
 # unaffected). The cors() middleware in src/index.ts reads this.
 ALLOWED_ORIGINS = ""
 
-# v0.2.3: GATEWAY-PLUGIN SELECTOR (the deploy-button customization knob).
+# v0.3.0: GATEWAY-PLUGIN SELECTOR. UNSET here on purpose — the deploy
+# button's setup page supplies it (see .dev.vars.example); when unset, every
+# catalog gateway is enabled (back-compat with v0.2.2 deployments).
 # Comma-separated gateway slugs/aliases this deployment may use:
 #   stripe, paypal, bkash|bkash-api, razorpay, nagad|nagad-merchant-api
 # - unset/empty/"all" -> every implemented adapter (v0.2.2 behavior)
@@ -65,7 +67,7 @@ ALLOWED_ORIGINS = ""
 #   GET /install); a list of ONLY unknown tokens enables NOTHING (fail
 #   closed). Enforced at payment/refund/webhook entry points — see
 #   src/gateways/enabled.ts and docs/GATEWAYS.md.
-ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api"
+
 
 # ============================================================
 # D1 Database bindings
@@ -309,7 +311,7 @@ name = "edgepay-cf-dev"
 # declares [vars] gets ONLY those vars (previously this block carried 5 of
 # 18, leaving APP_NAME/DEFAULT_CURRENCY/JWT_ISSUER/… undefined at runtime in
 # dev/staging). The full set is now declared per environment.
-vars = { ENVIRONMENT = "development", APP_NAME = "EdgePay", APP_VERSION = "0.2.3", APP_URL = "http://localhost:8787", APP_DOMAIN = "localhost", LOG_LEVEL = "debug", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "http://localhost:3000", ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api" }
+vars = { ENVIRONMENT = "development", APP_NAME = "EdgePay", APP_VERSION = "0.3.0", APP_URL = "http://localhost:8787", APP_DOMAIN = "localhost", LOG_LEVEL = "debug", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "http://localhost:3000" }
 
 [[env.dev.d1_databases]]
 binding = "DB"
@@ -406,7 +408,7 @@ enabled = true
 [env.staging]
 name = "edgepay-cf-staging"
 # v0.2.3: full var set (vars are non-inheritable — see env.dev note).
-vars = { ENVIRONMENT = "staging", APP_NAME = "EdgePay", APP_VERSION = "0.2.3", APP_URL = "https://edgepay-cf-staging.<your-subdomain>.workers.dev", APP_DOMAIN = "edgepay-cf-staging.<your-subdomain>.workers.dev", LOG_LEVEL = "info", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "", ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api" }
+vars = { ENVIRONMENT = "staging", APP_NAME = "EdgePay", APP_VERSION = "0.3.0", APP_URL = "https://edgepay-cf-staging.<your-subdomain>.workers.dev", APP_DOMAIN = "edgepay-cf-staging.<your-subdomain>.workers.dev", LOG_LEVEL = "info", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "" }
 
 [[env.staging.d1_databases]]
 binding = "DB"

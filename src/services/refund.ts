@@ -83,7 +83,7 @@ export class RefundService {
       if (tx.gateway_slug && tx.gateway_trx_id) {
         const adapter = gatewayRegistry.resolve(tx.gateway_slug);
         const credentials = await this.loadCredentials(tx.payment_intent_id);
-        const result = await adapter.refund(tx.gateway_trx_id, input.amount, credentials);
+        const result = await adapter.refund(tx.gateway_trx_id, input.amount, credentials, { kv: this.env.KV });
         if (result.success && result.refund_id) {
           gatewayRefundId = result.refund_id;
         }

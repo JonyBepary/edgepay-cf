@@ -12,7 +12,7 @@
  * with 9-hour TTL (PayPal tokens live 32400s ≈ 9h).
  */
 
-import { BaseGatewayAdapter, type GatewayMetadata, type GatewayField, type InitiateParams, type InitiateResult, type VerifyResult, type RefundResult, type VerifyWebhookInput, type Credentials } from '../base';
+import { BaseGatewayAdapter, type GatewayMetadata, type GatewayField, type InitiateParams, type InitiateResult, type VerifyResult, type RefundResult, type VerifyWebhookInput, type Credentials, type GatewayContext } from '../base';
 
 const API_BASE_LIVE = 'https://api-m.paypal.com';
 const API_BASE_SANDBOX = 'https://api-m.sandbox.paypal.com';
@@ -49,9 +49,9 @@ export class PayPalGateway extends BaseGatewayAdapter {
     ];
   }
 
-  async initiate(params: InitiateParams, credentials: Credentials, env?: { KV: import('../../types/env').Env['KV'] }): Promise<InitiateResult> {
+  async initiate(params: InitiateParams, credentials: Credentials, ctx?: GatewayContext): Promise<InitiateResult> {
     const baseUrl = credentials.mode === 'live' ? API_BASE_LIVE : API_BASE_SANDBOX;
-    const token = await this.getToken(baseUrl, credentials, env);
+    const token = await this.getToken(baseUrl, credentials, ctx);
 
     const response = await fetch(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
@@ -99,14 +99,15 @@ export class PayPalGateway extends BaseGatewayAdapter {
     };
   }
 
-  async verify(callbackData: Record<string, unknown>, credentials: Credentials, env?: { KV: import('../../types/env').Env['KV'] }): Promise<VerifyResult> {
-    const baseUrl = credentials.mode === 'live' ? API_BASE_LIVE : API_BASE_SANDBOX;
-    const token = await this.getToken(baseUrl, credentials, env);
-
+  async verify(callbackData: Record<string, unknown>, credentials: Credentials, ctx?: GatewayContext): Promise<VerifyResult> {
+    // Input guard FIRST (no token-grant subrequest for an unusable callback)
     const orderId = String(callbackData.token ?? '');  // PayPal returns ?token=ORDER_ID
     if (!orderId) {
       return { success: false, gateway_trx_id: '', amount: null, status: 'failed', error: 'Missing PayPal order ID' };
     }
+
+    const baseUrl = credentials.mode === 'live' ? API_BASE_LIVE : API_BASE_SANDBOX;
+    const token = await this.getToken(baseUrl, credentials, ctx);
 
     const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
@@ -191,9 +192,9 @@ export class PayPalGateway extends BaseGatewayAdapter {
     return data.verification_status === 'SUCCESS';
   }
 
-  async refund(gatewayTrxId: string, amount: string, credentials: Credentials, env?: { KV: import('../../types/env').Env['KV'] }): Promise<RefundResult> {
+  async refund(gatewayTrxId: string, amount: string, credentials: Credentials, ctx?: GatewayContext): Promise<RefundResult> {
     const baseUrl = credentials.mode === 'live' ? API_BASE_LIVE : API_BASE_SANDBOX;
-    const token = await this.getToken(baseUrl, credentials, env);
+    const token = await this.getToken(baseUrl, credentials, ctx);
 
     const response = await fetch(`${baseUrl}/v2/payments/captures/${gatewayTrxId}/refund`, {
       method: 'POST',
@@ -218,11 +219,11 @@ export class PayPalGateway extends BaseGatewayAdapter {
     };
   }
 
-  private async getToken(baseUrl: string, credentials: Credentials, env?: { KV: import('../../types/env').Env['KV'] }): Promise<string> {
+  private async getToken(baseUrl: string, credentials: Credentials, ctx?: GatewayContext): Promise<string> {
     // Check cache (cache key per merchant — would normally include merchant_id in real impl)
-    const cacheKey = env?.KV ? await this.cacheKey(credentials) : '';
-    if (env?.KV && cacheKey) {
-      const cached = await env.KV.get(cacheKey);
+    const cacheKey = ctx?.kv ? await this.cacheKey(credentials) : '';
+    if (ctx?.kv && cacheKey) {
+      const cached = await ctx.kv.get(cacheKey);
       if (cached) return cached;
     }
 
@@ -246,8 +247,8 @@ export class PayPalGateway extends BaseGatewayAdapter {
     }
 
     // Cache
-    if (env?.KV && cacheKey) {
-      await env.KV.put(cacheKey, data.access_token, { expirationTtl: TOKEN_TTL_SEC });
+    if (ctx?.kv && cacheKey) {
+      await ctx.kv.put(cacheKey, data.access_token, { expirationTtl: TOKEN_TTL_SEC });
     }
 
     return data.access_token;

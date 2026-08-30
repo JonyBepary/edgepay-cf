@@ -35,7 +35,7 @@ describe('GET /api/openapi.json', () => {
 
     expect(doc.openapi).toBe('3.1.0');
     expect(doc.info.title).toContain('EdgePay');
-    expect(doc.info.version).toBe('0.2.3');
+    expect(doc.info.version).toBe('0.3.0');
     expect(doc.servers[0].url).toBeTruthy();
   });
 
@@ -107,8 +107,10 @@ describe('GET /api/reference — Scalar rendering', () => {
     expect(m, 'script tag must carry a nonce').not.toBeNull();
     const htmlNonce = m![1];
 
-    // BOTH script tags carry the same nonce
-    expect((html.match(new RegExp(`nonce="${htmlNonce}"`, 'g')) ?? []).length).toBeGreaterThanOrEqual(2);
+    // BOTH script tags carry the same nonce (split-based count: the nonce is
+    // random base64 and may contain regex metacharacters like + or /, which
+    // would break a naive `new RegExp(nonce)` — this was a flaky assertion)
+    expect(html.split(`nonce="${htmlNonce}"`).length - 1).toBeGreaterThanOrEqual(2);
 
     const csp = res.headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain(`script-src 'self' 'nonce-${htmlNonce}' https://cdn.jsdelivr.net`);

@@ -57,15 +57,19 @@ The setup page's **`ENABLED_GATEWAYS`** field is the gateway-plugin selector.
 It takes a comma-separated list of slugs (friendly aliases accepted):
 
 | You type | Enables | Adapter |
-|----------|---------|---------|
-| `stripe` | `stripe` | Stripe cards/checkout |
-| `paypal` | `paypal` | PayPal |
-| `bkash` or `bkash-api` | `bkash-api` | bKash Merchant API (BD) |
-| `razorpay` | `razorpay` | Razorpay (IN) |
-| `nagad` or `nagad-merchant-api` | `nagad-merchant-api` | Nagad Merchant API (BD) |
+The selector accepts **any of the 123 catalog gateways** — the BD set:
+`bkash`/`bkash-api`, `nagad`/`nagad-merchant-api`, `rocket`, `sslcommerz`,
+`aamarpay`, `shurjopay`, `portwallet`, `cellfin`, `nexuspay`, `ok-wallet`,
+`upay`; global cards: `stripe`, `paypal`, `razorpay`, `adyen`, `2checkout`,
+`checkout-com`…; Africa MFS: `mpesa`, `mtn-momo`… — the complete list is at
+`GET /api/v1/gateways` after deploy and in
+[docs/GATEWAYS.md](GATEWAYS.md).
 
-Examples: `stripe,bkash` (cards + bKash), just `bkash,nagad` (pure BD MFS), or
-leave the default to enable all five.
+Examples: `stripe,bkash` (cards + bKash), `bkash,nagad,rocket,sslcommerz`
+(pure BD MFS), or leave the default to enable the entire catalog.
+Gateways whose port is still pending are marked `planned` in the catalog —
+selectable and credential-configurable, but payments return a clear error
+until their adapter lands.
 
 Semantics (implemented in `src/gateways/enabled.ts`, pinned by
 `tests/gateways-enabled.test.ts`):
@@ -198,7 +202,7 @@ migration step targets the `DB` **binding** (`wrangler d1 migrations apply DB
 [Wrangler environments docs](https://developers.cloudflare.com/workers/wrangler/environments/)):
 
 - **Bindings and vars are NOT inherited** — each environment declares its own
-  full set (a v0.2.2 audit fixed the bindings half of this; v0.2.3 completed it
+  full set (a v0.2.2 audit fixed the bindings half of this; v0.3.0 completed it
   for `[vars]`, which previously shipped only 5 of 18 values to dev/staging).
 - Deploy an environment with `--env`:
 

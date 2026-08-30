@@ -141,7 +141,7 @@ describe('miniflare bindings merge (test-infrastructure guard)', () => {
     // vars, APP_VERSION would be undefined here.
     const res = await SELF.fetch('http://localhost/api/v1/health');
     const body = await res.json() as { data: { version: string; environment: string } };
-    expect(body.data.version).toBe('0.2.3');
+    expect(body.data.version).toBe('0.3.0');
     expect(body.data.environment).toBe('production');
   });
 });

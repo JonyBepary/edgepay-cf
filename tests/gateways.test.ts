@@ -154,13 +154,24 @@ describe('Nagad gateway', () => {
 });
 
 describe('Gateway registry', () => {
-  it('registers all 5 built-in gateways', async () => {
+  it('registers the core 5 + the full 123-provider catalog (v0.3.0 port)', async () => {
     const { gatewayRegistry } = await import('../src/gateways/index');
     expect(gatewayRegistry.has('stripe')).toBe(true);
     expect(gatewayRegistry.has('paypal')).toBe(true);
     expect(gatewayRegistry.has('bkash-api')).toBe(true);
     expect(gatewayRegistry.has('razorpay')).toBe(true);
     expect(gatewayRegistry.has('nagad-merchant-api')).toBe(true);
-    expect(gatewayRegistry.list().length).toBe(5);
+    // BD hand-ports
+    expect(gatewayRegistry.has('rocket')).toBe(true);
+    expect(gatewayRegistry.has('sslcommerz')).toBe(true);
+    expect(gatewayRegistry.has('aamarpay')).toBe(true);
+    expect(gatewayRegistry.has('shurjopay')).toBe(true);
+    expect(gatewayRegistry.has('portwallet')).toBe(true);
+    // generated catalog coverage — every catalog slug resolves
+    const { GATEWAY_CATALOG } = await import('../src/gateways/catalog.data');
+    expect(gatewayRegistry.list().length).toBe(GATEWAY_CATALOG.length);
+    for (const entry of GATEWAY_CATALOG) {
+      expect(gatewayRegistry.has(entry.slug), `registry missing ${entry.slug}`).toBe(true);
+    }
   });
 });
