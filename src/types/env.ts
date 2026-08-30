@@ -77,15 +77,11 @@ export interface Env {
   WEBHOOK_BACKOFF_MS: string;
   RATE_LIMIT_WINDOW_SECONDS: string;
   RATE_LIMIT_MAX_REQUESTS: string;
-  SESSION_TTL_SECONDS: string;
-  // v0.2.2 (audit P2): CORS origin allowlist, comma-separated. Empty string
+  // CORS origin allowlist, comma-separated. Empty/undefined
   // = fail closed (no cross-origin browser access). Read by cors() in index.ts.
-  ALLOWED_ORIGINS: string;
-  // v0.2.3: gateway-plugin selector — comma-separated gateway slugs/aliases
-  // (e.g. "stripe,bkash,razorpay") that this deployment may use. Unset/empty
-  // = ALL implemented gateways (v0.2.2 back-compat). Parsed by
-  // src/gateways/enabled.ts; enforced at payment/refund/webhook entry points.
-  ENABLED_GATEWAYS: string;
+  ALLOWED_ORIGINS?: string;
+  // Gateway-plugin selector — comma-separated gateway slugs/aliases.
+  ENABLED_GATEWAYS?: string;
 
   // Secrets — set via `wrangler secret put`
   JWT_SECRET: string;
@@ -106,9 +102,9 @@ export interface Env {
 
   // Cloudflare Access — the admin surface FAILS CLOSED unless these are
   // configured (validated against the team's JWKS; the email header is
-  // never trusted). Empty string = misconfigured = 503, not open.
-  CF_ACCESS_TEAM_DOMAIN: string;   // e.g. 'myteam.cloudflareaccess.com'
-  CF_ACCESS_AUD_TAG: string;       // the Access application's AUD tag
+  // never trusted). Undefined / empty string = misconfigured = 503, not open.
+  CF_ACCESS_TEAM_DOMAIN?: string;   // e.g. 'myteam.cloudflareaccess.com'
+  CF_ACCESS_AUD_TAG?: string;       // the Access application's AUD tag
 
   // Break-glass service token (secrets) — the ONLY non-JWT path into
   // /api/admin/*; every use emits a PAGE-level audit alarm.

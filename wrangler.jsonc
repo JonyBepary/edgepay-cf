@@ -63,19 +63,7 @@
     "RATE_LIMIT_MAX_REQUESTS": "120",
     "SESSION_TTL_SECONDS": "86400",
     // Gateway-plugin selection — default multi-gateway set
-    "ENABLED_GATEWAYS": "bkash,nagad,rocket,bkash-api,nagad-merchant-api,sslcommerz,stripe,paypal,razorpay",
-    // CORS origin allowlist — comma-separated origins (empty = fail closed)
-    "ALLOWED_ORIGINS": "",
-    // Cloudflare Access Zero Trust configuration for admin surface
-    "CF_ACCESS_TEAM_DOMAIN": "",
-    "CF_ACCESS_AUD_TAG": "",
-    // Break-glass admin client ID (non-secret paired with secret BREAK_GLASS_CLIENT_SECRET)
-    "BREAK_GLASS_CLIENT_ID": "",
-    // Cloudflare account and zone IDs for custom-hostnames (paired with secret CF_API_TOKEN)
-    "CF_ACCOUNT_ID": "",
-    "CF_ZONE_ID": "",
-    // PBKDF2 password cost override (default 600K; strictly-free tiers use 100000)
-    "PBKDF2_ITERATIONS": ""
+    "ENABLED_GATEWAYS": "bkash,nagad,rocket,bkash-api,nagad-merchant-api,sslcommerz,stripe,paypal,razorpay"
   },
 
   // ============================================================
