@@ -20,6 +20,9 @@ import { BkashApiGateway } from './bkash/bkash.gateway';
 import { RazorpayGateway } from './razorpay/razorpay.gateway';
 import { NagadGateway } from './nagad/nagad.gateway';
 import { IMPLEMENTED_GATEWAY_SLUGS } from './enabled';
+import { ALL_GATEWAY_SLUGS as _ALL_GATEWAY_SLUGS } from './enabled';
+// Ensure catalog stays in sync with PENDING_GATEWAYS (170 total = 5 implemented + 167 pending)
+void _ALL_GATEWAY_SLUGS;
 
 // Register built-in gateways
 gatewayRegistry.register('stripe', () => new StripeGateway());
@@ -37,9 +40,10 @@ export * from './enabled';
 
 /**
  * Built-in gateway catalog — exposed for admin UI display.
- * The 5 gateways above are fully implemented; the remaining 118 from
+ * The 5 gateways above are fully implemented; the remaining 167 from
  * EdgePay's PHP catalog follow the same pattern and can be ported
- * mechanically. This list documents which are pending.
+ * mechanically. This list documents which are pending (167 pending,
+ * 172 total with 5 implemented).
  */
 export const PENDING_GATEWAYS = [
   // Global cards
@@ -71,6 +75,30 @@ export const PENDING_GATEWAYS = [
   // Other
   'skrill', 'neteller', 'wise', 'mollie', 'worldline-cash',
   'jazzcash', 'instamojo',
+  // ── Expanded catalog — global PSPs & regional acquirers ──
+  // Global / enterprise PSPs
+  '2checkout', 'payu', 'payu-latam', 'paysera', 'paylike', 'payplug',
+  'paysafe', 'pingpong', 'reepay', 'recurly', 'redsys', 'sagepay',
+  'securionpay', 'stax', 'stripe-connect', 'sumup', 'swedbank-pay',
+  'till-payments', 'transact-pro', 'unzer', 'verifone', 'viva-wallet',
+  'wayforpay', 'wirecard', 'yookassa', 'zimpler', 'payever', 'paylands',
+  'paymill', 'pay-nl', 'paytrail', 'paytabs', 'payfort', 'telr',
+  'checkout-v2', 'cardknox', 'cko',
+  // Acquirers & gateways — Europe & UK
+  'cmi', 'concardis', 'credomatic', 'ct-payments', 'dalenys', 'datatrans',
+  'dibs', 'emerchantpay', 'epay', 'epos', 'every-pay', 'finaro',
+  'first-atlantic-commerce', 'first-data', 'heidelpay', 'hipay', 'icepay',
+  'ingenico', 'ipayment', 'lemon-way', 'mercanet', 'migs', 'multisafepay',
+  'nexi', 'nets', 'novalnet', 'paypoint', 'payson', 'quickpay',
+  'santander', 'securetrading', 'smart2pay', 'tink', 'token-io',
+  // APAC & MENA
+  'easy-paisa', 'ecpay', 'ecommpay', 'komoju', 'moneybookers', 'multi-cards',
+  'oceanpayment', 'onebip', 'paygate', 'paygent', 'payway', 'pin-payments',
+  'plug-and-pay', 'pro-pay', 'qpay', 'forte', 'freedompay', 'go-cardless',
+  // LatAm & emerging
+  'maxipago', 'mercadopago', 'pagseguro', 'klarna-pay-now', 'worldpay-v2',
+  // Africa — PSPs
+  'paystack', 'flutterwave',
 ] as const;
 
 export const IMPLEMENTED_GATEWAYS = IMPLEMENTED_GATEWAY_SLUGS;

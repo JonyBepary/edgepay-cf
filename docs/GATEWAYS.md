@@ -7,11 +7,15 @@ credential field definitions the admin UI renders. This document explains the
 two-level enablement model, the five implemented plugins, and the roadmap for
 the remaining catalog.
 
+> **172 gateway plugins — 5 implemented, 167 pending port.** The Deploy to Cloudflare
+> button's `ENABLED_GATEWAYS` field accepts any of the 172 slugs (see catalog below);
+> pending gateways are selectable but report `pending` in `GET /api/v1/gateways` until ported.
+
 - [Two-level enablement model](#two-level-enablement-model)
 - [The five implemented plugins](#the-five-implemented-plugins)
 - [Configuring credentials per merchant](#configuring-credentials-per-merchant)
 - [Adding a gateway to the platform](#adding-a-gateway-to-the-platform)
-- [The 123-gateway catalog and the v0.3.0 plan](#the-123-gateway-catalog-and-the-v030-plan)
+- [The 172-gateway catalog and the v0.3.0 plan](#the-172-gateway-catalog-and-the-v030-plan)
 
 ---
 
@@ -97,14 +101,24 @@ Platforms is a $25/mo product, incompatible with the strictly-free posture):
 Each adapter is ~2–5 KB minified+gzipped — the Workers 10 MB compressed-script
 budget accommodates hundreds before code-splitting becomes worth its complexity.
 
-## The 123-gateway catalog and the v0.3.0 plan
+## The 172-gateway catalog and the v0.3.0 plan
 
-The original PHP platform shipped 123 gateways; 5 are ported. `PENDING_GATEWAYS`
-in `src/gateways/index.ts` lists the other 118 (global cards, wallets, MFS per
-region, BNPL, crypto…). Porting them mechanically as bundled adapters would
-bloat the bundle and review surface long before the script-size limit, so the
-v0.3.0 plugin design (documented in the architecture addendum) takes a
-three-tier route that reuses existing infrastructure:
+The original PHP platform shipped 123 gateways; EdgePay-CF now catalogs **172**
+(5 implemented + 167 pending) to cover global PSPs, regional acquirers, wallets,
+MFS and crypto. `PENDING_GATEWAYS` in `src/gateways/index.ts` (and
+`ALL_GATEWAY_SLUGS` / `GATEWAY_CATALOG` in `src/gateways/enabled.ts`) lists the
+167 pending — global cards (`adyen`, `authorize-net`, `braintree`, `checkout-com`,
+`worldpay`, `2checkout`, `payu`, `paysafe`, `recurly`, `unzer`, `verifone`…),
+wallets (`apple-pay`, `google-pay`, `alipay`…), MFS per region (`paytm`,
+`phonepe`, `mtn-momo`, `paystack`, `flutterwave`, `gcash`, `pix`,
+`mercadopago`, `fawry`…), Europe (`ideal`, `sofort`, `giropay`, `mollie`,
+`datatrans`, `nexi`, `nets`…), BNPL/crypto (`klarna`, `afterpay`, `coinbase-commerce`,
+`bitpay`…) and 80+ additional acquirers (`paytrail`, `paytabs`, `telr`,
+`redsys`, `payplug`, `sumup`, `viva-wallet`, `yookassa`, `wayforpay`,
+`paygate`, `novalnet`, `tink`, `quickpay`…). Porting them mechanically as
+bundled adapters would bloat the bundle and review surface long before the
+script-size limit, so the v0.3.0 plugin design (documented in the architecture
+addendum) takes a three-tier route that reuses existing infrastructure:
 
 - **Tier 1 — manifest gateways**: JSON adapter manifests (endpoints, auth
   scheme, response mapping) stored in D1 and executed by a built-in

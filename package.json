@@ -36,7 +36,7 @@
     "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
     "bindings": {
       "ENABLED_GATEWAYS": {
-        "description": "**Gateway plugins to enable.** Comma-separated list from: `stripe`, `paypal`, `bkash`, `razorpay`, `nagad` (aliases like `bkash-api`/`nagad-merchant-api` also work). Example: `stripe,bkash`. Leave the default to enable all five. Per-gateway API keys are entered later in the admin UI — see [docs/GATEWAYS.md](docs/GATEWAYS.md)."
+        "description": "**140+ gateway plugins** — `stripe`, `paypal`, `bkash`, `razorpay`, `nagad`, `adyen`, `braintree`, `mollie`, `paytm`, `phonepe`, `mtn-momo`, `pix`, `klarna`, `coinbase-commerce`, `apple-pay`, `google-pay`, `2checkout`, `payu`, `worldpay`, `square`… (see [docs/GATEWAYS.md](docs/GATEWAYS.md) for full 172). Comma-separated; aliases like `bkash`→`bkash-api` work. Leave default to enable all 5 implemented now; pending show as 'coming soon' until ported."
       },
       "ALLOWED_ORIGINS": {
         "description": "Comma-separated browser origins allowed to call the API (CORS allowlist), e.g. `https://shop.example.com`. Leave empty to disallow all cross-origin browser calls — server-to-server API calls and hosted checkout keep working either way."

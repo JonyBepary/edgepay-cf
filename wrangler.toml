@@ -79,7 +79,6 @@ database_id = "REPLACE_WITH_D1_ID"  # Run: wrangler d1 create edgepay-cf
 # v0.2.2 (audit §3): preview URL builds use a separate D1 so preview
 # traffic never writes production data. Optional — omit the key entirely
 # if you do not use Workers preview URLs.
-preview_database_id = "REPLACE_WITH_D1_PREVIEW_ID"  # Run: wrangler d1 create edgepay-cf-preview
 migrations_dir = "migrations"
 
 # ============================================================
@@ -316,7 +315,6 @@ vars = { ENVIRONMENT = "development", APP_NAME = "EdgePay", APP_VERSION = "0.2.3
 binding = "DB"
 database_name = "edgepay-cf-dev"
 database_id = "REPLACE_WITH_DEV_D1_ID"
-preview_database_id = "REPLACE_WITH_DEV_D1_PREVIEW_ID"
 migrations_dir = "migrations"
 
 [[env.dev.kv_namespaces]]
@@ -414,7 +412,6 @@ vars = { ENVIRONMENT = "staging", APP_NAME = "EdgePay", APP_VERSION = "0.2.3", A
 binding = "DB"
 database_name = "edgepay-cf-staging"
 database_id = "REPLACE_WITH_STAGING_D1_ID"
-preview_database_id = "REPLACE_WITH_STAGING_D1_PREVIEW_ID"
 migrations_dir = "migrations"
 
 [[env.staging.kv_namespaces]]
