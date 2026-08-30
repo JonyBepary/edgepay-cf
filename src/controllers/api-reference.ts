@@ -81,8 +81,33 @@ apiReferenceRoutes.get(
   },
   Scalar<ReferenceEnv>((c) => ({
     url: '/api/openapi.json',
-    pageTitle: 'EdgePay API Reference',
+    pageTitle: 'EdgePay API Reference & Documentation',
     cdn: SCALAR_CDN,
     nonce: c.get('scalarNonce'),
+    theme: 'purple',
+    layout: 'modern',
+    showSidebar: true,
+    hideDownloadButton: false,
+    darkMode: true,
+    searchHotKey: 'k',
+    metaData: {
+      title: 'EdgePay API Reference',
+      description: 'Interactive API Reference for EdgePay Cloudflare-Native Payment Platform',
+      ogDescription: 'Edge-native payment gateway and GAAP double-entry ledger for mobile financial services (bKash, Nagad, Rocket) and cards on Cloudflare Workers.',
+      ogTitle: 'EdgePay API Reference',
+    },
+    customCss: `
+      :root {
+        --scalar-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --scalar-radius: 8px;
+      }
+      .scalar-card {
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+      }
+      .sidebar {
+        font-size: 0.92rem;
+      }
+    `,
   })),
 );

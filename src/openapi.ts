@@ -1541,6 +1541,55 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
         },
       },
 
+      '/install/bootstrap-key': {
+        post: {
+          tags: ['Setup'],
+          summary: 'Bootstrap or recover an admin API key',
+          description:
+            'Generates a new active admin Bearer API key using merchant super-admin email and password. Use when an existing deployment needs an API key or recovery without database access.',
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['admin_email', 'admin_password'],
+                  properties: {
+                    admin_email: { type: 'string', format: 'email' },
+                    admin_password: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'New API key generated.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          merchant_id: { type: 'integer' },
+                          api_key: { type: 'string' },
+                          message: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 429),
+          },
+        },
+      },
+
       // -----------------------------------------------------------------
       // Documentation
       // -----------------------------------------------------------------
