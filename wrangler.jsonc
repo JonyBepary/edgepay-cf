@@ -73,7 +73,8 @@
     // that browser clients may call the API from. Empty = FAIL CLOSED (no
     // cross-origin browser access; server-to-server API calls and
     // same-origin checkout are unaffected).
-    "ALLOWED_ORIGINS": ""
+    "ALLOWED_ORIGINS": "",
+    "ENABLED_GATEWAYS": ""
   },
 
   // ============================================================
