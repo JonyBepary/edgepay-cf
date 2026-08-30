@@ -34,6 +34,12 @@
     ],
     "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
     "bindings": {
+      "ENABLED_GATEWAYS": {
+        "description": "**Gateway plugins to enable.** Comma-separated list from the 123-provider catalog — e.g. `bkash,nagad,rocket,sslcommerz` (Bangladesh MFS set), `stripe,paypal,razorpay` (global cards), or `all`. Short aliases work (`bkash` = `bkash-api`). The full list ships in [docs/GATEWAYS.md](docs/GATEWAYS.md) and is queryable at `GET /api/v1/gateways` after deploy. Leave empty to enable the entire catalog. Per-gateway credentials are configured after deploy; unported gateways are marked `planned` in the catalog and reject payments with a clear error until their port lands."
+      },
+      "ALLOWED_ORIGINS": {
+        "description": "Comma-separated browser origins allowed to call the API (CORS allowlist), e.g. `https://shop.example.com`. Leave empty to disallow all cross-origin browser calls — server-to-server API calls and hosted checkout keep working either way."
+      },
       "JWT_SECRET": {
         "description": "Secret used to sign mobile-companion JWTs. Generate with `openssl rand -hex 32` (minimum 32 characters) and paste the result."
       },
@@ -43,11 +49,29 @@
       "ENCRYPTION_KEY": {
         "description": "AES-256-GCM key that encrypts gateway credentials and PII at rest. Generate with `openssl rand -base64 32` and paste the result. **Store it safely — losing it makes stored credentials unrecoverable.**"
       },
+      "CF_ACCESS_TEAM_DOMAIN": {
+        "description": "Your Cloudflare Zero Trust team domain (e.g. `myteam.cloudflareaccess.com`) protecting the admin API. Create one free at <https://one.dash.cloudflare.com>. Leave empty for now — the admin API stays closed (503) until it is set. See [docs/SECURITY.md](docs/SECURITY.md)."
+      },
+      "CF_ACCESS_AUD_TAG": {
+        "description": "The AUD tag of the Cloudflare Access application covering `https://<your-worker>/api/admin/*`. Leave empty for now; configure together with CF_ACCESS_TEAM_DOMAIN."
+      },
+      "BREAK_GLASS_CLIENT_ID": {
+        "description": "Optional. Service-token client id for emergency admin access when Access is unreachable. Only set if you understand the paging implications (docs/SECURITY.md)."
+      },
       "BREAK_GLASS_CLIENT_SECRET": {
         "description": "Optional. Service-token secret paired with BREAK_GLASS_CLIENT_ID. Every use pages an audit alarm."
       },
       "CF_API_TOKEN": {
         "description": "Optional. Cloudflare API token for custom-hostname provisioning (Cloudflare for SaaS). Leave empty unless you use per-brand custom domains."
+      },
+      "CF_ACCOUNT_ID": {
+        "description": "Optional. Your Cloudflare account id (used with CF_API_TOKEN for custom hostnames)."
+      },
+      "CF_ZONE_ID": {
+        "description": "Optional. Zone id of the domain custom hostnames live in."
+      },
+      "PBKDF2_ITERATIONS": {
+        "description": "Optional. On the **free plan's 10ms CPU budget** the default PBKDF2 600K iterations cannot finish; strictly-free deployments set `100000`. (Stored password hashes embed their own cost, so this only affects NEW hashes.)"
       }
     }
   },
