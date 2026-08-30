@@ -1,0 +1,497 @@
+name = "edgepay-cf"
+main = "src/index.ts"
+# v0.2.2 (audit P1): was 2024-10-22 (22 months stale).
+# 2026-08-28 is the NEWEST compatibility date supported by BOTH runtimes
+# this repo uses: the pinned test stack (miniflare 5.20260828.0-alpha /
+# workerd 1.20260828.x via @cloudflare/vitest-plugin 1.1.2) and wrangler
+# 4.127.1's bundled workerd (1.20260828.1). The audit targeted 2026-08-30,
+# but no released workerd knows a date that new yet — bump this together
+# with the devDependencies. (nodejs_compat_v2 behavior is default-on from
+# 2026-08-04, so the explicit nodejs_compat flag below is forward-safe.)
+compatibility_date = "2026-08-28"
+compatibility_flags = ["nodejs_compat"]
+
+# ------------------------------------------------------------
+# Worker limits (Cloudflare)
+#   - CPU: 30s on Paid plan (5$/mo), 10ms on Free plan
+#   - Memory: 128MB
+#   - Subrequest limit: 50 (Free) / 1000 (Paid) per invocation
+#   - Script size: 10MB compressed
+# ------------------------------------------------------------
+
+# ============================================================
+# Environment variables (NON-SECRET)
+# ============================================================
+[vars]
+ENVIRONMENT = "production"
+APP_NAME = "EdgePay"
+APP_VERSION = "0.2.3"
+APP_URL = "https://your-worker.your-subdomain.workers.dev"
+APP_DOMAIN = "your-worker.your-subdomain.workers.dev"
+LOG_LEVEL = "info"
+DEFAULT_CURRENCY = "BDT"
+DEFAULT_TIMEZONE = "Asia/Dhaka"
+DEFAULT_LANGUAGE = "en"
+JWT_ISSUER = "edgepay-cf"
+JWT_TTL_SECONDS = "3600"
+REFRESH_TOKEN_TTL_SECONDS = "2592000"
+WEBHOOK_MAX_RETRIES = "3"
+WEBHOOK_BACKOFF_MS = "60000"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+RATE_LIMIT_MAX_REQUESTS = "120"
+SESSION_TTL_SECONDS = "86400"
+
+# v0.2.1: Cloudflare Access — the /api/admin/* surface VERIFIES the
+# Cf-Access-Jwt-Assertion against this team's JWKS and FAILS CLOSED.
+# Empty values = misconfigured = 503 (never open). The only non-JWT
+# path is the break-glass service token (secrets below), which pages
+# on every use. There is no CF_ACCESS_ENABLED=false escape hatch.
+CF_ACCESS_TEAM_DOMAIN = ""          # e.g. "myteam.cloudflareaccess.com"
+CF_ACCESS_AUD_TAG = ""              # the Access application's AUD tag
+# Secrets (wrangler secret put):
+#   BREAK_GLASS_CLIENT_ID / BREAK_GLASS_CLIENT_SECRET — emergency ops access
+
+# v0.2.2 (audit P2): CORS origin allowlist — comma-separated origins that
+# browser clients may call the API from. Empty = FAIL CLOSED (no cross-origin
+# browser access; server-to-server API calls and same-origin checkout are
+# unaffected). The cors() middleware in src/index.ts reads this.
+ALLOWED_ORIGINS = ""
+
+# v0.2.3: GATEWAY-PLUGIN SELECTOR (the deploy-button customization knob).
+# Comma-separated gateway slugs/aliases this deployment may use:
+#   stripe, paypal, bkash|bkash-api, razorpay, nagad|nagad-merchant-api
+# - unset/empty/"all" -> every implemented adapter (v0.2.2 behavior)
+# - unknown tokens are dropped (typo feedback in GET /api/v1/gateways and
+#   GET /install); a list of ONLY unknown tokens enables NOTHING (fail
+#   closed). Enforced at payment/refund/webhook entry points — see
+#   src/gateways/enabled.ts and docs/GATEWAYS.md.
+ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api"
+
+# ============================================================
+# D1 Database bindings
+#   Free: 5GB storage, 5M rows read/day, 100K rows written/day
+#   Paid: 10GB storage, 25B rows read/day, 50M rows written/day
+# ============================================================
+[[d1_databases]]
+binding = "DB"
+database_name = "edgepay-cf"
+database_id = "REPLACE_WITH_D1_ID"  # Run: wrangler d1 create edgepay-cf
+# v0.2.2 (audit §3): preview URL builds use a separate D1 so preview
+# traffic never writes production data. Optional — omit the key entirely
+# if you do not use Workers preview URLs.
+preview_database_id = "REPLACE_WITH_D1_PREVIEW_ID"  # Run: wrangler d1 create edgepay-cf-preview
+migrations_dir = "migrations"
+
+# ============================================================
+# KV Namespace bindings
+#   Free: 100K reads/day, 1K writes/day, 1GB storage
+#   Paid: 10M reads/day, 1M writes/day, 1GB storage (extra $0.50/GB-mo)
+# ============================================================
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_ID"  # Run: wrangler kv namespace create KV
+preview_id = "REPLACE_WITH_PREVIEW_KV_ID"
+
+# ============================================================
+# R2 Storage bindings
+#   Free: 10GB storage, 1M Class A ops, 10M Class B ops/month, 0 egress
+# ============================================================
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "edgepay-uploads"
+preview_bucket_name = "edgepay-uploads-preview"
+
+# ============================================================
+# Queues (requires Workers Paid plan)
+#   - webhook-out: outbound webhook deliveries (with retry)
+#   - email-out: outbound email queue
+#   - sms-parse: SMS verification queue
+# ============================================================
+[[queues.producers]]
+queue = "webhook-out"
+binding = "WEBHOOK_QUEUE"
+
+[[queues.producers]]
+queue = "email-out"
+binding = "EMAIL_QUEUE"
+
+[[queues.producers]]
+queue = "sms-parse"
+binding = "SMS_QUEUE"
+
+[[queues.consumers]]
+queue = "webhook-out"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "webhook-out-dlq"
+
+[[queues.consumers]]
+queue = "email-out"
+max_batch_size = 25
+max_batch_timeout = 30
+max_retries = 5
+
+[[queues.consumers]]
+queue = "sms-parse"
+max_batch_size = 50
+max_batch_timeout = 10
+max_retries = 3
+
+# ============================================================
+# Cron Triggers — 3 schedules (v0.2.1, consolidated from 5).
+#   Refund reconciliation is instance-per-refund workflow-driven;
+#   per-merchant scheduled work runs on LedgerDO alarms.
+#   The free plan allows only 5 crons PER ACCOUNT — 3 here leaves room.
+# ============================================================
+[triggers]
+crons = [
+  "*/5 * * * *",      # Every 5 min: intent expiry, SMS verification
+  "0 * * * *",        # Hourly: currency update, domain re-verify, posting replay (fast heal)
+  "0 2 * * *",        # Daily 2am: reconciliation sweep workflow + update check
+]
+
+# ============================================================
+# Observability
+# ============================================================
+[observability]
+enabled = true
+# v0.2.2 (audit P1): Workers Logs sampling moved under [observability.logs]
+# (top-level head_sampling_rate still works but is the legacy form).
+[observability.logs]
+head_sampling_rate = 1  # Sample 100% of requests into Workers Logs
+# v0.2.2 (audit P1): Workers Traces — sampled at 1% (high-traffic friendly).
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.01
+
+# ============================================================
+# Smart Placement (run Worker near DB instead of near client)
+# ============================================================
+[placement]
+mode = "smart"
+
+# ============================================================
+# Durable Objects — ONE per-tenant LedgerDO per merchant.
+#   Owns the merchant's ENTIRE chart: a multi-account posting is a
+#   single atomic call (no per-account fan-out -> no atomicity gap).
+#
+# COST MATH (corrected in v0.2.1 — v0.2.0 was ~30x low):
+#   1 DO request per posting + reads. At 10K tx/day ≈ 310K requests/mo
+#   ≈ $0.05 requests + duration ≈ well under $1/mo. At 100K tx/day
+#   ≈ 3.1M/mo ≈ $0.47 requests + duration. (Verify against current
+#   pricing: $0.15/M requests + $12.50/M GB-s.) The per-tenant design
+#   is 3x CHEAPER than per-account (which needs one request per entry).
+#   Free tier: 100K DO requests/day — comfortably covers ~5K tx/day.
+# ============================================================
+[[durable_objects.bindings]]
+name = "LEDGER_DO"
+class_name = "LedgerDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LedgerDO"]
+
+# ============================================================
+# Workers Workflows — durable multi-step orchestration
+#   - refund-reconciliation: instance-per-refund, bounded poll loop,
+#     halts as `errored` (= the DLQ, with alerting) after ~24h
+#   - reconciliation-sweep: daily pending replay + consistency verify
+#     + stuck refund re-drive
+# ============================================================
+[[workflows]]
+name = "refund-reconciliation"
+binding = "REFUND_WORKFLOW"
+class_name = "RefundReconciliationWorkflow"
+
+[[workflows]]
+name = "reconciliation-sweep"
+binding = "SWEEP_WORKFLOW"
+class_name = "ReconciliationSweepWorkflow"
+
+# ============================================================
+# Native Ratelimit bindings — PER-API-KEY limits (edge rules can only
+# express per-IP). Mounts: 120 reads/min, 30 writes/min per key.
+# Keep ONE free edge rule for volumetric per-IP abuse (dashboard).
+# ============================================================
+[[ratelimits]]
+name = "RATE_LIMIT_READ"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[ratelimits]]
+name = "RATE_LIMIT_WRITE"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }
+
+# ============================================================
+# Analytics Engine — per-merchant metrics without touching D1
+#   (parse-miss rate, webhook lag, reconciliation runs, paging events)
+#   Free: 100K datapoints/day
+# ============================================================
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "edgepay_metrics"
+
+# ============================================================
+# Workers Static Assets — serves checkout CSS/JS with zero subrequests
+#   Eliminates the R2-binding dance for assets that ship with the Worker
+# ============================================================
+[assets]
+directory = "./public/assets"
+binding = "ASSETS"
+not_found_handling = "none"
+# v0.2.1: the Worker ALWAYS runs first — asset matching can never shadow
+# API/webhook/checkout routes (even if a file with a matching name is ever
+# added to ./public/assets). The Worker delegates /assets/* to the ASSETS
+# binding itself (see src/index.ts). Boolean form for maximum wrangler-version
+# compatibility; the glob-array form is equivalent but newer.
+run_worker_first = true
+
+# ============================================================
+# Workers AI — SMS parser long-tail fallback
+#   Free: 10K neurons/day. Paid: $0.01/1K neurons (roughly)
+#   NOTE: Commented out by default — uncomment + run `wrangler deploy`
+#   after your first deployment. Miniflare (test runner) doesn't support
+#   the AI binding natively, so we keep it out of the default config.
+# ============================================================
+# [ai]
+# binding = "AI"
+
+# ============================================================
+# Cloudflare Access — Zero Trust identity proxy for /admin/*
+#   Configured via Cloudflare dashboard (not wrangler.toml)
+#   - Create Access Application for https://edgepay-cf.example.com/admin/*
+#   - Identity providers: Google, GitHub, Okta, SAML
+#   - MFA: enforced at the Access layer
+#   - The Worker sees CF-Access-Authenticated-Email header on every request
+# ============================================================
+
+# ============================================================
+# Native Rate Limiting Rules (configured via dashboard, not wrangler.toml)
+#   Free zone: 1 rule. Pro zone ($25/mo): 10 rules.
+#   Recommended rules:
+#     - /api/v1/*       → 120 req/min per IP
+#     - /api/v1/payments POST → 30 req/min per IP
+#     - /api/admin/v1/* → 60 req/min per IP
+#     - /api/mobile/v1/* → 60 req/min per IP
+#     - /install POST   → 3 req/hour per IP
+#     - /api/v1/auth/login POST → 5 req/5min per IP
+#   These run BEFORE the Worker — zero CPU cost, zero KV writes.
+# ============================================================
+
+# ============================================================
+# Cloudflare for SaaS Custom Hostnames (configured via API)
+#   - POST /zones/{zone}/custom_hostnames to provision per-brand hostnames
+#   - Automatic DV certificate issuance + renewal
+#   - Replaces the DNS TXT verification pipeline (Ch 8.4)
+#   - See src/services/custom-hostnames.ts for the integration
+# ============================================================
+
+# ============================================================
+# Environment: development
+#
+# v0.2.2 (audit P0): BINDINGS ARE NOT INHERITED BY WRANGLER ENVIRONMENTS
+# (https://developers.cloudflare.com/workers/wrangler/environments/ —
+# "bindings and environment variables are non-inheritable and must be
+# specified per environment"). Previously env.dev declared only D1/KV/R2,
+# so `wrangler deploy --env dev` produced a Worker where env.LEDGER_DO was
+# undefined — every ledger call 500s. All bindings are now declared
+# explicitly per environment. (compatibility_date/flags, placement,
+# observability and triggers ARE inherited; they are repeated below only
+# where the audit's P0 asks for explicit pinning — same values.)
+#
+# Ops note: deploying this env requires the dev Queues to exist:
+#   wrangler queues create webhook-out / webhook-out-dlq / email-out / sms-parse
+# ============================================================
+[env.dev]
+name = "edgepay-cf-dev"
+# v0.2.3: vars are NON-INHERITABLE in wrangler environments — an env that
+# declares [vars] gets ONLY those vars (previously this block carried 5 of
+# 18, leaving APP_NAME/DEFAULT_CURRENCY/JWT_ISSUER/… undefined at runtime in
+# dev/staging). The full set is now declared per environment.
+vars = { ENVIRONMENT = "development", APP_NAME = "EdgePay", APP_VERSION = "0.2.3", APP_URL = "http://localhost:8787", APP_DOMAIN = "localhost", LOG_LEVEL = "debug", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "http://localhost:3000", ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api" }
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "edgepay-cf-dev"
+database_id = "REPLACE_WITH_DEV_D1_ID"
+preview_database_id = "REPLACE_WITH_DEV_D1_PREVIEW_ID"
+migrations_dir = "migrations"
+
+[[env.dev.kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_DEV_KV_ID"
+
+[[env.dev.r2_buckets]]
+binding = "R2"
+bucket_name = "edgepay-uploads-dev"
+
+[[env.dev.durable_objects.bindings]]
+name = "LEDGER_DO"
+class_name = "LedgerDO"
+
+# DO class migrations are inherited from the top-level [[migrations]] block
+# (they are NOT in the docs' non-inheritable list) — repeating them here
+# would duplicate tag v1.
+
+[[env.dev.workflows]]
+name = "refund-reconciliation"
+binding = "REFUND_WORKFLOW"
+class_name = "RefundReconciliationWorkflow"
+
+[[env.dev.workflows]]
+name = "reconciliation-sweep"
+binding = "SWEEP_WORKFLOW"
+class_name = "ReconciliationSweepWorkflow"
+
+[[env.dev.queues.producers]]
+queue = "webhook-out"
+binding = "WEBHOOK_QUEUE"
+
+[[env.dev.queues.producers]]
+queue = "email-out"
+binding = "EMAIL_QUEUE"
+
+[[env.dev.queues.producers]]
+queue = "sms-parse"
+binding = "SMS_QUEUE"
+
+[[env.dev.queues.consumers]]
+queue = "webhook-out"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "webhook-out-dlq"
+
+[[env.dev.queues.consumers]]
+queue = "email-out"
+max_batch_size = 25
+max_batch_timeout = 30
+max_retries = 5
+
+[[env.dev.queues.consumers]]
+queue = "sms-parse"
+max_batch_size = 50
+max_batch_timeout = 10
+max_retries = 3
+
+[[env.dev.ratelimits]]
+name = "RATE_LIMIT_READ"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[env.dev.ratelimits]]
+name = "RATE_LIMIT_WRITE"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }
+
+[[env.dev.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "edgepay_metrics"
+
+[env.dev.assets]
+directory = "./public/assets"
+binding = "ASSETS"
+not_found_handling = "none"
+run_worker_first = true
+
+[env.dev.placement]
+mode = "smart"
+
+[env.dev.observability]
+enabled = true
+
+# ============================================================
+# Environment: staging — same full binding treatment as dev (audit P0)
+# ============================================================
+[env.staging]
+name = "edgepay-cf-staging"
+# v0.2.3: full var set (vars are non-inheritable — see env.dev note).
+vars = { ENVIRONMENT = "staging", APP_NAME = "EdgePay", APP_VERSION = "0.2.3", APP_URL = "https://edgepay-cf-staging.<your-subdomain>.workers.dev", APP_DOMAIN = "edgepay-cf-staging.<your-subdomain>.workers.dev", LOG_LEVEL = "info", DEFAULT_CURRENCY = "BDT", DEFAULT_TIMEZONE = "Asia/Dhaka", DEFAULT_LANGUAGE = "en", JWT_ISSUER = "edgepay-cf", JWT_TTL_SECONDS = "3600", REFRESH_TOKEN_TTL_SECONDS = "2592000", WEBHOOK_MAX_RETRIES = "3", WEBHOOK_BACKOFF_MS = "60000", RATE_LIMIT_WINDOW_SECONDS = "60", RATE_LIMIT_MAX_REQUESTS = "120", SESSION_TTL_SECONDS = "86400", CF_ACCESS_TEAM_DOMAIN = "", CF_ACCESS_AUD_TAG = "", ALLOWED_ORIGINS = "", ENABLED_GATEWAYS = "stripe,paypal,bkash-api,razorpay,nagad-merchant-api" }
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "edgepay-cf-staging"
+database_id = "REPLACE_WITH_STAGING_D1_ID"
+preview_database_id = "REPLACE_WITH_STAGING_D1_PREVIEW_ID"
+migrations_dir = "migrations"
+
+[[env.staging.kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_STAGING_KV_ID"
+
+[[env.staging.r2_buckets]]
+binding = "R2"
+bucket_name = "edgepay-uploads-staging"
+
+[[env.staging.durable_objects.bindings]]
+name = "LEDGER_DO"
+class_name = "LedgerDO"
+
+[[env.staging.workflows]]
+name = "refund-reconciliation"
+binding = "REFUND_WORKFLOW"
+class_name = "RefundReconciliationWorkflow"
+
+[[env.staging.workflows]]
+name = "reconciliation-sweep"
+binding = "SWEEP_WORKFLOW"
+class_name = "ReconciliationSweepWorkflow"
+
+[[env.staging.queues.producers]]
+queue = "webhook-out"
+binding = "WEBHOOK_QUEUE"
+
+[[env.staging.queues.producers]]
+queue = "email-out"
+binding = "EMAIL_QUEUE"
+
+[[env.staging.queues.producers]]
+queue = "sms-parse"
+binding = "SMS_QUEUE"
+
+[[env.staging.queues.consumers]]
+queue = "webhook-out"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "webhook-out-dlq"
+
+[[env.staging.queues.consumers]]
+queue = "email-out"
+max_batch_size = 25
+max_batch_timeout = 30
+max_retries = 5
+
+[[env.staging.queues.consumers]]
+queue = "sms-parse"
+max_batch_size = 50
+max_batch_timeout = 10
+max_retries = 3
+
+[[env.staging.ratelimits]]
+name = "RATE_LIMIT_READ"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[env.staging.ratelimits]]
+name = "RATE_LIMIT_WRITE"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }
+
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "edgepay_metrics"
+
+[env.staging.assets]
+directory = "./public/assets"
+binding = "ASSETS"
+not_found_handling = "none"
+run_worker_first = true
+
+[env.staging.placement]
+mode = "smart"
+
+[env.staging.observability]
+enabled = true

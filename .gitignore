@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.env
+.env.local
+.DS_Store
+*.tgz
+coverage/
+.nyc_output/
