@@ -51,7 +51,7 @@ class PlannedGatewayStub extends BaseGatewayAdapter {
       slug: this.entry.slug,
       version: this.entry.version,
       description: this.entry.description,
-      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port (planned)',
+      author: 'EdgePay Gateway Suite (AGPLv3) (planned)',
       type: 'gateway',
       supported_currencies: [...this.entry.currencies],
       capabilities: [...this.entry.capabilities],

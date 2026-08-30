@@ -47,8 +47,8 @@ npm install
 npx wrangler login                       # opens the browser
 
 # Create the resources (all free-tier):
-npx wrangler d1 create edgepay-cf        # paste database_id → wrangler.toml
-npx wrangler kv namespace create KV      # paste id → wrangler.toml
+npx wrangler d1 create edgepay-cf        # paste database_id → wrangler.jsonc
+npx wrangler kv namespace create KV      # paste id → wrangler.jsonc
 npx wrangler r2 bucket create edgepay-uploads
 npx wrangler queues create webhook-out
 npx wrangler queues create webhook-out-dlq

@@ -8,7 +8,12 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run db:migrations:apply && wrangler deploy",
+    "deploy:dev": "npm run db:migrations:apply:dev && wrangler deploy --config wrangler.dev.jsonc",
+    "deploy:staging": "npm run db:migrations:apply:staging && wrangler deploy --config wrangler.staging.jsonc",
     "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
+    "db:migrations:apply:dev": "wrangler d1 migrations apply DB --remote --config wrangler.dev.jsonc",
+    "db:migrations:apply:staging": "wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc",
+    "cf-typegen": "wrangler types",
     "tail": "wrangler tail",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -21,21 +26,11 @@
     "format": "prettier --write 'src/**/*.ts'"
   },
   "cloudflare": {
-    "label": "EdgePay — Self-hosted Payment Ledger",
+    "label": "EdgePay — Self-hosted Payment Gateway",
     "products": [
       "Workers",
       "D1",
-      "Durable Objects",
-      "Queues",
-      "Workflows",
-      "KV",
-      "R2",
-      "Workers Static Assets"
-    ],
-    "categories": [
-      "payments",
-      "fintech",
-      "saas"
+      "Durable Objects"
     ],
     "docs_url": "https://github.com/JonyBepary/edgepay-cf/tree/main/docs",
     "bindings": {

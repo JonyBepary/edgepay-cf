@@ -13,7 +13,7 @@
  * state must persist across test FILES. Tests isolate via unique merchant IDs
  * per file (910001+) and tx_id keys that embed the merchant id.
  *
- * Tests run INSIDE workerd with the real bindings from wrangler.toml — D1,
+ * Tests run INSIDE workerd with the real bindings from wrangler.jsonc — D1,
  * Durable Objects (the per-tenant LedgerDO), Workflows, Queues, KV,
  * Analytics Engine. D1 migrations are applied once per worker (see
  * tests/setup/migrations.ts).
@@ -33,7 +33,7 @@ export default defineConfig({
   },
   plugins: [
     cloudflareTest({
-      wrangler: { configPath: './wrangler.toml' },
+      wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
         compatibilityFlags: ['nodejs_compat'],
         // v0.2.2 (audit P2): test value for the CORS allowlist — lets the

@@ -4,7 +4,7 @@
  * This file declares the shape of `env` available in every Worker fetch() handler,
  * scheduled() cron handler, and queue() consumer. Secrets (JWT_SECRET, APP_KEY,
  * ENCRYPTION_KEY, SMTP password, gateway API keys) MUST be set via
- * `wrangler secret put NAME` — never in wrangler.toml.
+ * `wrangler secret put NAME` — never in wrangler.jsonc.
  */
 
 /**
@@ -60,7 +60,7 @@ export interface D1ExecResult {
  * The full env shape passed to every Worker handler.
  */
 export interface Env {
-  // Non-secret vars (from wrangler.toml [vars])
+  // Non-secret vars (from wrangler.jsonc "vars")
   ENVIRONMENT: 'development' | 'staging' | 'production';
   APP_NAME: string;
   APP_VERSION: string;
@@ -115,7 +115,7 @@ export interface Env {
   BREAK_GLASS_CLIENT_ID?: string;
   BREAK_GLASS_CLIENT_SECRET?: string;
 
-  // Workers AI (optional — the binding is commented out in wrangler.toml
+  // Workers AI (optional — the binding is commented out in wrangler.jsonc
   // until first deploy; SMS parsing falls back to manual review without it)
   AI?: Ai;
 

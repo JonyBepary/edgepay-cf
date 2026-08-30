@@ -1,5 +1,5 @@
 /**
- * SSLCommerz gateway adapter — hand port of EdgePay-Gateway-Plugin/sslcommerz.
+ * SSLCommerz gateway adapter — hand port of the EdgePay gateway suite
  *
  * Flow (hosted checkout, form-encoded):
  *   1. POST /gwprocess/v4/api.php (store credentials in body) -> GatewayPageURL
@@ -50,7 +50,7 @@ export class SslCommerzGateway extends BaseGatewayAdapter {
       slug: 'sslcommerz',
       version: '1.0.0',
       description: 'SSLCommerz payment gateway for Bangladesh',
-      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port',
+      author: 'EdgePay Gateway Suite (AGPLv3)',
       type: 'gateway',
       supported_currencies: ['BDT', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD'],
       capabilities: ['verification'],

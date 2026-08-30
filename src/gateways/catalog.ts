@@ -1,8 +1,8 @@
 /**
  * Gateway catalog reader — typed access to the 123-provider catalog.
  *
- * The catalog data (catalog.data.ts) is generated from the
- * EdgePay-Gateway-Plugin repository. This module is the human-facing API over
+ * The catalog data (catalog.data.ts) is generated from the upstream PHP
+ * gateway-plugin repository. This module is the human-facing API over
  * it: lookups, alias resolution, category grouping, and the expanded field
  * definitions the admin install UI renders.
  *

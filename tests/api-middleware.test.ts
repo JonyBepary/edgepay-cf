@@ -10,7 +10,7 @@
  *      /api/* and /webhook/* (nonce CSP + frame/nosniff/referrer headers).
  *   3. The zod request schemas backing POST /payments and POST /refunds.
  *   4. Miniflare binding MERGE semantics — the single overridden var must
- *      not wipe the wrangler.toml [vars] (health reports APP_VERSION).
+ *      not wipe the wrangler.jsonc vars (health reports APP_VERSION).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -136,7 +136,7 @@ describe('zod request schemas (audit P2)', () => {
 });
 
 describe('miniflare bindings merge (test-infrastructure guard)', () => {
-  it('the ALLOWED_ORIGINS test override does NOT wipe wrangler.toml [vars]', async () => {
+  it('the ALLOWED_ORIGINS test override does NOT wipe wrangler.jsonc vars', async () => {
     // If miniflare `bindings` REPLACED (instead of merged with) the wrangler
     // vars, APP_VERSION would be undefined here.
     const res = await SELF.fetch('http://localhost/api/v1/health');

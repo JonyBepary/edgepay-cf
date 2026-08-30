@@ -1,7 +1,7 @@
 /**
  * EdgePay gateway catalog — GENERATED FILE, DO NOT EDIT BY HAND.
  *
- * Source of truth: the EdgePay-Gateway-Plugin repository (123 provider
+ * Source of truth: the upstream PHP gateway-plugin repository (123 provider
  * modules). Regenerate with:
  *   python3 scripts/port-gateways/analyze.py <plugin-repo> scripts/port-gateways/analysis.json
  *   python3 scripts/port-gateways/build-catalog.py scripts/port-gateways/analysis.json src/gateways/catalog.data.ts 0.3.0

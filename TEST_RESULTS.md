@@ -18,8 +18,8 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 
 ### Deploy to Cloudflare button
 
-- README badge + `deploy.workers.cloudflare.com/?url=<repo>` (template URL:
-  replace `JonyBepary`).
+- README badge + `deploy.workers.cloudflare.com/?url=<repo>` (points at
+  `JonyBepary/edgepay-cf`).
 - `package.json → cloudflare` metadata (label/products/categories/docs_url) +
   `cloudflare.bindings` descriptions for every setup-page field — including
   the gateway-plugin selector `ENABLED_GATEWAYS` and the three required
@@ -72,8 +72,9 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 Workers ran with `APP_NAME`/`DEFAULT_CURRENCY`/`JWT_ISSUER`/… undefined at
 runtime. Both environments now declare the complete var set (verified in
 dry-run output: `SESSION_TTL_SECONDS`, `ENABLED_GATEWAYS`, … present for dev
-and staging). APP_VERSION bumped to 0.2.3 everywhere (wrangler.toml ×3,
-package.json, openapi info, tests).
+and staging). APP_VERSION bumped to 0.2.3 everywhere (the wrangler config ×3
+environments — now `wrangler.jsonc` + `wrangler.dev.jsonc` +
+`wrangler.staging.jsonc`, package.json, openapi info, tests).
 
 ### New test suites (22 tests)
 
@@ -112,18 +113,18 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 
 ## What v0.2.2 changed (the audit's fixes, implemented and verified)
 
-### Branding normalization (audit §7 — reproduced faithfully)
+### Rename upstream → EdgePay (audit §7 — reproduced faithfully)
 
 The audited state was recreated from the v0.2.1 tree: ordered sed
-(`BRAND_NORMALIZATION → 
-BRAND_NORMALIZATION`) across the same 40 files, then the four intentional
+(`UPPER→EDGEUPPER → Pascal→EdgePascal → edgepay→edgepay →
+lower→edgelower`) across the same 40 files, then the four intentional
 retentions restored exactly as §7 documents them:
 
 | Retained | Where |
 |---|---|
-| `op_` table prefix + "original upstream schema" comment | `migrations/0001_initial_schema.sql:3-5` |
-| `legacy_trx_id` dual-read fallback in the Stripe extractor | `src/controllers/webhooks.ts` |
-| Historical upstream reference, annotated "(now EdgePay)" | `README.md:3` |
+| `op_` table prefix + original-schema comment | `migrations/0001_initial_schema.sql:3-5` |
+| `edgepay_trx_id` extractor in the Stripe webhook path | `src/controllers/webhooks.ts` |
+| Original PHP project lineage note | `README.md:3` |
 | Historical SQL comments | `migrations/` |
 
 Post-rename grep count matches §7's verification (4 intentional hits).

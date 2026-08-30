@@ -104,7 +104,7 @@ export class SmsParserService {
       // (no network hop — model runs on Cloudflare's GPU infrastructure
       // colocated with the Worker)
       const ai = this.env.AI;
-    if (!ai) throw new Error('AI binding not configured (uncomment [ai] in wrangler.toml)');
+    if (!ai) throw new Error('AI binding not configured (uncomment "ai" in wrangler.jsonc)');
     const response = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
         messages: [
           { role: 'system', content: AI_FALLBACK_PROMPT },

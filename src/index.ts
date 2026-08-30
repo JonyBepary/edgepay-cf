@@ -27,7 +27,7 @@
  *
  * Plus: Durable Object class (LedgerAccountDO) + Workflow class
  * (RefundReconciliationWorkflow) — these are not "handlers" but are
- * registered via the `class` export + wrangler.toml bindings.
+ * registered via the `class` export + wrangler.jsonc bindings.
  */
 
 import { Hono } from 'hono';

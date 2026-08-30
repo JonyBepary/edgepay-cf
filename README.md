@@ -2,46 +2,52 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
 
-A HonoJS + Cloudflare Workers port —
-the open-source, self-hosted payment gateway automation platform for BD/AF mobile-payment
-merchants (bKash, Nagad, Rocket, Razorpay, Stripe, PayPal…). EdgePay-CF runs entirely on
-Cloudflare's edge network (Workers + D1 + Durable Objects + KV + R2 + Queues + Workflows),
-and runs **fully on the free tier** (~3.3K payments/day practical ceiling — see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#free-tier-budget)).
+<!-- dash-content-start -->
+
+EdgePay is an open-source, self-hosted payment-gateway automation platform for
+BD/AF mobile-payment merchants (bKash, Nagad, Rocket, SSLCommerz, Razorpay,
+Stripe, PayPal…). EdgePay-CF is the edge-native rebuild of that platform on
+HonoJS + Cloudflare Workers (Workers + D1 + Durable Objects + KV + R2 + Queues +
+Workflows), and runs **fully on the free tier** (~3.3K payments/day practical
+ceiling — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#free-tier-budget)).
 
 > **One-click deploy**: click the button above, pick your **gateway plugins**
 > (`ENABLED_GATEWAYS`), paste three generated secrets, and Cloudflare provisions
-> D1, KV, R2, Queues, Workflows and Durable Objects, applies migrations and deploys —
-> no local tooling needed. Full walkthrough: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+> D1, KV, R2, Queues, Workflows and Durable Objects, applies migrations and
+> deploys — no local tooling needed. Full walkthrough:
+> [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## What's included
 
-- **123-gateway catalog** (v0.3.0): the full port of the EdgePay-Gateway-Plugin
-  suite — 86 adapters with working payment flows (BD MFS complete: bKash, Nagad,
-  Rocket, SSLCommerz, Aamarpay, ShurjoPay, PortWallet, CellFin, NexusPay, OK
-  Wallet, Upay + global/regional rails) and 37 `planned` entries, all selectable
-  per deployment via the `ENABLED_GATEWAYS` plugin gate
-  ([docs/GATEWAYS.md](docs/GATEWAYS.md))
+- **123-gateway catalog** (v0.3.0): 86 adapters with working payment flows
+  (BD MFS complete: bKash, Nagad, Rocket, SSLCommerz, Aamarpay, ShurjoPay,
+  PortWallet, CellFin, NexusPay, OK Wallet, Upay + global/regional rails) and
+  37 `planned` entries, all selectable per deployment via the
+  `ENABLED_GATEWAYS` plugin gate ([docs/GATEWAYS.md](docs/GATEWAYS.md))
 - **Interactive API reference** — OpenAPI 3.1 served at `/api/openapi.json`,
-  rendered by [Scalar](https://scalar.com) at `/api/reference` on your own deployment
+  rendered by [Scalar](https://scalar.com) at `/api/reference` on your own
+  deployment
 - **Multi-brand domain routing** — per-brand custom domain isolation (KV cache +
   Cloudflare for SaaS custom hostnames)
-- **Double-entry ledger** (GAAP-compliant) — one per-tenant LedgerDO per merchant,
-  6-step posting protocol with dedup + heal convergence
+- **Double-entry ledger** (GAAP-compliant) — one per-tenant LedgerDO per
+  merchant, 6-step posting protocol with dedup + heal convergence
   ([docs/POSTING-PROTOCOL.md](docs/POSTING-PROTOCOL.md))
-- **Webhooks, both directions** — HMAC-SHA256-signed outbound events (queued, retried,
-  DLQ) and verified inbound gateway webhooks (IP allowlist → geo fallback → signature)
-  ([docs/WEBHOOKS.md](docs/WEBHOOKS.md))
-- **JWT auth** (mobile companion, OTP device pairing, SMS forwarding + AI fallback parsing)
-  + **Bearer API keys** with read/write/admin scopes (merchant + admin APIs)
-- **Security** — Cloudflare Access fail-closed on the admin surface, AES-256-GCM PII +
-  credential encryption, CSRF, nonce-CSP/HSTS on JSON surfaces
-  ([docs/SECURITY.md](docs/SECURITY.md))
+- **Webhooks, both directions** — HMAC-SHA256-signed outbound events (queued,
+  retried, DLQ) and verified inbound gateway webhooks (IP allowlist → geo
+  fallback → signature) ([docs/WEBHOOKS.md](docs/WEBHOOKS.md))
+- **JWT auth** (mobile companion, OTP device pairing, SMS forwarding + AI
+  fallback parsing) + **Bearer API keys** with read/write/admin scopes
+  (merchant + admin APIs)
+- **Security** — Cloudflare Access fail-closed on the admin surface,
+  AES-256-GCM PII + credential encryption, CSRF, nonce-CSP/HSTS on JSON
+  surfaces ([docs/SECURITY.md](docs/SECURITY.md))
 - **3 Cron Triggers, 3 Queue consumers, 2 Workflows** — refund reconciliation
   (instance-per-refund), daily reconciliation sweep, intent expiry
 - **D1 schema** — 53 tables ([migrations/](migrations/))
 - **zod request validation** on money-critical routes, idempotency keys,
   native Ratelimit bindings per API key
+
+<!-- dash-content-end -->
 
 ## Documentation
 
@@ -79,7 +85,7 @@ edgepay-cf/
 │   │   └── install.ts              # /install wizard
 │   ├── services/                   # payment, ledger, refund, reconciliation,
 │   │                               # webhook-dispatcher, custom-hostnames, sms…
-│   ├── gateways/                   # base.ts + 5 adapters + enabled.ts (selection)
+│   ├── gateways/                   # base.ts + adapters + enabled.ts (selection)
 │   ├── do/ledger-do.ts             # Per-tenant LedgerDO (posting protocol)
 │   ├── workflows/                  # refund-reconciliation, reconciliation-sweep
 │   ├── cron/handler.ts             # 3 cron schedules
@@ -88,7 +94,9 @@ edgepay-cf/
 ├── db/seeds.sql
 ├── tests/                          # 11 suites, 104 tests (vitest in workerd)
 ├── docs/                           # the documentation set above
-├── wrangler.toml                   # prod + dev + staging environments
+├── wrangler.jsonc                  # the deploy button reads THIS file
+├── wrangler.dev.jsonc              # optional dev Worker  (npm run deploy:dev)
+├── wrangler.staging.jsonc          # optional staging     (npm run deploy:staging)
 ├── .dev.vars.example               # secrets template (deploy-button fields)
 └── package.json                    # incl. cloudflare.bindings descriptions
 ```
@@ -97,21 +105,19 @@ edgepay-cf/
 
 ### Option A — Deploy to Cloudflare button (recommended)
 
-1. Push this repo to **your public GitHub** (the button needs a public repo) and
-   replace `JonyBepary` in the badge URL above and in
-   `package.json → cloudflare.docs_url`.
-2. Generate the three required secrets locally:
+1. Generate the three required secrets locally:
    ```bash
    openssl rand -hex 32        # JWT_SECRET
    openssl rand -base64 32     # APP_KEY
    openssl rand -base64 32     # ENCRYPTION_KEY  (back this up!)
    ```
-3. Click **Deploy to Cloudflare**. On the setup page: pick a Worker name, set
-   **ENABLED_GATEWAYS** to the plugins you want (e.g. `bkash,nagad,rocket,sslcommerz`
-   — pick any of the 123 catalog gateways), paste the
-   secrets, deploy. D1/KV/R2/Queues/Workflows/DO are provisioned automatically and
-   migrations run as part of the deploy script.
-4. Open `https://<your-worker>.workers.dev/install` → create the super-admin →
+2. Click **Deploy to Cloudflare** (badge at the top of this README). On the
+   setup page: pick a repository + Worker name, set **ENABLED_GATEWAYS** to the
+   plugins you want (e.g. `bkash,nagad,rocket,sslcommerz` — pick any of the 123
+   catalog gateways), paste the secrets, deploy. D1/KV/R2/Queues/Workflows/DO
+   are provisioned automatically and migrations run as part of the deploy
+   script.
+3. Open `https://<your-worker>.workers.dev/install` → create the super-admin →
    configure gateway credentials in the admin UI.
 
 Details and troubleshooting: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
@@ -123,8 +129,8 @@ npm install
 npx wrangler login
 
 # Create resources (all free): D1, KV, R2, Queues
-npx wrangler d1 create edgepay-cf            # paste database_id into wrangler.toml
-npx wrangler kv namespace create KV           # paste id into wrangler.toml
+npx wrangler d1 create edgepay-cf            # paste database_id into wrangler.jsonc
+npx wrangler kv namespace create KV           # paste id into wrangler.jsonc
 npx wrangler r2 bucket create edgepay-uploads
 npx wrangler queues create webhook-out && npx wrangler queues create webhook-out-dlq
 npx wrangler queues create email-out && npx wrangler queues create sms-parse
@@ -178,12 +184,11 @@ and the $5/mo paid-tier alternative.
 
 ## License
 
-AGPL-3.0-or-later — same as the original EdgePay.
+AGPL-3.0-or-later — see [LICENSE](LICENSE).
 
-## Acknowledgments
+## Built with
 
-- Original EdgePay project: https://github.com/edgepay/EdgePay
-- Built with: [HonoJS](https://hono.dev), [Cloudflare Workers](https://workers.cloudflare.com),
-  [D1](https://developers.cloudflare.com/d1), [Durable Objects](https://developers.cloudflare.com/durable-objects),
-  [jose](https://github.com/panva/jose), [decimal.js](https://github.com/MikeMcl/decimal.js),
-  [Scalar API Reference](https://github.com/scalar/scalar)
+[HonoJS](https://hono.dev) · [Cloudflare Workers](https://workers.cloudflare.com) ·
+[D1](https://developers.cloudflare.com/d1) · [Durable Objects](https://developers.cloudflare.com/durable-objects) ·
+[jose](https://github.com/panva/jose) · [decimal.js](https://github.com/MikeMcl/decimal.js) ·
+[Scalar API Reference](https://github.com/scalar/scalar)

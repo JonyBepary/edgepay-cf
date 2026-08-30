@@ -5,10 +5,9 @@ EdgePay-CF treats every payment provider as a **plugin adapter** implementing
 `verifyWebhook()`, `refund()`, `queryRefundStatus()`, plus metadata and the
 credential field definitions the admin UI renders.
 
-**v0.3.0 ships the full 123-provider catalog** — the complete port of the
-[EdgePay-Gateway-Plugin](https://github.com/edgepay/EdgePay-Gateway-Plugin)
-suite (AGPLv3): 86 adapters with working payment flows plus 37 catalog-listed
-`planned` providers whose ports land next.
+**v0.3.0 ships the full 123-provider catalog** — 86 adapters with working
+payment flows (AGPLv3) plus 37 catalog-listed `planned` providers whose
+ports land next.
 
 - [Two-level enablement model](#two-level-enablement-model)
 - [The 123-provider catalog (v0.3.0 port)](#the-123-provider-catalog-v030-port)
@@ -197,12 +196,8 @@ Three routes, in order of effort:
 
 ## The port pipeline (regenerating adapters)
 
-The whole port is reproducible from the upstream repo:
-
-```bash
-git clone https://github.com/edgepay/EdgePay-Gateway-Plugin /tmp/plugins
-bash scripts/port-gateways/build-all.sh /tmp/plugins
-```
+The whole port is reproducible from the upstream repo (pass its path to the
+pipeline — it is not bundled with EdgePay-CF):
 
 Pipeline stages (`scripts/port-gateways/`):
 

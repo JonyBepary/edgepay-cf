@@ -1,5 +1,5 @@
 /**
- * Aamarpay gateway adapter — hand port of EdgePay-Gateway-Plugin/aamarpay.
+ * Aamarpay gateway adapter — hand port of the EdgePay gateway suite
  *
  * Flow (hosted checkout, JSON):
  *   1. POST /jsonpost.php (store credentials + signature in body) -> payment_url
@@ -46,7 +46,7 @@ export class AamarpayGateway extends BaseGatewayAdapter {
       slug: 'aamarpay',
       version: '1.0.0',
       description: 'Aamarpay payment gateway integration',
-      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port',
+      author: 'EdgePay Gateway Suite (AGPLv3)',
       type: 'gateway',
       supported_currencies: ['BDT'],
       capabilities: ['verification'],

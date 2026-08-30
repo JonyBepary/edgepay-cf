@@ -1,7 +1,7 @@
 /**
  * LedgerDO posting-protocol integration tests — REAL Durable Object + REAL
  * D1 (vitest-pool-workers runs these inside workerd with the actual
- * bindings from wrangler.toml; no mocks of the consistency surface).
+ * bindings from wrangler.jsonc; no mocks of the consistency surface).
  *
  * This is the test suite the review demanded for the two critical fixes:
  *   - fix #1 (atomicity): one per-tenant LedgerDO owns the whole chart;

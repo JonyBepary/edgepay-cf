@@ -27,13 +27,9 @@ Cloudflare's [Deploy to Cloudflare buttons](https://developers.cloudflare.com/wo
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
 ```
 
-Before sharing it, make two edits in your fork:
-
-1. Replace `JonyBepary` in the badge URL (README) with your actual
-   GitHub user/org, so the button points at **your** public repo. The button only
-   supports public github.com / gitlab.com repositories.
-2. Update `package.json → cloudflare.docs_url` to the same repo (used by the
-   setup page's "view docs" affordance).
+The button only supports public github.com / gitlab.com repositories. If you
+fork or rename, update the badge URL (README) and
+`package.json → cloudflare.docs_url` to point at **your** repo.
 
 What happens when someone (including you) clicks it:
 
@@ -54,10 +50,8 @@ runs entirely in the browser and on Cloudflare's build infrastructure.
 ## Choosing your gateway plugins
 
 The setup page's **`ENABLED_GATEWAYS`** field is the gateway-plugin selector.
-It takes a comma-separated list of slugs (friendly aliases accepted):
-
-| You type | Enables | Adapter |
-The selector accepts **any of the 123 catalog gateways** — the BD set:
+It takes a comma-separated list of slugs (friendly aliases accepted) — **any of
+the 123 catalog gateways**. The BD set:
 `bkash`/`bkash-api`, `nagad`/`nagad-merchant-api`, `rocket`, `sslcommerz`,
 `aamarpay`, `shurjopay`, `portwallet`, `cellfin`, `nexuspay`, `ok-wallet`,
 `upay`; global cards: `stripe`, `paypal`, `razorpay`, `adyen`, `2checkout`,
@@ -93,7 +87,7 @@ This is the **platform-level** gate. Merchants still install gateways and store
 credentials per-tenant (AES-256-GCM in D1) — see [GATEWAYS.md](GATEWAYS.md) for
 the full two-level model.
 
-**Changing the selection later**: edit `ENABLED_GATEWAYS` in `wrangler.toml`
+**Changing the selection later**: edit `ENABLED_GATEWAYS` in `wrangler.jsonc`
 inside the repo the button created for you and push — Workers Builds redeploys
 automatically. Confirm the active set any time with:
 
@@ -121,12 +115,12 @@ service token, custom-hostname API credentials, and `PBKDF2_ITERATIONS`
 
 ## What the button provisions
 
-Cloudflare reads `wrangler.toml` and provisions every declared resource, then
+Cloudflare reads `wrangler.jsonc` and provisions every declared resource, then
 rewrites the config in the cloned repo with the concrete IDs:
 
 | Resource | Binding(s) | Free-tier allowance |
 |----------|-----------|---------------------|
-| D1 database (+ preview DB) | `DB` | 5 GB total, 5M rows read + 100K rows written/day |
+| D1 database | `DB` | 5 GB total, 5M rows read + 100K rows written/day |
 | KV namespace | `KV` | 100K reads + 1K writes/day |
 | R2 bucket | `R2` | 10 GB, 1M Class A + 10M Class B ops/mo |
 | Queues (4: webhook-out, its DLQ, email-out, sms-parse) | `WEBHOOK_QUEUE`, `EMAIL_QUEUE`, `SMS_QUEUE` | 10K ops/day (the binding constraint) |
@@ -173,9 +167,8 @@ The button is a convenience, not a requirement. The CLI path:
 npm install
 npx wrangler login
 
-# Create named resources and paste the returned IDs into wrangler.toml
+# Create named resources and paste the returned IDs into wrangler.jsonc
 npx wrangler d1 create edgepay-cf
-npx wrangler d1 create edgepay-cf-preview      # optional preview-URL DB
 npx wrangler kv namespace create KV
 npx wrangler r2 bucket create edgepay-uploads
 npx wrangler queues create webhook-out
@@ -198,25 +191,23 @@ migration step targets the `DB` **binding** (`wrangler d1 migrations apply DB
 
 ## Environments: dev / staging / prod
 
-`wrangler.toml` declares three environments. Two rules matter (both from the
-[Wrangler environments docs](https://developers.cloudflare.com/workers/wrangler/environments/)):
-
-- **Bindings and vars are NOT inherited** — each environment declares its own
-  full set (a v0.2.2 audit fixed the bindings half of this; v0.3.0 completed it
-  for `[vars]`, which previously shipped only 5 of 18 values to dev/staging).
-- Deploy an environment with `--env`:
+Production is the top level of `wrangler.jsonc` (the only file the Deploy
+to Cloudflare button reads). Dev and staging are **self-contained separate
+configs** — because bindings and vars are never inherited across Wrangler
+environments, each file declares its own complete set
+([Wrangler environments docs](https://developers.cloudflare.com/workers/wrangler/environments/)):
 
 ```bash
-npx wrangler deploy --env dev       # edgepay-cf-dev
-npx wrangler deploy --env staging   # edgepay-cf-staging
+npm run deploy:dev       # wrangler deploy --config wrangler.dev.jsonc     -> edgepay-cf-dev
+npm run deploy:staging   # wrangler deploy --config wrangler.staging.jsonc -> edgepay-cf-staging
 ```
 
 Dev/staging use suffixed resource names (`edgepay-cf-dev`, `edgepay-uploads-dev`,
-…) and their own `REPLACE_WITH_*` ID placeholders — fill those in before
+…) and their own placeholder IDs in their config files — fill those in before
 deploying those environments, and create their queues
 (`wrangler queues create webhook-out …` per environment prefix) since queue
 names are account-global. Secrets are per-Worker too: set them once per
-environment with `npx wrangler secret put NAME --env dev`.
+environment with `wrangler secret put NAME --config wrangler.dev.jsonc`.
 
 ## Free-tier budget
 
@@ -242,7 +233,7 @@ Two free-tier settings to change deliberately:
   the free plan's 10ms CPU budget. Stored password hashes embed their own
   iteration count, so lowering this only affects *new* hashes; existing ones
   keep verifying at their original cost.
-- **Workers AI binding** — `[ai]` is commented out in `wrangler.toml` because
+- **Workers AI binding** — `"ai"` is commented out in `wrangler.jsonc` because
   the test runner does not emulate it. After your first deploy, uncomment the
   binding and redeploy to enable AI fallback SMS parsing (regex templates remain
   the primary path and work without it).
@@ -255,10 +246,10 @@ supported posture, not a demo mode.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Deploy fails at the migrations step | `database_id` still a placeholder in the repo the button created (provisioning normally rewrites it) | `npx wrangler d1 list`, paste the id into `wrangler.toml`, push |
+| Deploy fails at the migrations step | `database_id` still a placeholder in the repo the button created (provisioning normally rewrites it) | `npx wrangler d1 list`, paste the id into `wrangler.jsonc`, push |
 | `/api/admin/*` returns 503 | Cloudflare Access vars empty (fail closed) | Set `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD_TAG`, see [SECURITY.md](SECURITY.md) |
 | `422 GATEWAY_DISABLED` on payments | Gateway slug not in `ENABLED_GATEWAYS` | Add it to the var (or check spelling via `GET /api/v1/gateways` → `dropped_aliases`) |
 | Inbound webhook 404 `UNKNOWN_GATEWAY` | Slug not registered **or** disabled — intentionally indistinguishable | Same as above; only enabled gateways accept webhooks |
 | Install wizard says secrets `weak`/`missing` | Placeholder-length secrets | `openssl rand` values from the table above; re-put via `wrangler secret put` |
-| Dev/staging Worker 500s on first call | Env resource IDs still placeholders | Fill the `REPLACE_WITH_*` values for that environment |
-| Queues consumer errors after first deploy | Queues not yet created for that environment | `wrangler queues create` each queue (names in `wrangler.toml`) |
+| Dev/staging Worker 500s on first call | Env resource IDs still placeholders | Fill the placeholder IDs in that environment's `wrangler.*.jsonc` |
+| Queues consumer errors after first deploy | Queues not yet created for that environment | `wrangler queues create` each queue (names in the wrangler config) |

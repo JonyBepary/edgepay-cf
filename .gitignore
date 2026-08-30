@@ -2,10 +2,16 @@ node_modules/
 dist/
 .wrangler/
 .dev.vars
+!.dev.vars.example
 *.log
 .env
 .env.local
+!.env.example
 .DS_Store
 *.tgz
 coverage/
 .nyc_output/
+
+# port-pipeline generated intermediates (regenerate via scripts/port-gateways/build-all.sh)
+scripts/port-gateways/analysis.json
+scripts/port-gateways/analysis-report.txt

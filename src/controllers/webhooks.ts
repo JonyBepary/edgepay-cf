@@ -208,12 +208,11 @@ webhookRoutes.post('/:gateway', async (c) => {
 function extractTransactionId(gatewaySlug: string, payload: Record<string, unknown>): string | null {
   switch (gatewaySlug) {
     case 'stripe': {
-      // metadata.edgepay_trx_id is set during initiate(); pre-rename
-      // payments embedded legacy transaction id — dual-read so webhooks still in
-      // flight after the rename keep reconciling.
+      // metadata.edgepay_trx_id is set during initiate() — this is the key
+      // the checkout flow uses to reconcile the webhook with the intent.
       const metadata = (payload.data as { object?: { metadata?: Record<string, string> } } | undefined)
         ?.object?.metadata;
-      return metadata?.edgepay_trx_id ?? metadata?.legacy_trx_id ?? null;
+      return metadata?.edgepay_trx_id ?? null;
     }
     case 'paypal': {
       // resource.custom is a JSON string we set during initiate()

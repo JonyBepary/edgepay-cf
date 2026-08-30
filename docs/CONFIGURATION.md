@@ -2,12 +2,12 @@
 
 Every knob EdgePay-CF exposes, where it lives, and what it does. Three layers:
 
-1. **Vars** (`wrangler.toml → [vars]`, or the Deploy to Cloudflare setup page) —
+1. **Vars** (`wrangler.jsonc → "vars"`, or the Deploy to Cloudflare setup page) —
    non-secret configuration, per environment.
 2. **Secrets** (`wrangler secret put NAME`, `.dev.vars` locally, or the setup
    page fields sourced from `.dev.vars.example`) — sensitive values, never in
    the repo.
-3. **Bindings** (`wrangler.toml`) — Cloudflare resources the Worker attaches to;
+3. **Bindings** (`wrangler.jsonc`) — Cloudflare resources the Worker attaches to;
    provisioned automatically by the deploy button.
 
 > Environment rule (from the
@@ -68,7 +68,7 @@ required secret's *length class* (`ok`/`weak`/`missing`) — never its content.
 | `RATE_LIMIT_READ` / `RATE_LIMIT_WRITE` | Ratelimit | Per-API-key limits (120 reads/min, 30 writes/min). Absent = degraded allow + metric, never silent fail-open. |
 | `ANALYTICS` | Analytics Engine | Parse-miss rate, webhook lag, reconciliation runs, paging events — metrics without touching D1. |
 | `ASSETS` | Static assets | Checkout CSS/JS, served with zero subrequests; `run_worker_first` keeps API routes unshadowed. |
-| `AI` | Workers AI *(opt-in)* | SMS long-tail fallback parsing. Commented out in `wrangler.toml` until first deploy (the test runner cannot emulate it) — uncomment and redeploy. |
+| `AI` | Workers AI *(opt-in)* | SMS long-tail fallback parsing. Commented out in `wrangler.jsonc` until first deploy (the test runner cannot emulate it) — uncomment and redeploy. |
 
 ## Deploy-button wiring
 
@@ -80,6 +80,6 @@ The pieces that make the Deploy to Cloudflare flow work, and where they live:
 | Field descriptions | `package.json → cloudflare.bindings` | Shown next to each var/secret on the setup page |
 | Secrets template | `.dev.vars.example` | The set of secret fields the setup page offers |
 | Deploy script | `package.json → scripts.deploy` | `npm run db:migrations:apply && wrangler deploy` — migrations run against whatever D1 the button provisioned (binding-referenced) |
-| Resource defaults | `wrangler.toml` | Names + placeholder IDs; the button provisions and rewrites IDs |
+| Resource defaults | `wrangler.jsonc` | Names + placeholder IDs; the button provisions and rewrites IDs |
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the end-to-end walkthrough.

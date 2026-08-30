@@ -249,7 +249,7 @@ export class ScheduledHandler {
    */
   private async checkForUpdates(env: Env): Promise<void> {
     try {
-      const response = await fetch('https://api.github.com/repos/edgepay/edgepay-cf/releases/latest');
+      const response = await fetch('https://api.github.com/repos/JonyBepary/edgepay-cf/releases/latest');
       if (!response.ok) return;
 
       const data = await response.json() as { tag_name: string; published_at: string };

@@ -1,12 +1,13 @@
-# EdgePay Worker secrets — example file.
+# EdgePay Worker secrets & deploy-time settings — example file.
 #
 # Copy to `.dev.vars` for local development (`wrangler dev` auto-loads it).
 # In production set the same values via `wrangler secret put <NAME>` — never
 # commit real values.
 #
 # Deploy to Cloudflare button: every key below becomes a field on the setup
-# page, with the descriptions from package.json > cloudflare.bindings.
-# Generate the three required values BEFORE deploying:
+# page (order = file order), with descriptions from
+# package.json > cloudflare.bindings. Generate the three required values
+# BEFORE deploying:
 #
 #   JWT_SECRET:      openssl rand -hex 32
 #   APP_KEY:         openssl rand -base64 32
@@ -16,7 +17,18 @@
 #  Losing it makes every stored credential unrecoverable — keep a copy in a
 #  password manager.)
 
-# --- REQUIRED -----------------------------------------------------------
+# --- Gateway plugin selection (v0.3.0 — the 123-provider catalog) ---------
+# Comma-separated gateway slugs this deployment may use. Pick any of the 123
+# catalog gateways — the full list is in docs/GATEWAYS.md, or query
+# GET /api/v1/gateways after deploy. Examples:
+#   bkash,nagad,rocket,sslcommerz     (Bangladesh MFS set)
+#   stripe,paypal,razorpay            (global cards)
+#   all                               (everything — the default)
+# Leave empty for the full catalog. Unknown tokens are reported (not fatal).
+# Merchants still configure per-gateway credentials AFTER deploy.
+ENABLED_GATEWAYS=
+
+# --- REQUIRED secrets ------------------------------------------------------
 
 # Signs mobile-companion JWTs (HS256). Min 32 chars.
 JWT_SECRET=
@@ -45,17 +57,6 @@ BREAK_GLASS_CLIENT_SECRET=
 CF_API_TOKEN=
 CF_ACCOUNT_ID=
 CF_ZONE_ID=
-
-# --- Gateway plugin selection (v0.3.0 — the 123-provider catalog) ---------
-# Comma-separated gateway slugs this deployment may use. Pick any of the 123
-# catalog gateways — the full list is in docs/GATEWAYS.md, or query
-# GET /api/v1/gateways after deploy. Examples:
-#   bkash,nagad,rocket,sslcommerz     (Bangladesh MFS set)
-#   stripe,paypal,razorpay            (global cards)
-#   all                               (everything — the default)
-# Leave empty for the full catalog. Unknown tokens are reported (not fatal).
-# Merchants still configure per-gateway credentials AFTER deploy.
-ENABLED_GATEWAYS=
 
 # --- OPTIONAL: tuning -----------------------------------------------------
 
