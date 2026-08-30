@@ -42,12 +42,6 @@
       },
       "ENCRYPTION_KEY": {
         "description": "AES-256-GCM key that encrypts gateway credentials and PII at rest. Generate with `openssl rand -base64 32` and paste the result. **Store it safely — losing it makes stored credentials unrecoverable.**"
-      },
-      "BREAK_GLASS_CLIENT_SECRET": {
-        "description": "Optional. Service-token secret paired with BREAK_GLASS_CLIENT_ID. Every use pages an audit alarm."
-      },
-      "CF_API_TOKEN": {
-        "description": "Optional. Cloudflare API token for custom-hostname provisioning (Cloudflare for SaaS). Leave empty unless you use per-brand custom domains."
       }
     }
   },
