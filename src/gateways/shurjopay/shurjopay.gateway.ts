@@ -1,5 +1,5 @@
 /**
- * ShurjoPay gateway adapter — hand port of OwnPay-Gateway-Plugin/shurjopay.
+ * ShurjoPay gateway adapter — hand port of EdgePay-Gateway-Plugin/shurjopay.
  *
  * Flow (tokenized hosted checkout):
  *   1. POST /api/get_token (username+password) -> { token, store_id }
@@ -52,7 +52,7 @@ export class ShurjopayGateway extends BaseGatewayAdapter {
       slug: 'shurjopay',
       version: '1.0.0',
       description: 'ShurjoPay payment gateway integration for Bangladesh',
-      author: 'OwnPay Gateway Plugin Suite (AGPLv3) — EdgePay port',
+      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port',
       type: 'gateway',
       supported_currencies: ['BDT'],
       capabilities: ['verification'],

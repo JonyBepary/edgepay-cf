@@ -1,5 +1,5 @@
 /**
- * DBBL Rocket gateway adapter — hand port of OwnPay-Gateway-Plugin/rocket.
+ * DBBL Rocket gateway adapter — hand port of EdgePay-Gateway-Plugin/rocket.
  *
  * Flow: auto-submit form POST with an MD5 concat signature (provider-
  * mandated legacy hash — see lib/hash.ts; never used for anything internal).
@@ -33,7 +33,7 @@ export class RocketGateway extends BaseGatewayAdapter {
       slug: 'rocket',
       version: '1.0.0',
       description: 'DBBL Rocket payment gateway integration',
-      author: 'OwnPay Gateway Plugin Suite (AGPLv3) — EdgePay port',
+      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port',
       type: 'gateway',
       supported_currencies: ['BDT'],
       capabilities: ['verification'],

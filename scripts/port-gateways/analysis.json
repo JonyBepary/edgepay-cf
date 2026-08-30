@@ -6,11 +6,11 @@
    "name": "2Checkout",
    "slug": "2checkout",
    "version": "1.0.0",
-   "description": "2Checkout payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "2Checkout payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TwoCheckoutGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\TwoCheckout",
+   "namespace": "EdgePay\\Modules\\Gateways\\TwoCheckout",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -49,8 +49,8 @@
    "name": "2Checkout",
    "slug": "2checkout",
    "version": "1.0.0",
-   "description": "2Checkout payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "2Checkout payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -85,7 +85,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -96,7 +96,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -189,13 +189,13 @@
    "slug": "aamarpay",
    "version": "1.0.0",
    "description": "Aamarpay payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "assets/icon.svg",
    "color": "#FF6B00",
    "entrypoint": "AamarpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Aamarpay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Aamarpay",
    "capabilities": [
     "gateway"
    ],
@@ -226,7 +226,7 @@
    "slug": "aamarpay",
    "version": "1.0.0",
    "description": "Aamarpay payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -346,11 +346,11 @@
    "name": "Adyen",
    "slug": "adyen",
    "version": "1.0.0",
-   "description": "Adyen payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Adyen payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AdyenGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Adyen",
+   "namespace": "EdgePay\\Modules\\Gateways\\Adyen",
    "capabilities": [
     "gateway"
    ],
@@ -388,8 +388,8 @@
    "name": "Adyen",
    "slug": "adyen",
    "version": "1.0.0",
-   "description": "Adyen payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Adyen payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -504,11 +504,11 @@
    "name": "Affirm",
    "slug": "affirm",
    "version": "1.0.0",
-   "description": "Affirm checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Affirm checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AffirmGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Affirm",
+   "namespace": "EdgePay\\Modules\\Gateways\\Affirm",
    "capabilities": [
     "gateway"
    ],
@@ -544,8 +544,8 @@
    "name": "Affirm",
    "slug": "affirm",
    "version": "1.0.0",
-   "description": "Affirm checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Affirm checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -678,11 +678,11 @@
    "name": "Afterpay",
    "slug": "afterpay",
    "version": "1.0.0",
-   "description": "Afterpay checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Afterpay checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AfterpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Afterpay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Afterpay",
    "capabilities": [
     "gateway"
    ],
@@ -718,8 +718,8 @@
    "name": "Afterpay",
    "slug": "afterpay",
    "version": "1.0.0",
-   "description": "Afterpay / Clearpay checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Afterpay / Clearpay checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -851,11 +851,11 @@
    "name": "Airtel Money",
    "slug": "airtel-money",
    "version": "1.0.0",
-   "description": "Airtel Money payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Airtel Money payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AirtelMoneyGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\AirtelMoney",
+   "namespace": "EdgePay\\Modules\\Gateways\\AirtelMoney",
    "capabilities": [
     "gateway"
    ],
@@ -890,8 +890,8 @@
    "name": "Airtel Money",
    "slug": "airtel-money",
    "version": "1.0.0",
-   "description": "Airtel Money payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Airtel Money payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -970,11 +970,11 @@
    "name": "Alipay Global",
    "slug": "alipay",
    "version": "1.0.0",
-   "description": "Alipay Global payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Alipay Global payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AlipayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Alipay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Alipay",
    "capabilities": [
     "gateway"
    ],
@@ -1009,8 +1009,8 @@
    "name": "Alipay Global",
    "slug": "alipay",
    "version": "1.0.0",
-   "description": "Alipay Global payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Alipay Global payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1112,11 +1112,11 @@
    "name": "Amazon Pay",
    "slug": "amazon-pay",
    "version": "1.0.0",
-   "description": "Amazon Pay checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Amazon Pay checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AmazonPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\AmazonPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\AmazonPay",
    "capabilities": [
     "gateway"
    ],
@@ -1152,8 +1152,8 @@
    "name": "Amazon Pay",
    "slug": "amazon-pay",
    "version": "1.0.0",
-   "description": "Amazon Pay checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Amazon Pay checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1278,13 +1278,13 @@
    "slug": "apple-pay",
    "version": "1.0.0",
    "description": "Apple Pay Express Checkout gateway plugin",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "express",
    "icon": "icon.svg",
    "color": "#080D1A",
    "entrypoint": "ApplePayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\ApplePay",
+   "namespace": "EdgePay\\Modules\\Gateways\\ApplePay",
    "capabilities": [
     "gateway"
    ],
@@ -1311,7 +1311,7 @@
    "slug": "apple-pay",
    "version": "1.0.0",
    "description": "Apple Pay Express Checkout gateway plugin",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1453,11 +1453,11 @@
    "name": "Authorize.Net",
    "slug": "authorize-net",
    "version": "1.0.0",
-   "description": "Authorize.Net payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Authorize.Net payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "AuthorizeNetGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\AuthorizeNet",
+   "namespace": "EdgePay\\Modules\\Gateways\\AuthorizeNet",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -1492,8 +1492,8 @@
    "name": "Authorize.Net",
    "slug": "authorize-net",
    "version": "1.0.0",
-   "description": "Authorize.Net payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Authorize.Net payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1534,7 +1534,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -1546,7 +1546,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 10,
@@ -1622,11 +1622,11 @@
    "name": "Bancontact",
    "slug": "bancontact",
    "version": "1.0.0",
-   "description": "Bancontact payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Bancontact payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BancontactGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Bancontact",
+   "namespace": "EdgePay\\Modules\\Gateways\\Bancontact",
    "capabilities": [
     "gateway"
    ],
@@ -1663,8 +1663,8 @@
    "name": "Bancontact",
    "slug": "bancontact",
    "version": "1.0.0",
-   "description": "Bancontact payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Bancontact payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1762,11 +1762,11 @@
    "name": "Biller Genie",
    "slug": "biller-genie",
    "version": "1.0.0",
-   "description": "Biller Genie payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Biller Genie payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BillerGenieGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BillerGenie",
+   "namespace": "EdgePay\\Modules\\Gateways\\BillerGenie",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -1805,8 +1805,8 @@
    "name": "Biller Genie",
    "slug": "biller-genie",
    "version": "1.0.0",
-   "description": "Biller Genie payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Biller Genie payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -1833,7 +1833,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -1844,7 +1844,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -1928,10 +1928,10 @@
    "slug": "billplz",
    "version": "1.0.0",
    "description": "Billplz Direct Debit payment integration for Malaysia",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BillplzGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Billplz",
+   "namespace": "EdgePay\\Modules\\Gateways\\Billplz",
    "capabilities": [
     "gateway"
    ],
@@ -1966,7 +1966,7 @@
    "slug": "billplz",
    "version": "1.0.0",
    "description": "Billplz Direct Debit payment integration for Malaysia",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -2095,13 +2095,13 @@
    "slug": "binance-merchant-api",
    "version": "1.0.0",
    "description": "Binance Pay merchant API gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#F0B90B",
    "entrypoint": "BinanceMerchantApiGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BinanceMerchantApi",
+   "namespace": "EdgePay\\Modules\\Gateways\\BinanceMerchantApi",
    "capabilities": [
     "gateway"
    ],
@@ -2134,7 +2134,7 @@
    "slug": "binance-merchant-api",
    "version": "1.0.0",
    "description": "Binance Pay merchant API gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -2244,11 +2244,11 @@
    "name": "Binance Personal Address",
    "slug": "binance-personal",
    "version": "1.0.0",
-   "description": "Binance Personal Address payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Binance Personal Address payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BinancePersonalGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BinancePersonal",
+   "namespace": "EdgePay\\Modules\\Gateways\\BinancePersonal",
    "capabilities": [
     "gateway"
    ],
@@ -2281,8 +2281,8 @@
    "name": "Binance Personal Address",
    "slug": "binance-personal",
    "version": "1.0.0",
-   "description": "Binance Personal Address payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Binance Personal Address payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -2388,11 +2388,11 @@
    "name": "BitPay",
    "slug": "bitpay",
    "version": "1.0.0",
-   "description": "BitPay crypto checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BitPay crypto checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BitpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Bitpay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Bitpay",
    "capabilities": [
     "gateway"
    ],
@@ -2428,8 +2428,8 @@
    "name": "BitPay",
    "slug": "bitpay",
    "version": "1.0.0",
-   "description": "BitPay crypto checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BitPay crypto checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -2554,13 +2554,13 @@
    "slug": "bkash-api",
    "version": "1.0.0",
    "description": "bKash tokenized checkout API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#E2136E",
    "entrypoint": "BkashApiGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BkashApi",
+   "namespace": "EdgePay\\Modules\\Gateways\\BkashApi",
    "capabilities": [
     "gateway"
    ],
@@ -2591,7 +2591,7 @@
    "slug": "bkash-api",
    "version": "1.0.0",
    "description": "bKash tokenized checkout API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -2750,11 +2750,11 @@
    "name": "BLIK",
    "slug": "blik",
    "version": "1.0.0",
-   "description": "BLIK mobile payment gateway integration (via Przelewy24) for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BLIK mobile payment gateway integration (via Przelewy24) for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BlikGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Blik",
+   "namespace": "EdgePay\\Modules\\Gateways\\Blik",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -2789,8 +2789,8 @@
    "name": "BLIK",
    "slug": "blik",
    "version": "1.0.0",
-   "description": "BLIK payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BLIK payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -2840,7 +2840,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -2852,7 +2852,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 20,
@@ -2864,7 +2864,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 10,
@@ -2937,11 +2937,11 @@
    "name": "BlueSnap",
    "slug": "bluesnap",
    "version": "1.0.0",
-   "description": "BlueSnap payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BlueSnap payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BlueSnapGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BlueSnap",
+   "namespace": "EdgePay\\Modules\\Gateways\\BlueSnap",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -2976,8 +2976,8 @@
    "name": "BlueSnap",
    "slug": "bluesnap",
    "version": "1.0.0",
-   "description": "BlueSnap payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BlueSnap payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -3010,7 +3010,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -3021,7 +3021,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -3104,11 +3104,11 @@
    "name": "Braintree",
    "slug": "braintree",
    "version": "1.0.0",
-   "description": "Braintree payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Braintree payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BraintreeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Braintree",
+   "namespace": "EdgePay\\Modules\\Gateways\\Braintree",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -3147,8 +3147,8 @@
    "name": "Braintree",
    "slug": "braintree",
    "version": "1.0.0",
-   "description": "Braintree payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Braintree payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -3190,7 +3190,7 @@
     "headers": [
      "Content-Type: application/xml",
      "Accept: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "raw",
     "timeout": 15,
@@ -3203,7 +3203,7 @@
     "headers": [
      "Content-Type: application/xml",
      "Accept: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "raw",
     "timeout": 15,
@@ -3268,11 +3268,11 @@
    "name": "BTCPay Server",
    "slug": "btcpay",
    "version": "1.0.0",
-   "description": "BTCPay Server payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BTCPay Server payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "BTCPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\BTCPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\BTCPay",
    "capabilities": [
     "gateway"
    ],
@@ -3305,8 +3305,8 @@
    "name": "BTCPay Server",
    "slug": "btcpay",
    "version": "1.0.0",
-   "description": "BTCPay Server payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "BTCPay Server payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -3420,13 +3420,13 @@
    "slug": "cashfree",
    "version": "1.0.0",
    "description": "Cashfree PG hosted checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#2d62e6",
    "entrypoint": "CashfreeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Cashfree",
+   "namespace": "EdgePay\\Modules\\Gateways\\Cashfree",
    "capabilities": [
     "gateway"
    ],
@@ -3457,7 +3457,7 @@
    "slug": "cashfree",
    "version": "1.0.0",
    "description": "Cashfree PG hosted checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -3597,13 +3597,13 @@
    "slug": "cashmaal",
    "version": "1.0.0",
    "description": "CashMaal payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "assets/icon.svg",
    "color": "#1F95F4",
    "entrypoint": "CashmaalGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Cashmaal",
+   "namespace": "EdgePay\\Modules\\Gateways\\Cashmaal",
    "capabilities": [
     "gateway"
    ],
@@ -3634,7 +3634,7 @@
    "slug": "cashmaal",
    "version": "1.0.0",
    "description": "CashMaal payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -3718,11 +3718,11 @@
    "name": "CCAvenue",
    "slug": "ccavenue",
    "version": "1.0.0",
-   "description": "CCAvenue payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "CCAvenue payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "CCAvenueGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\CCAvenue",
+   "namespace": "EdgePay\\Modules\\Gateways\\CCAvenue",
    "capabilities": [
     "gateway"
    ],
@@ -3756,8 +3756,8 @@
    "name": "CCAvenue",
    "slug": "ccavenue",
    "version": "1.0.0",
-   "description": "CCAvenue payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "CCAvenue payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -3847,13 +3847,13 @@
    "slug": "cellfin",
    "version": "1.0.0",
    "description": "Islami Bank Bangladesh PLC (IBBL) CellFin MFS and digital wallet payment integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#4CAF50",
    "entrypoint": "CellFinGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\CellFin",
+   "namespace": "EdgePay\\Modules\\Gateways\\CellFin",
    "capabilities": [
     "gateway"
    ],
@@ -3884,7 +3884,7 @@
    "slug": "cellfin",
    "version": "1.0.0",
    "description": "Islami Bank Bangladesh PLC (IBBL) CellFin MFS and digital wallet payment integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -4033,11 +4033,11 @@
    "name": "Chase Paymentech",
    "slug": "chase-paymentech",
    "version": "1.0.0",
-   "description": "Chase Paymentech payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Chase Paymentech payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "ChasePaymentechGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\ChasePaymentech",
+   "namespace": "EdgePay\\Modules\\Gateways\\ChasePaymentech",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -4076,8 +4076,8 @@
    "name": "Chase Paymentech",
    "slug": "chase-paymentech",
    "version": "1.0.0",
-   "description": "Chase Paymentech payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Chase Paymentech payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4116,7 +4116,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -4127,7 +4127,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -4210,11 +4210,11 @@
    "name": "Checkout.com",
    "slug": "checkout-com",
    "version": "1.0.0",
-   "description": "Checkout.com payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Checkout.com payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "CheckoutComGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\CheckoutCom",
+   "namespace": "EdgePay\\Modules\\Gateways\\CheckoutCom",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -4249,8 +4249,8 @@
    "name": "Checkout.com",
    "slug": "checkout-com",
    "version": "1.0.0",
-   "description": "Checkout.com payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Checkout.com payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4292,7 +4292,7 @@
     "headers": [
      "Authorization: Bearer ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -4304,7 +4304,7 @@
     "method": "GET",
     "headers": [
      "Authorization: Bearer ",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -4398,11 +4398,11 @@
    "name": "Coinbase Commerce",
    "slug": "coinbase-commerce",
    "version": "1.0.0",
-   "description": "Coinbase Commerce payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Coinbase Commerce payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "CoinbaseGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Coinbase",
+   "namespace": "EdgePay\\Modules\\Gateways\\Coinbase",
    "capabilities": [
     "gateway"
    ],
@@ -4437,8 +4437,8 @@
    "name": "Coinbase Commerce",
    "slug": "coinbase-commerce",
    "version": "1.0.0",
-   "description": "Coinbase Commerce payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Coinbase Commerce payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4541,11 +4541,11 @@
    "name": "Cybersource",
    "slug": "cybersource",
    "version": "1.0.0",
-   "description": "Cybersource payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Cybersource payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "CybersourceGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Cybersource",
+   "namespace": "EdgePay\\Modules\\Gateways\\Cybersource",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -4580,8 +4580,8 @@
    "name": "Cybersource",
    "slug": "cybersource",
    "version": "1.0.0",
-   "description": "Cybersource payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Cybersource payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4620,7 +4620,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -4631,7 +4631,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -4714,11 +4714,11 @@
    "name": "DANA Wallet",
    "slug": "dana",
    "version": "1.0.0",
-   "description": "DANA Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "DANA Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "DanaGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Dana",
+   "namespace": "EdgePay\\Modules\\Gateways\\Dana",
    "capabilities": [
     "gateway"
    ],
@@ -4751,8 +4751,8 @@
    "name": "DANA Wallet",
    "slug": "dana",
    "version": "1.0.0",
-   "description": "DANA Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "DANA Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4849,11 +4849,11 @@
    "name": "dLocal",
    "slug": "dlocal",
    "version": "1.0.0",
-   "description": "dLocal payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "dLocal payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "DLocalGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\DLocal",
+   "namespace": "EdgePay\\Modules\\Gateways\\DLocal",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -4892,8 +4892,8 @@
    "name": "dLocal",
    "slug": "dlocal",
    "version": "1.0.0",
-   "description": "dLocal payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "dLocal payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -4932,7 +4932,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -4943,7 +4943,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -5026,11 +5026,11 @@
    "name": "Easypaisa",
    "slug": "easypaisa",
    "version": "1.0.0",
-   "description": "Easypaisa payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Easypaisa payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "EasypaisaGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Easypaisa",
+   "namespace": "EdgePay\\Modules\\Gateways\\Easypaisa",
    "capabilities": [
     "gateway"
    ],
@@ -5064,8 +5064,8 @@
    "name": "Easypaisa",
    "slug": "easypaisa",
    "version": "1.0.0",
-   "description": "Easypaisa payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Easypaisa payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -5160,10 +5160,10 @@
    "slug": "ebanx",
    "version": "1.0.0",
    "description": "Ebanx payment gateway integration for Latin America",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "EbanxGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Ebanx",
+   "namespace": "EdgePay\\Modules\\Gateways\\Ebanx",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -5203,7 +5203,7 @@
    "slug": "ebanx",
    "version": "1.0.0",
    "description": "Ebanx payment gateway integration for Latin America",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -5238,7 +5238,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -5317,11 +5317,11 @@
    "name": "Elavon",
    "slug": "elavon",
    "version": "1.0.0",
-   "description": "Elavon payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Elavon payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "ElavonGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Elavon",
+   "namespace": "EdgePay\\Modules\\Gateways\\Elavon",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -5360,8 +5360,8 @@
    "name": "Elavon",
    "slug": "elavon",
    "version": "1.0.0",
-   "description": "Elavon payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Elavon payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -5400,7 +5400,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -5411,7 +5411,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -5495,13 +5495,13 @@
    "slug": "eps",
    "version": "1.0.0",
    "description": "EPS payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "assets/icon.svg",
    "color": "#019A44",
    "entrypoint": "EpsGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Eps",
+   "namespace": "EdgePay\\Modules\\Gateways\\Eps",
    "capabilities": [
     "gateway"
    ],
@@ -5532,7 +5532,7 @@
    "slug": "eps",
    "version": "1.0.0",
    "description": "EPS payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -5668,11 +5668,11 @@
    "name": "FastSpring",
    "slug": "fastspring",
    "version": "1.0.0",
-   "description": "FastSpring payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "FastSpring payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FastSpringGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\FastSpring",
+   "namespace": "EdgePay\\Modules\\Gateways\\FastSpring",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -5707,8 +5707,8 @@
    "name": "FastSpring",
    "slug": "fastspring",
    "version": "1.0.0",
-   "description": "FastSpring payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "FastSpring payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -5747,7 +5747,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -5758,7 +5758,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -5841,11 +5841,11 @@
    "name": "Fattmerchant",
    "slug": "fattmerchant",
    "version": "1.0.0",
-   "description": "Fattmerchant payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Fattmerchant payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FattmerchantGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Fattmerchant",
+   "namespace": "EdgePay\\Modules\\Gateways\\Fattmerchant",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -5880,8 +5880,8 @@
    "name": "Fattmerchant",
    "slug": "fattmerchant",
    "version": "1.0.0",
-   "description": "Fattmerchant payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Fattmerchant payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -5908,7 +5908,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -5919,7 +5919,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -6003,10 +6003,10 @@
    "slug": "fawry",
    "version": "1.0.0",
    "description": "Fawry payment gateway integration for Egypt and MENA region",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FawryGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Fawry",
+   "namespace": "EdgePay\\Modules\\Gateways\\Fawry",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -6046,7 +6046,7 @@
    "slug": "fawry",
    "version": "1.0.0",
    "description": "Fawry Pay gateway integration for Egypt/MENA",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6086,7 +6086,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -6097,7 +6097,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -6184,11 +6184,11 @@
    "name": "First Data",
    "slug": "first-data",
    "version": "1.0.0",
-   "description": "First Data payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "First Data payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FirstDataGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\FirstData",
+   "namespace": "EdgePay\\Modules\\Gateways\\FirstData",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -6227,8 +6227,8 @@
    "name": "First Data",
    "slug": "first-data",
    "version": "1.0.0",
-   "description": "First Data payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "First Data payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6267,7 +6267,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -6278,7 +6278,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -6361,11 +6361,11 @@
    "name": "Fiserv",
    "slug": "fiserv",
    "version": "1.0.0",
-   "description": "Fiserv payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Fiserv payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FiservGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Fiserv",
+   "namespace": "EdgePay\\Modules\\Gateways\\Fiserv",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -6404,8 +6404,8 @@
    "name": "Fiserv",
    "slug": "fiserv",
    "version": "1.0.0",
-   "description": "Fiserv payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Fiserv payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6438,7 +6438,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -6449,7 +6449,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -6532,11 +6532,11 @@
    "name": "Flutterwave",
    "slug": "flutterwave",
    "version": "1.0.0",
-   "description": "Flutterwave payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Flutterwave payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "FlutterwaveGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Flutterwave",
+   "namespace": "EdgePay\\Modules\\Gateways\\Flutterwave",
    "capabilities": [
     "gateway"
    ],
@@ -6572,8 +6572,8 @@
    "name": "Flutterwave",
    "slug": "flutterwave",
    "version": "1.0.0",
-   "description": "Flutterwave payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Flutterwave payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6683,11 +6683,11 @@
    "name": "GCash Wallet",
    "slug": "gcash",
    "version": "1.0.0",
-   "description": "GCash Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GCash Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "GCashGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\GCash",
+   "namespace": "EdgePay\\Modules\\Gateways\\GCash",
    "capabilities": [
     "gateway"
    ],
@@ -6721,8 +6721,8 @@
    "name": "GCash Wallet",
    "slug": "gcash",
    "version": "1.0.0",
-   "description": "GCash Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GCash Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6839,11 +6839,11 @@
    "name": "Giropay",
    "slug": "giropay",
    "version": "1.0.0",
-   "description": "Giropay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Giropay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "GiropayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Giropay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Giropay",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -6878,8 +6878,8 @@
    "name": "Giropay",
    "slug": "giropay",
    "version": "1.0.0",
-   "description": "Giropay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Giropay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -6923,7 +6923,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -6935,7 +6935,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 10,
@@ -7006,11 +7006,11 @@
    "name": "Global Payments",
    "slug": "global-payments",
    "version": "1.0.0",
-   "description": "Global Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Global Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "GlobalPaymentsGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\GlobalPayments",
+   "namespace": "EdgePay\\Modules\\Gateways\\GlobalPayments",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -7045,8 +7045,8 @@
    "name": "Global Payments",
    "slug": "global-payments",
    "version": "1.0.0",
-   "description": "Global Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Global Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7085,7 +7085,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -7096,7 +7096,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -7179,11 +7179,11 @@
    "name": "GoCardless",
    "slug": "gocardless",
    "version": "1.0.0",
-   "description": "GoCardless direct debit integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GoCardless direct debit integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "GocardlessGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Gocardless",
+   "namespace": "EdgePay\\Modules\\Gateways\\Gocardless",
    "capabilities": [
     "gateway"
    ],
@@ -7219,8 +7219,8 @@
    "name": "GoCardless",
    "slug": "gocardless",
    "version": "1.0.0",
-   "description": "GoCardless direct debit integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GoCardless direct debit integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7335,13 +7335,13 @@
    "slug": "google-pay",
    "version": "1.0.0",
    "description": "Google Pay Express Checkout gateway plugin",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "express",
    "icon": "icon.svg",
    "color": "#4285F4",
    "entrypoint": "GooglePayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\GooglePay",
+   "namespace": "EdgePay\\Modules\\Gateways\\GooglePay",
    "capabilities": [
     "gateway"
    ],
@@ -7375,7 +7375,7 @@
    "slug": "google-pay",
    "version": "1.0.0",
    "description": "Google Pay Express Checkout gateway plugin",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7517,11 +7517,11 @@
    "name": "GrabPay",
    "slug": "grabpay",
    "version": "1.0.0",
-   "description": "GrabPay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GrabPay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "GrabPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\GrabPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\GrabPay",
    "capabilities": [
     "gateway"
    ],
@@ -7556,8 +7556,8 @@
    "name": "GrabPay",
    "slug": "grabpay",
    "version": "1.0.0",
-   "description": "GrabPay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "GrabPay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7645,11 +7645,11 @@
    "name": "Heartland",
    "slug": "heartland",
    "version": "1.0.0",
-   "description": "Heartland payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Heartland payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "HeartlandGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Heartland",
+   "namespace": "EdgePay\\Modules\\Gateways\\Heartland",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -7688,8 +7688,8 @@
    "name": "Heartland",
    "slug": "heartland",
    "version": "1.0.0",
-   "description": "Heartland payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Heartland payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7716,7 +7716,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -7727,7 +7727,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -7810,11 +7810,11 @@
    "name": "Helcim",
    "slug": "helcim",
    "version": "1.0.0",
-   "description": "Helcim payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Helcim payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "HelcimGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Helcim",
+   "namespace": "EdgePay\\Modules\\Gateways\\Helcim",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -7849,8 +7849,8 @@
    "name": "Helcim",
    "slug": "helcim",
    "version": "1.0.0",
-   "description": "Helcim payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Helcim payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -7883,7 +7883,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -7894,7 +7894,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -7977,11 +7977,11 @@
    "name": "iDEAL",
    "slug": "ideal",
    "version": "1.0.0",
-   "description": "iDEAL payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "iDEAL payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "IdealGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Ideal",
+   "namespace": "EdgePay\\Modules\\Gateways\\Ideal",
    "capabilities": [
     "gateway"
    ],
@@ -8018,8 +8018,8 @@
    "name": "iDEAL",
    "slug": "ideal",
    "version": "1.0.0",
-   "description": "iDEAL payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "iDEAL payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -8118,13 +8118,13 @@
    "slug": "instamojo",
    "version": "1.0.0",
    "description": "Instamojo secure payment request API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#00a294",
    "entrypoint": "InstamojoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Instamojo",
+   "namespace": "EdgePay\\Modules\\Gateways\\Instamojo",
    "capabilities": [
     "gateway"
    ],
@@ -8155,7 +8155,7 @@
    "slug": "instamojo",
    "version": "1.0.0",
    "description": "Instamojo secure payment request API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -8297,11 +8297,11 @@
    "name": "JazzCash",
    "slug": "jazzcash",
    "version": "1.0.0",
-   "description": "JazzCash payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "JazzCash payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "JazzCashGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\JazzCash",
+   "namespace": "EdgePay\\Modules\\Gateways\\JazzCash",
    "capabilities": [
     "gateway"
    ],
@@ -8335,8 +8335,8 @@
    "name": "JazzCash",
    "slug": "jazzcash",
    "version": "1.0.0",
-   "description": "JazzCash payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "JazzCash payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -8429,11 +8429,11 @@
    "name": "KakaoPay",
    "slug": "kakaopay",
    "version": "1.0.0",
-   "description": "KakaoPay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "KakaoPay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "KakaopayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Kakaopay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Kakaopay",
    "capabilities": [
     "gateway"
    ],
@@ -8468,8 +8468,8 @@
    "name": "KakaoPay",
    "slug": "kakaopay",
    "version": "1.0.0",
-   "description": "KakaoPay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "KakaoPay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -8550,11 +8550,11 @@
    "name": "Klarna",
    "slug": "klarna",
    "version": "1.0.0",
-   "description": "Klarna payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Klarna payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "KlarnaGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Klarna",
+   "namespace": "EdgePay\\Modules\\Gateways\\Klarna",
    "capabilities": [
     "gateway"
    ],
@@ -8592,8 +8592,8 @@
    "name": "Klarna",
    "slug": "klarna",
    "version": "1.0.0",
-   "description": "Klarna payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Klarna payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -8689,10 +8689,10 @@
    "slug": "kushki",
    "version": "1.0.0",
    "description": "Kushki payment gateway integration for Latin America",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "KushkiGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Kushki",
+   "namespace": "EdgePay\\Modules\\Gateways\\Kushki",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -8728,7 +8728,7 @@
    "slug": "kushki",
    "version": "1.0.0",
    "description": "Kushki payment gateway integration for Latin America",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -8768,7 +8768,7 @@
     "headers": [
      "Private-Merchant-Id: ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -8780,7 +8780,7 @@
     "method": "GET",
     "headers": [
      "Private-Merchant-Id: ",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -8859,11 +8859,11 @@
    "name": "Maya Wallet",
    "slug": "maya",
    "version": "1.0.0",
-   "description": "Maya Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Maya Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MayaGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Maya",
+   "namespace": "EdgePay\\Modules\\Gateways\\Maya",
    "capabilities": [
     "gateway"
    ],
@@ -8899,8 +8899,8 @@
    "name": "Maya Wallet",
    "slug": "maya",
    "version": "1.0.0",
-   "description": "Maya Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Maya Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9013,11 +9013,11 @@
    "name": "MercadoLibre Wallet",
    "slug": "mercadolibre-wallet",
    "version": "1.0.0",
-   "description": "MercadoLibre Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "MercadoLibre Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MercadoLibreWalletGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\MercadoLibreWallet",
+   "namespace": "EdgePay\\Modules\\Gateways\\MercadoLibreWallet",
    "capabilities": [
     "gateway"
    ],
@@ -9052,8 +9052,8 @@
    "name": "MercadoLibre Wallet",
    "slug": "mercadolibre-wallet",
    "version": "1.0.0",
-   "description": "MercadoLibre Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "MercadoLibre Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9134,11 +9134,11 @@
    "name": "Mercado Pago",
    "slug": "mercadopago",
    "version": "1.0.0",
-   "description": "Mercado Pago payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Mercado Pago payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MercadoPagoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\MercadoPago",
+   "namespace": "EdgePay\\Modules\\Gateways\\MercadoPago",
    "capabilities": [
     "gateway"
    ],
@@ -9174,8 +9174,8 @@
    "name": "Mercado Pago",
    "slug": "mercadopago",
    "version": "1.0.0",
-   "description": "Mercado Pago payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Mercado Pago payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9257,10 +9257,10 @@
    "slug": "midtrans",
    "version": "1.0.0",
    "description": "Midtrans payment gateway integration (Indonesia and APAC)",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MidtransGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Midtrans",
+   "namespace": "EdgePay\\Modules\\Gateways\\Midtrans",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -9296,7 +9296,7 @@
    "slug": "midtrans",
    "version": "1.0.0",
    "description": "Midtrans payment gateway integration for Indonesia/APAC",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9338,7 +9338,7 @@
      "Authorization: Basic ",
      "Content-Type: application/json",
      "Accept: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -9351,7 +9351,7 @@
     "headers": [
      "Authorization: Basic ",
      "Accept: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -9432,13 +9432,13 @@
    "slug": "mobikwik",
    "version": "1.0.0",
    "description": "MobiKwik Zaakpay hosted checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#004b93",
    "entrypoint": "MobikwikGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Mobikwik",
+   "namespace": "EdgePay\\Modules\\Gateways\\Mobikwik",
    "capabilities": [
     "gateway"
    ],
@@ -9473,7 +9473,7 @@
    "slug": "mobikwik",
    "version": "1.0.0",
    "description": "MobiKwik Zaakpay hosted checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -9563,11 +9563,11 @@
    "name": "Mollie Payments",
    "slug": "mollie",
    "version": "1.0.0",
-   "description": "Mollie Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Mollie Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MollieGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Mollie",
+   "namespace": "EdgePay\\Modules\\Gateways\\Mollie",
    "capabilities": [
     "gateway"
    ],
@@ -9602,8 +9602,8 @@
    "name": "Mollie Payments",
    "slug": "mollie",
    "version": "1.0.0",
-   "description": "Mollie Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Mollie Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9702,10 +9702,10 @@
    "slug": "momo",
    "version": "1.0.0",
    "description": "MoMo E-wallet payment integration for Vietnam",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MomoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Momo",
+   "namespace": "EdgePay\\Modules\\Gateways\\Momo",
    "capabilities": [
     "gateway"
    ],
@@ -9740,7 +9740,7 @@
    "slug": "momo",
    "version": "1.0.0",
    "description": "MoMo E-wallet payment integration for Vietnam",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -9874,11 +9874,11 @@
    "name": "Moneris",
    "slug": "moneris",
    "version": "1.0.0",
-   "description": "Moneris payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Moneris payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MonerisGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Moneris",
+   "namespace": "EdgePay\\Modules\\Gateways\\Moneris",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -9917,8 +9917,8 @@
    "name": "Moneris",
    "slug": "moneris",
    "version": "1.0.0",
-   "description": "Moneris payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Moneris payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -9951,7 +9951,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -9962,7 +9962,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -10045,11 +10045,11 @@
    "name": "M-Pesa Safaricom",
    "slug": "mpesa",
    "version": "1.0.0",
-   "description": "M-Pesa Safaricom payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "M-Pesa Safaricom payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MpesaGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Mpesa",
+   "namespace": "EdgePay\\Modules\\Gateways\\Mpesa",
    "capabilities": [
     "gateway"
    ],
@@ -10083,8 +10083,8 @@
    "name": "M-Pesa Safaricom",
    "slug": "mpesa",
    "version": "1.0.0",
-   "description": "M-Pesa Safaricom payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "M-Pesa Safaricom payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -10199,10 +10199,10 @@
    "slug": "mtn-momo",
    "version": "1.0.0",
    "description": "MTN Mobile Money Collection API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MtnMomoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\MtnMomo",
+   "namespace": "EdgePay\\Modules\\Gateways\\MtnMomo",
    "capabilities": [
     "gateway"
    ],
@@ -10239,7 +10239,7 @@
    "slug": "mtn-momo",
    "version": "1.0.0",
    "description": "MTN Mobile Money Collection API Integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -10400,10 +10400,10 @@
    "slug": "myfatoorah",
    "version": "1.0.0",
    "description": "MyFatoorah V2 API invoice and payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "MyfatoorahGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Myfatoorah",
+   "namespace": "EdgePay\\Modules\\Gateways\\Myfatoorah",
    "capabilities": [
     "gateway"
    ],
@@ -10440,7 +10440,7 @@
    "slug": "myfatoorah",
    "version": "1.0.0",
    "description": "MyFatoorah V2 Invoice and Payment Gateway Integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -10602,13 +10602,13 @@
    "slug": "nagad-merchant-api",
    "version": "1.0.0",
    "description": "Nagad Merchant API payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "assets/icon.svg",
    "color": "#F15A22",
    "entrypoint": "NagadMerchantApiGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\NagadMerchantApi",
+   "namespace": "EdgePay\\Modules\\Gateways\\NagadMerchantApi",
    "capabilities": [
     "gateway"
    ],
@@ -10639,7 +10639,7 @@
    "slug": "nagad-merchant-api",
    "version": "1.0.0",
    "description": "Nagad Merchant API payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -10803,11 +10803,11 @@
    "name": "Neteller",
    "slug": "neteller",
    "version": "1.0.0",
-   "description": "Neteller payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Neteller payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "NetellerGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Neteller",
+   "namespace": "EdgePay\\Modules\\Gateways\\Neteller",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -10842,8 +10842,8 @@
    "name": "Neteller",
    "slug": "neteller",
    "version": "1.0.0",
-   "description": "Neteller payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Neteller payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -10876,7 +10876,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -10887,7 +10887,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -10971,13 +10971,13 @@
    "slug": "nexuspay",
    "version": "1.0.0",
    "description": "Dutch-Bangla Bank Limited (DBBL) NexusPay payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#009688",
    "entrypoint": "NexusPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\NexusPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\NexusPay",
    "capabilities": [
     "gateway"
    ],
@@ -11008,7 +11008,7 @@
    "slug": "nexuspay",
    "version": "1.0.0",
    "description": "Dutch-Bangla Bank Limited (DBBL) NexusPay payment gateway integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -11147,11 +11147,11 @@
    "name": "NMI",
    "slug": "nmi",
    "version": "1.0.0",
-   "description": "NMI payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "NMI payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "NmiGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Nmi",
+   "namespace": "EdgePay\\Modules\\Gateways\\Nmi",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -11190,8 +11190,8 @@
    "name": "NMI",
    "slug": "nmi",
    "version": "1.0.0",
-   "description": "NMI payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "NMI payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -11218,7 +11218,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -11229,7 +11229,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -11313,13 +11313,13 @@
    "slug": "now-payments",
    "version": "1.0.0",
    "description": "Accept NowPayments Crypto payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#4CC38A",
    "entrypoint": "NowPaymentsGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\NowPayments",
+   "namespace": "EdgePay\\Modules\\Gateways\\NowPayments",
    "capabilities": [
     "gateway"
    ],
@@ -11352,7 +11352,7 @@
    "slug": "now-payments",
    "version": "1.0.0",
    "description": "Accept NowPayments Crypto payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -11460,13 +11460,13 @@
    "slug": "ok-wallet",
    "version": "1.0.0",
    "description": "ONE Bank OK Wallet mobile financial services payment integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#3F51B5",
    "entrypoint": "OkWalletGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\OkWallet",
+   "namespace": "EdgePay\\Modules\\Gateways\\OkWallet",
    "capabilities": [
     "gateway"
    ],
@@ -11497,7 +11497,7 @@
    "slug": "ok-wallet",
    "version": "1.0.0",
    "description": "ONE Bank OK Wallet mobile financial services payment integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -11647,10 +11647,10 @@
    "slug": "opay",
    "version": "1.0.0",
    "description": "OPay Cashier Checkout and digital wallet integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "OpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Opay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Opay",
    "capabilities": [
     "gateway"
    ],
@@ -11686,7 +11686,7 @@
    "slug": "opay",
    "version": "1.0.0",
    "description": "OPay Cashier Checkout and Digital Wallet Integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -11825,11 +11825,11 @@
    "name": "OpenNode",
    "slug": "opennode",
    "version": "1.0.0",
-   "description": "OpenNode payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "OpenNode payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "OpenNodeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\OpenNode",
+   "namespace": "EdgePay\\Modules\\Gateways\\OpenNode",
    "capabilities": [
     "gateway"
    ],
@@ -11864,8 +11864,8 @@
    "name": "OpenNode",
    "slug": "opennode",
    "version": "1.0.0",
-   "description": "OpenNode payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "OpenNode payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -11961,10 +11961,10 @@
    "slug": "orange-money",
    "version": "1.0.0",
    "description": "Orange Mobile Money API integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "OrangeMoneyGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\OrangeMoney",
+   "namespace": "EdgePay\\Modules\\Gateways\\OrangeMoney",
    "capabilities": [
     "gateway"
    ],
@@ -12000,7 +12000,7 @@
    "slug": "orange-money",
    "version": "1.0.0",
    "description": "Orange Money Web Payment API Integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -12145,11 +12145,11 @@
    "name": "OVO Wallet",
    "slug": "ovo",
    "version": "1.0.0",
-   "description": "OVO Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "OVO Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "OvoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Ovo",
+   "namespace": "EdgePay\\Modules\\Gateways\\Ovo",
    "capabilities": [
     "gateway"
    ],
@@ -12182,8 +12182,8 @@
    "name": "OVO Wallet",
    "slug": "ovo",
    "version": "1.0.0",
-   "description": "OVO Wallet payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "OVO Wallet payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12281,13 +12281,13 @@
    "slug": "oxapay",
    "version": "1.0.0",
    "description": "Accept OxaPay Crypto payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "crypto",
    "icon": "assets/icon.svg",
    "color": "#f15a24",
    "entrypoint": "OxapayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Oxapay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Oxapay",
    "capabilities": [
     "gateway"
    ],
@@ -12318,7 +12318,7 @@
    "slug": "oxapay",
    "version": "1.0.0",
    "description": "Accept OxaPay Crypto payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12411,11 +12411,11 @@
    "name": "Paddle",
    "slug": "paddle",
    "version": "1.0.0",
-   "description": "Paddle payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paddle payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PaddleGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Paddle",
+   "namespace": "EdgePay\\Modules\\Gateways\\Paddle",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -12454,8 +12454,8 @@
    "name": "Paddle",
    "slug": "paddle",
    "version": "1.0.0",
-   "description": "Paddle payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paddle payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12491,7 +12491,7 @@
     "headers": [
      "Authorization: Bearer ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -12503,7 +12503,7 @@
     "method": "GET",
     "headers": [
      "Authorization: Bearer ",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -12516,7 +12516,7 @@
     "headers": [
      "Authorization: Bearer ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -12602,11 +12602,11 @@
    "name": "PagSeguro",
    "slug": "pagseguro",
    "version": "1.0.0",
-   "description": "PagSeguro payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PagSeguro payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PagSeguroGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PagSeguro",
+   "namespace": "EdgePay\\Modules\\Gateways\\PagSeguro",
    "capabilities": [
     "gateway"
    ],
@@ -12642,8 +12642,8 @@
    "name": "PagSeguro",
    "slug": "pagseguro",
    "version": "1.0.0",
-   "description": "PagSeguro payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PagSeguro payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12721,10 +12721,10 @@
    "slug": "payfast",
    "version": "1.0.0",
    "description": "Payfast payment gateway integration for South Africa",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PayfastGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Payfast",
+   "namespace": "EdgePay\\Modules\\Gateways\\Payfast",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -12760,7 +12760,7 @@
    "slug": "payfast",
    "version": "1.0.0",
    "description": "Payfast payment gateway integration for South Africa",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12802,7 +12802,7 @@
     "url_expr": "$endpoint",
     "method": "POST",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "form",
     "timeout": 15,
@@ -12878,11 +12878,11 @@
    "name": "Payline Data",
    "slug": "payline-data",
    "version": "1.0.0",
-   "description": "Payline Data payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payline Data payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PaylineDataGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PaylineData",
+   "namespace": "EdgePay\\Modules\\Gateways\\PaylineData",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -12921,8 +12921,8 @@
    "name": "Payline Data",
    "slug": "payline-data",
    "version": "1.0.0",
-   "description": "Payline Data payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payline Data payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -12955,7 +12955,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -12966,7 +12966,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -13049,11 +13049,11 @@
    "name": "PayMe by HSBC",
    "slug": "payme",
    "version": "1.0.0",
-   "description": "PayMe by HSBC payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PayMe by HSBC payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PayMeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PayMe",
+   "namespace": "EdgePay\\Modules\\Gateways\\PayMe",
    "capabilities": [
     "gateway"
    ],
@@ -13089,8 +13089,8 @@
    "name": "PayMe by HSBC",
    "slug": "payme",
    "version": "1.0.0",
-   "description": "PayMe by HSBC payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PayMe by HSBC payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13196,11 +13196,11 @@
    "name": "Payment Depot",
    "slug": "payment-depot",
    "version": "1.0.0",
-   "description": "Payment Depot payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payment Depot payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PaymentDepotGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PaymentDepot",
+   "namespace": "EdgePay\\Modules\\Gateways\\PaymentDepot",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -13239,8 +13239,8 @@
    "name": "Payment Depot",
    "slug": "payment-depot",
    "version": "1.0.0",
-   "description": "Payment Depot payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payment Depot payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13267,7 +13267,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -13278,7 +13278,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -13361,11 +13361,11 @@
    "name": "Payoneer",
    "slug": "payoneer",
    "version": "1.0.0",
-   "description": "Payoneer payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payoneer payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PayoneerGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Payoneer",
+   "namespace": "EdgePay\\Modules\\Gateways\\Payoneer",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -13400,8 +13400,8 @@
    "name": "Payoneer",
    "slug": "payoneer",
    "version": "1.0.0",
-   "description": "Payoneer payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Payoneer payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13434,7 +13434,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -13445,7 +13445,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -13529,13 +13529,13 @@
    "slug": "paypal-checkout",
    "version": "1.0.0",
    "description": "Accept PayPal Checkout payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#003087",
    "entrypoint": "PaypalCheckoutGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PaypalCheckout",
+   "namespace": "EdgePay\\Modules\\Gateways\\PaypalCheckout",
    "capabilities": [
     "gateway"
    ],
@@ -13568,7 +13568,7 @@
    "slug": "paypal-checkout",
    "version": "1.0.0",
    "description": "Accept PayPal Checkout payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13692,11 +13692,11 @@
    "name": "Paystack",
    "slug": "paystack",
    "version": "1.0.0",
-   "description": "Paystack payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paystack payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PaystackGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Paystack",
+   "namespace": "EdgePay\\Modules\\Gateways\\Paystack",
    "capabilities": [
     "gateway"
    ],
@@ -13733,8 +13733,8 @@
    "name": "Paystack",
    "slug": "paystack",
    "version": "1.0.0",
-   "description": "Paystack payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paystack payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13835,13 +13835,13 @@
    "slug": "paystation",
    "version": "1.0.0",
    "description": "Accept PayStation payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mobile",
    "icon": "assets/icon.svg",
    "color": "#e01a22",
    "entrypoint": "PaystationGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Paystation",
+   "namespace": "EdgePay\\Modules\\Gateways\\Paystation",
    "capabilities": [
     "gateway"
    ],
@@ -13872,7 +13872,7 @@
    "slug": "paystation",
    "version": "1.0.0",
    "description": "Accept PayStation payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -13985,11 +13985,11 @@
    "name": "PayTabs",
    "slug": "paytabs",
    "version": "1.0.0",
-   "description": "PayTabs payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PayTabs payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PayTabsGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PayTabs",
+   "namespace": "EdgePay\\Modules\\Gateways\\PayTabs",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -14024,8 +14024,8 @@
    "name": "PayTabs",
    "slug": "paytabs",
    "version": "1.0.0",
-   "description": "PayTabs payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PayTabs payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -14059,7 +14059,7 @@
     "headers": [
      "Authorization: ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -14138,13 +14138,13 @@
    "slug": "paytm",
    "version": "1.0.0",
    "description": "Paytm secure transaction token showPaymentPage integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#002970",
    "entrypoint": "PaytmGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Paytm",
+   "namespace": "EdgePay\\Modules\\Gateways\\Paytm",
    "capabilities": [
     "gateway"
    ],
@@ -14179,7 +14179,7 @@
    "slug": "paytm",
    "version": "1.0.0",
    "description": "Paytm secure transaction token showPaymentPage integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -14316,11 +14316,11 @@
    "name": "Paytrace",
    "slug": "paytrace",
    "version": "1.0.0",
-   "description": "Paytrace payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paytrace payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PaytraceGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Paytrace",
+   "namespace": "EdgePay\\Modules\\Gateways\\Paytrace",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -14359,8 +14359,8 @@
    "name": "Paytrace",
    "slug": "paytrace",
    "version": "1.0.0",
-   "description": "Paytrace payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Paytrace payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -14393,7 +14393,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -14404,7 +14404,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -14488,13 +14488,13 @@
    "slug": "payu",
    "version": "1.0.0",
    "description": "PayU India secure checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mfs",
    "icon": "icon.svg",
    "color": "#84c01a",
    "entrypoint": "PayuGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Payu",
+   "namespace": "EdgePay\\Modules\\Gateways\\Payu",
    "capabilities": [
     "gateway"
    ],
@@ -14525,7 +14525,7 @@
    "slug": "payu",
    "version": "1.0.0",
    "description": "PayU India secure checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -14615,11 +14615,11 @@
    "name": "PhonePe",
    "slug": "phonepe",
    "version": "1.0.0",
-   "description": "PhonePe payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PhonePe payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PhonePeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PhonePe",
+   "namespace": "EdgePay\\Modules\\Gateways\\PhonePe",
    "capabilities": [
     "gateway"
    ],
@@ -14654,8 +14654,8 @@
    "name": "PhonePe",
    "slug": "phonepe",
    "version": "1.0.0",
-   "description": "PhonePe payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PhonePe payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -14778,11 +14778,11 @@
    "name": "Pix Dynamic",
    "slug": "pix",
    "version": "1.0.0",
-   "description": "Pix Dynamic payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Pix Dynamic payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PixGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Pix",
+   "namespace": "EdgePay\\Modules\\Gateways\\Pix",
    "capabilities": [
     "gateway"
    ],
@@ -14817,8 +14817,8 @@
    "name": "Pix Dynamic",
    "slug": "pix",
    "version": "1.0.0",
-   "description": "Pix Dynamic payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Pix Dynamic payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -14895,13 +14895,13 @@
    "slug": "portwallet",
    "version": "1.0.0",
    "description": "PortWallet payment gateway and aggregator service supporting cards and MFS",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#FF5722",
    "entrypoint": "PortWalletGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PortWallet",
+   "namespace": "EdgePay\\Modules\\Gateways\\PortWallet",
    "capabilities": [
     "gateway"
    ],
@@ -14936,7 +14936,7 @@
    "slug": "portwallet",
    "version": "1.0.0",
    "description": "PortWallet payment gateway and aggregator service supporting cards and MFS",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -15082,11 +15082,11 @@
    "name": "PromptPay QR",
    "slug": "promptpay",
    "version": "1.0.0",
-   "description": "PromptPay QR payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PromptPay QR payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "PromptPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\PromptPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\PromptPay",
    "capabilities": [
     "gateway"
    ],
@@ -15119,8 +15119,8 @@
    "name": "PromptPay QR",
    "slug": "promptpay",
    "version": "1.0.0",
-   "description": "PromptPay QR payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "PromptPay QR payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15219,11 +15219,11 @@
    "name": "Przelewy24",
    "slug": "przelewy24",
    "version": "1.0.0",
-   "description": "Przelewy24 payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Przelewy24 payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "Przelewy24Gateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Przelewy24",
+   "namespace": "EdgePay\\Modules\\Gateways\\Przelewy24",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -15258,8 +15258,8 @@
    "name": "Przelewy24",
    "slug": "przelewy24",
    "version": "1.0.0",
-   "description": "Przelewy24 payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Przelewy24 payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15312,7 +15312,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -15324,7 +15324,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 10,
@@ -15393,11 +15393,11 @@
    "name": "Rapyd",
    "slug": "rapyd",
    "version": "1.0.0",
-   "description": "Rapyd payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Rapyd payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "RapydGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Rapyd",
+   "namespace": "EdgePay\\Modules\\Gateways\\Rapyd",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -15432,8 +15432,8 @@
    "name": "Rapyd",
    "slug": "rapyd",
    "version": "1.0.0",
-   "description": "Rapyd payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Rapyd payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15466,7 +15466,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -15477,7 +15477,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -15560,11 +15560,11 @@
    "name": "Razorpay",
    "slug": "razorpay",
    "version": "1.0.0",
-   "description": "Razorpay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Razorpay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "RazorpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Razorpay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Razorpay",
    "capabilities": [
     "gateway"
    ],
@@ -15601,8 +15601,8 @@
    "name": "Razorpay",
    "slug": "razorpay",
    "version": "1.0.0",
-   "description": "Razorpay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Razorpay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15697,11 +15697,11 @@
    "name": "DBBL Rocket",
    "slug": "rocket",
    "version": "1.0.0",
-   "description": "DBBL Rocket payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "DBBL Rocket payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "RocketGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Rocket",
+   "namespace": "EdgePay\\Modules\\Gateways\\Rocket",
    "capabilities": [
     "gateway"
    ],
@@ -15735,8 +15735,8 @@
    "name": "DBBL Rocket",
    "slug": "rocket",
    "version": "1.0.0",
-   "description": "DBBL Rocket payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "DBBL Rocket payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15816,11 +15816,11 @@
    "name": "Sezzle",
    "slug": "sezzle",
    "version": "1.0.0",
-   "description": "Sezzle checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Sezzle checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "SezzleGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Sezzle",
+   "namespace": "EdgePay\\Modules\\Gateways\\Sezzle",
    "capabilities": [
     "gateway"
    ],
@@ -15856,8 +15856,8 @@
    "name": "Sezzle",
    "slug": "sezzle",
    "version": "1.0.0",
-   "description": "Sezzle checkout integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Sezzle checkout integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -15969,11 +15969,11 @@
    "name": "Shift4",
    "slug": "shift4",
    "version": "1.0.0",
-   "description": "Shift4 payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Shift4 payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "Shift4Gateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Shift4",
+   "namespace": "EdgePay\\Modules\\Gateways\\Shift4",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -16008,8 +16008,8 @@
    "name": "Shift4",
    "slug": "shift4",
    "version": "1.0.0",
-   "description": "Shift4 payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Shift4 payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -16042,7 +16042,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -16053,7 +16053,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -16137,10 +16137,10 @@
    "slug": "shopeepay",
    "version": "1.0.0",
    "description": "ShopeePay e-wallet integration via Omise hosted sources",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "ShopeePayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\ShopeePay",
+   "namespace": "EdgePay\\Modules\\Gateways\\ShopeePay",
    "capabilities": [
     "gateway"
    ],
@@ -16176,7 +16176,7 @@
    "slug": "shopeepay",
    "version": "1.0.0",
    "description": "ShopeePay e-wallet integration via Omise hosted sources",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -16290,13 +16290,13 @@
    "slug": "shurjopay",
    "version": "1.0.0",
    "description": "Accept shurjoPay payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "mobile",
    "icon": "assets/icon.svg",
    "color": "#eb7324",
    "entrypoint": "ShurjopayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Shurjopay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Shurjopay",
    "capabilities": [
     "gateway"
    ],
@@ -16327,7 +16327,7 @@
    "slug": "shurjopay",
    "version": "1.0.0",
    "description": "Accept shurjoPay payments directly from customers.",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -16452,11 +16452,11 @@
    "name": "Skrill",
    "slug": "skrill",
    "version": "1.0.0",
-   "description": "Skrill payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Skrill payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "SkrillGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Skrill",
+   "namespace": "EdgePay\\Modules\\Gateways\\Skrill",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -16491,8 +16491,8 @@
    "name": "Skrill",
    "slug": "skrill",
    "version": "1.0.0",
-   "description": "Skrill payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Skrill payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -16525,7 +16525,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -16536,7 +16536,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -16619,11 +16619,11 @@
    "name": "Sofort",
    "slug": "sofort",
    "version": "1.0.0",
-   "description": "Sofort (Klarna) payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Sofort (Klarna) payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "SofortGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Sofort",
+   "namespace": "EdgePay\\Modules\\Gateways\\Sofort",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -16658,8 +16658,8 @@
    "name": "Sofort",
    "slug": "sofort",
    "version": "1.0.0",
-   "description": "Sofort payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Sofort payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -16704,7 +16704,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/xml; charset=UTF-8",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "raw",
     "timeout": 15,
@@ -16716,7 +16716,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/xml; charset=UTF-8",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "raw",
     "timeout": 10,
@@ -16793,11 +16793,11 @@
    "name": "Square Payments",
    "slug": "square",
    "version": "1.0.0",
-   "description": "Square Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Square Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "SquareGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Square",
+   "namespace": "EdgePay\\Modules\\Gateways\\Square",
    "capabilities": [
     "gateway"
    ],
@@ -16835,8 +16835,8 @@
    "name": "Square Payments",
    "slug": "square",
    "version": "1.0.0",
-   "description": "Square Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Square Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -16921,13 +16921,13 @@
    "slug": "sslcommerz",
    "version": "1.0.0",
    "description": "SSLCommerz payment gateway for Bangladesh",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#2B4BC0",
    "entrypoint": "SslCommerzGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\SslCommerz",
+   "namespace": "EdgePay\\Modules\\Gateways\\SslCommerz",
    "capabilities": [
     "gateway"
    ],
@@ -16958,7 +16958,7 @@
    "slug": "sslcommerz",
    "version": "1.0.0",
    "description": "SSLCommerz payment gateway for Bangladesh",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -17071,11 +17071,11 @@
    "name": "Stax",
    "slug": "stax",
    "version": "1.0.0",
-   "description": "Stax payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Stax payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "StaxGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Stax",
+   "namespace": "EdgePay\\Modules\\Gateways\\Stax",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -17114,8 +17114,8 @@
    "name": "Stax",
    "slug": "stax",
    "version": "1.0.0",
-   "description": "Stax payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Stax payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -17142,7 +17142,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -17153,7 +17153,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -17237,13 +17237,13 @@
    "slug": "stripe",
    "version": "1.0.0",
    "description": "Stripe payment gateway \u2014 cards, wallets, international payments",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#635BFF",
    "entrypoint": "StripeGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Stripe",
+   "namespace": "EdgePay\\Modules\\Gateways\\Stripe",
    "capabilities": [
     "gateway"
    ],
@@ -17277,7 +17277,7 @@
    "slug": "stripe",
    "version": "1.0.0",
    "description": "Stripe payment gateway \u2014 cards, wallets, international payments",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -17434,13 +17434,13 @@
    "slug": "tap",
    "version": "1.0.0",
    "description": "Trust Axiata Pay (Tap) mobile financial services and digital checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "category": "global",
    "icon": "icon.svg",
    "color": "#E91E63",
    "entrypoint": "TapGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Tap",
+   "namespace": "EdgePay\\Modules\\Gateways\\Tap",
    "capabilities": [
     "gateway"
    ],
@@ -17475,7 +17475,7 @@
    "slug": "tap",
    "version": "1.0.0",
    "description": "Trust Axiata Pay (Tap) mobile financial services and digital checkout integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -17625,10 +17625,10 @@
    "slug": "tap-payments",
    "version": "1.0.0",
    "description": "Tap Payments (goSell API v2) checkout and card integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TapPaymentsGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\TapPayments",
+   "namespace": "EdgePay\\Modules\\Gateways\\TapPayments",
    "capabilities": [
     "gateway"
    ],
@@ -17664,7 +17664,7 @@
    "slug": "tap-payments",
    "version": "1.0.0",
    "description": "Tap Payments (goSell API v2) Checkout Integration",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -17809,11 +17809,11 @@
    "name": "Toss Payments",
    "slug": "toss",
    "version": "1.0.0",
-   "description": "Toss Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Toss Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TossGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Toss",
+   "namespace": "EdgePay\\Modules\\Gateways\\Toss",
    "capabilities": [
     "gateway"
    ],
@@ -17848,8 +17848,8 @@
    "name": "Toss Payments",
    "slug": "toss",
    "version": "1.0.0",
-   "description": "Toss Payments payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Toss Payments payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -17932,10 +17932,10 @@
    "slug": "touch-n-go",
    "version": "1.0.0",
    "description": "Touch 'n Go eWallet payment integration via Stripe PaymentIntent",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TouchNGoGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\TouchNGo",
+   "namespace": "EdgePay\\Modules\\Gateways\\TouchNGo",
    "capabilities": [
     "gateway"
    ],
@@ -17968,7 +17968,7 @@
   "metadata": {
    "slug": "touch-n-go",
    "version": "1.0.0",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -18078,10 +18078,10 @@
    "slug": "truemoney",
    "version": "1.0.0",
    "description": "TrueMoney e-wallet integration via Omise hosted sources",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TrueMoneyGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\TrueMoney",
+   "namespace": "EdgePay\\Modules\\Gateways\\TrueMoney",
    "capabilities": [
     "gateway"
    ],
@@ -18116,7 +18116,7 @@
    "slug": "truemoney",
    "version": "1.0.0",
    "description": "TrueMoney e-wallet integration via Omise hosted sources",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {
@@ -18227,11 +18227,11 @@
    "name": "TrustCommerce",
    "slug": "trustcommerce",
    "version": "1.0.0",
-   "description": "TrustCommerce payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "TrustCommerce payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TrustCommerceGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\TrustCommerce",
+   "namespace": "EdgePay\\Modules\\Gateways\\TrustCommerce",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -18266,8 +18266,8 @@
    "name": "TrustCommerce",
    "slug": "trustcommerce",
    "version": "1.0.0",
-   "description": "TrustCommerce payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "TrustCommerce payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -18300,7 +18300,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -18311,7 +18311,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -18394,11 +18394,11 @@
    "name": "Trustly",
    "slug": "trustly",
    "version": "1.0.0",
-   "description": "Trustly bank payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Trustly bank payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TrustlyGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Trustly",
+   "namespace": "EdgePay\\Modules\\Gateways\\Trustly",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -18437,8 +18437,8 @@
    "name": "Trustly",
    "slug": "trustly",
    "version": "1.0.0",
-   "description": "Trustly bank payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Trustly bank payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -18487,7 +18487,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -18558,11 +18558,11 @@
    "name": "TSYS",
    "slug": "tsys",
    "version": "1.0.0",
-   "description": "TSYS payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "TSYS payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "TsysGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Tsys",
+   "namespace": "EdgePay\\Modules\\Gateways\\Tsys",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -18601,8 +18601,8 @@
    "name": "TSYS",
    "slug": "tsys",
    "version": "1.0.0",
-   "description": "TSYS payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "TSYS payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -18635,7 +18635,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -18646,7 +18646,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -18729,11 +18729,11 @@
    "name": "Upay",
    "slug": "upay",
    "version": "1.0.0",
-   "description": "Upay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Upay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "UpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Upay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Upay",
    "capabilities": [
     "gateway"
    ],
@@ -18768,8 +18768,8 @@
    "name": "Upay",
    "slug": "upay",
    "version": "1.0.0",
-   "description": "Upay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Upay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -18925,11 +18925,11 @@
    "name": "WeChat Pay",
    "slug": "wechat-pay",
    "version": "1.0.0",
-   "description": "WeChat Pay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "WeChat Pay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "WechatPayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\WechatPay",
+   "namespace": "EdgePay\\Modules\\Gateways\\WechatPay",
    "capabilities": [
     "gateway"
    ],
@@ -18964,8 +18964,8 @@
    "name": "WeChat Pay",
    "slug": "wechat-pay",
    "version": "1.0.0",
-   "description": "WeChat Pay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "WeChat Pay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -19015,7 +19015,7 @@
      "Authorization: ",
      "Content-Type: application/json",
      "Accept: application/json",
-     "User-Agent: OwnPay/1.0"
+     "User-Agent: EdgePay/1.0"
     ],
     "body_kind": "raw",
     "timeout": 15,
@@ -19064,11 +19064,11 @@
    "name": "Wise",
    "slug": "wise",
    "version": "1.0.0",
-   "description": "Wise payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Wise payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "WiseGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Wise",
+   "namespace": "EdgePay\\Modules\\Gateways\\Wise",
    "capabilities": [
     "gateway"
    ],
@@ -19106,8 +19106,8 @@
    "name": "Wise",
    "slug": "wise",
    "version": "1.0.0",
-   "description": "Wise payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Wise payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -19192,11 +19192,11 @@
    "name": "Worldline Connect",
    "slug": "worldline",
    "version": "1.0.0",
-   "description": "Worldline Connect payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Worldline Connect payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "WorldlineGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Worldline",
+   "namespace": "EdgePay\\Modules\\Gateways\\Worldline",
    "capabilities": [
     "gateway"
    ],
@@ -19233,8 +19233,8 @@
    "name": "Worldline Connect",
    "slug": "worldline",
    "version": "1.0.0",
-   "description": "Worldline Connect payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Worldline Connect payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -19364,11 +19364,11 @@
    "name": "Worldpay",
    "slug": "worldpay",
    "version": "1.0.0",
-   "description": "Worldpay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Worldpay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "WorldpayGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Worldpay",
+   "namespace": "EdgePay\\Modules\\Gateways\\Worldpay",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -19403,8 +19403,8 @@
    "name": "Worldpay",
    "slug": "worldpay",
    "version": "1.0.0",
-   "description": "Worldpay payment gateway integration for OwnPay",
-   "author": "OwnPay Core",
+   "description": "Worldpay payment gateway integration for EdgePay",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -19437,7 +19437,7 @@
     "method": "POST",
     "headers": [
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -19448,7 +19448,7 @@
     "url_expr": "$endpoint",
     "method": "GET",
     "headers": [
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,
@@ -19532,10 +19532,10 @@
    "slug": "xendit",
    "version": "1.0.0",
    "description": "Xendit payment gateway integration for Southeast Asia",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway",
    "entrypoint": "XenditGateway.php",
-   "namespace": "OwnPay\\Modules\\Gateways\\Xendit",
+   "namespace": "EdgePay\\Modules\\Gateways\\Xendit",
    "capabilities": [
     "gateway",
     "http_outbound",
@@ -19571,7 +19571,7 @@
    "slug": "xendit",
    "version": "1.0.0",
    "description": "Xendit payment gateway integration for Southeast Asia",
-   "author": "OwnPay Core",
+   "author": "EdgePay Core",
    "type": "gateway"
   },
   "constants": {},
@@ -19612,7 +19612,7 @@
     "headers": [
      "Authorization: Basic ",
      "Content-Type: application/json",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": "json",
     "timeout": 15,
@@ -19624,7 +19624,7 @@
     "method": "GET",
     "headers": [
      "Authorization: Basic ",
-     "User-Agent: OwnPay Gateway Client/1.0.0"
+     "User-Agent: EdgePay Gateway Client/1.0.0"
     ],
     "body_kind": null,
     "timeout": 10,

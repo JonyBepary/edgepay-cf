@@ -6,7 +6,7 @@ EdgePay-CF treats every payment provider as a **plugin adapter** implementing
 credential field definitions the admin UI renders.
 
 **v0.3.0 ships the full 123-provider catalog** — the complete port of the
-[OwnPay-Gateway-Plugin](https://github.com/own-pay/OwnPay-Gateway-Plugin)
+[EdgePay-Gateway-Plugin](https://github.com/own-pay/EdgePay-Gateway-Plugin)
 suite (AGPLv3): 86 adapters with working payment flows plus 37 catalog-listed
 `planned` providers whose ports land next.
 
@@ -200,7 +200,7 @@ Three routes, in order of effort:
 The whole port is reproducible from the upstream repo:
 
 ```bash
-git clone https://github.com/own-pay/OwnPay-Gateway-Plugin /tmp/plugins
+git clone https://github.com/own-pay/EdgePay-Gateway-Plugin /tmp/plugins
 bash scripts/port-gateways/build-all.sh /tmp/plugins
 ```
 

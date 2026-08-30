@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OwnPay-Gateway-Plugin (PHP) → EdgePay-CF (TS) port analyzer.
+EdgePay-Gateway-Plugin (PHP) → EdgePay-CF (TS) port analyzer.
 
 Reads every gateway module in the cloned plugin repo and extracts a
 structured description of each adapter: manifest, constants, credential

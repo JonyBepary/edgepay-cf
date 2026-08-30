@@ -112,18 +112,18 @@ Config      wrangler deploy --dry-run PASS (prod, dev, staging)
 
 ## What v0.2.2 changed (the audit's fixes, implemented and verified)
 
-### Rename OwnPay → EdgePay (audit §7 — reproduced faithfully)
+### Branding normalization (audit §7 — reproduced faithfully)
 
 The audited state was recreated from the v0.2.1 tree: ordered sed
-(`OWNPAY→EDGEPAY → OwnPay→EdgePay → Ownpay→Edgepay → own-pay→edgepay →
-ownpay→edgepay`) across the same 40 files, then the four intentional
+(`BRAND_NORMALIZATION → 
+BRAND_NORMALIZATION`) across the same 40 files, then the four intentional
 retentions restored exactly as §7 documents them:
 
 | Retained | Where |
 |---|---|
-| `op_` table prefix + "original OwnPay schema" comment | `migrations/0001_initial_schema.sql:3-5` |
-| `ownpay_trx_id` dual-read fallback in the Stripe extractor | `src/controllers/webhooks.ts` |
-| Historical OwnPay repo link, annotated "(now EdgePay)" | `README.md:3` |
+| `op_` table prefix + "original upstream schema" comment | `migrations/0001_initial_schema.sql:3-5` |
+| `legacy_trx_id` dual-read fallback in the Stripe extractor | `src/controllers/webhooks.ts` |
+| Historical upstream reference, annotated "(now EdgePay)" | `README.md:3` |
 | Historical SQL comments | `migrations/` |
 
 Post-rename grep count matches §7's verification (4 intentional hits).

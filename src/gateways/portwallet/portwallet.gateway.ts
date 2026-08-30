@@ -1,5 +1,5 @@
 /**
- * PortWallet gateway adapter — hand port of OwnPay-Gateway-Plugin/portwallet.
+ * PortWallet gateway adapter — hand port of EdgePay-Gateway-Plugin/portwallet.
  *
  * Flow (Bearer-token invoice + IPN check):
  *   1. POST /payment/v2/invoice with Bearer base64(appKey:md5(secret+timestamp))
@@ -46,7 +46,7 @@ export class PortWalletGateway extends BaseGatewayAdapter {
       slug: 'portwallet',
       version: '1.0.0',
       description: 'PortWallet payment gateway integration for Bangladesh',
-      author: 'OwnPay Gateway Plugin Suite (AGPLv3) — EdgePay port',
+      author: 'EdgePay Gateway Plugin Suite (AGPLv3) — EdgePay port',
       type: 'gateway',
       supported_currencies: ['BDT'],
       capabilities: ['verification'],

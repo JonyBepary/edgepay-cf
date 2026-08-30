@@ -16,7 +16,7 @@ and runs **fully on the free tier** (~3.3K payments/day practical ceiling — se
 
 ## What's included
 
-- **123-gateway catalog** (v0.3.0): the full port of the OwnPay-Gateway-Plugin
+- **123-gateway catalog** (v0.3.0): the full port of the EdgePay-Gateway-Plugin
   suite — 86 adapters with working payment flows (BD MFS complete: bKash, Nagad,
   Rocket, SSLCommerz, Aamarpay, ShurjoPay, PortWallet, CellFin, NexusPay, OK
   Wallet, Upay + global/regional rails) and 37 `planned` entries, all selectable

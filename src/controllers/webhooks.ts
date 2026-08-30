@@ -209,11 +209,11 @@ function extractTransactionId(gatewaySlug: string, payload: Record<string, unkno
   switch (gatewaySlug) {
     case 'stripe': {
       // metadata.edgepay_trx_id is set during initiate(); pre-rename
-      // payments embedded ownpay_trx_id — dual-read so webhooks still in
+      // payments embedded legacy transaction id — dual-read so webhooks still in
       // flight after the rename keep reconciling.
       const metadata = (payload.data as { object?: { metadata?: Record<string, string> } } | undefined)
         ?.object?.metadata;
-      return metadata?.edgepay_trx_id ?? metadata?.ownpay_trx_id ?? null;
+      return metadata?.edgepay_trx_id ?? metadata?.legacy_trx_id ?? null;
     }
     case 'paypal': {
       // resource.custom is a JSON string we set during initiate()
