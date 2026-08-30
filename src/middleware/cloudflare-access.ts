@@ -270,6 +270,10 @@ interface AccessAuthVariables {
   accessEmail: string | null;
   accessSub: string | null;
   accessBreakGlass: boolean;
+  merchantId: number | null;
+  authType: 'bearer' | 'jwt' | 'session' | 'access' | null;
+  authSubject: number | null;
+  authScopes: string[];
 }
 
 export function accessAuthMiddleware(): MiddlewareHandler<{
@@ -277,6 +281,53 @@ export function accessAuthMiddleware(): MiddlewareHandler<{
   Variables: Partial<AccessAuthVariables>;
 }> {
   return async (c, next) => {
+    // --- Bearer API Key with admin scope (allows direct REST administration) ---
+    const authHeader = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer op_live_')) {
+      const apiKey = authHeader.slice(7);
+      const keyMatch = apiKey.match(/^op_live_([a-z0-9]{12})_([a-z0-9]+)$/i);
+      if (keyMatch) {
+        const prefix = keyMatch[1];
+        const { sha256, timingSafeEqual } = await import('../lib/crypto');
+        const keyHash = await sha256(apiKey);
+
+        const keyRow = await c.env.DB.prepare(
+          `SELECT ak.id, ak.merchant_id, ak.scopes, ak.status, ak.expires_at,
+                  m.status AS merchant_status
+           FROM op_api_keys ak
+           JOIN op_merchants m ON m.id = ak.merchant_id
+           WHERE ak.key_prefix = ? AND ak.status = 'active'
+           LIMIT 1`
+        ).bind(prefix).first<{
+          id: number;
+          merchant_id: number;
+          scopes: string;
+          status: string;
+          expires_at: string | null;
+          merchant_status: string;
+        }>();
+
+        if (keyRow && keyRow.merchant_status === 'active') {
+          const storedHash = await c.env.DB.prepare(
+            `SELECT key_hash FROM op_api_keys WHERE id = ?`
+          ).bind(keyRow.id).first<{ key_hash: string }>();
+
+          if (storedHash && timingSafeEqual(storedHash.key_hash, keyHash)) {
+            const grantedScopes = JSON.parse(keyRow.scopes || '[]') as string[];
+            if (grantedScopes.includes('*') || grantedScopes.includes('admin')) {
+              c.set('accessEmail', `merchant-${keyRow.merchant_id}@edgepay.dev`);
+              c.set('accessSub', `api-key-${keyRow.id}`);
+              c.set('merchantId', keyRow.merchant_id);
+              c.set('authType', 'bearer');
+              c.set('authSubject', keyRow.id);
+              c.set('authScopes', grantedScopes);
+              return next();
+            }
+          }
+        }
+      }
+    }
+
     const teamDomain = c.env.CF_ACCESS_TEAM_DOMAIN?.trim();
     const aud = c.env.CF_ACCESS_AUD_TAG?.trim();
 
