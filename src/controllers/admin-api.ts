@@ -75,9 +75,18 @@ adminApiRoutes.put('/sms-templates/:id', requireScope('admin'), async (c) => {
   const body = await c.req.json<{ regex_pattern?: string; status?: string }>();
 
   await c.env.DB.prepare(
-
-    `UPDATE op_sms_templates SET regex_pattern = ?, status = ?, updated_at = ? WHERE id = ? AND merchant_id = ?`
-).bind(body.regex_pattern, body.status ?? 'active', new Date().toISOString(), id, merchantId).run();
+    `UPDATE op_sms_templates 
+     SET regex_pattern = COALESCE(?, regex_pattern), 
+         status = COALESCE(?, status), 
+         updated_at = ? 
+     WHERE id = ? AND merchant_id = ?`
+  ).bind(
+    body.regex_pattern ?? null,
+    body.status ?? null,
+    new Date().toISOString(),
+    id,
+    merchantId,
+  ).run();
 
   return c.json({ success: true });
 });
