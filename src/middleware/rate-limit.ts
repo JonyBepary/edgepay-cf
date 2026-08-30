@@ -34,9 +34,9 @@ const ANON_ROUTE_LIMITS: Record<string, RateLimitConfig> = {
   'api-read':    { windowSec: 60, maxRequests: 120, keyPrefix: 'rl:api:r:' },
   'api-write':   { windowSec: 60, maxRequests: 30,  keyPrefix: 'rl:api:w:' },
   'mobile':      { windowSec: 60, maxRequests: 60,  keyPrefix: 'rl:mobile:' },
-  'login':       { windowSec: 300, maxRequests: 5,  keyPrefix: 'rl:login:' },
-  'otp':         { windowSec: 3600, maxRequests: 3, keyPrefix: 'rl:otp:' },
-  'password':    { windowSec: 3600, maxRequests: 3, keyPrefix: 'rl:pwd:' },
+  'install':     { windowSec: 60, maxRequests: 120, keyPrefix: 'rl:install:' },
+  'otp':         { windowSec: 3600, maxRequests: 10, keyPrefix: 'rl:otp:' },
+  'password':    { windowSec: 3600, maxRequests: 10, keyPrefix: 'rl:pwd:' },
 };
 
 function rateLimitHeaders(c: { header: (k: string, v: string) => void }, limit: number, resetAt: number, remaining: number): void {

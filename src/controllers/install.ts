@@ -151,6 +151,11 @@ installRoutes.post('/', async (c) => {
       now,
       now,).run();
 
+  const userRow = await c.env.DB.prepare(
+    `SELECT id FROM op_merchant_users WHERE uuid = ? LIMIT 1`
+  ).bind(adminUuid).first<{ id: number }>();
+  const adminUserId = userRow?.id ?? 1;
+
   // 3. Create default ledger chart of accounts
   const { LedgerService } = await import('../services/ledger');
   const ledger = new LedgerService(c.env);
@@ -175,7 +180,69 @@ installRoutes.post('/', async (c) => {
     now
   ).run();
 
-  // 5. Mark installed (KV flag)
+  // 5. Seed default gateways for merchant
+  const defaultGateways = [
+    { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
+    { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
+    { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
+    { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
+    { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
+  ];
+
+  for (const gw of defaultGateways) {
+    await c.env.DB.prepare(
+      `INSERT INTO op_gateways 
+         (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+    ).bind(merchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
+  }
+
+  // 6. Seed default SMS regex templates for automated MFS verification
+  const defaultTemplates = [
+    {
+      gateway_slug: 'bkash',
+      name: 'bKash Received Money',
+      regex: 'You have received Tk (?<amount>[0-9,.]+)\\s+from\\s+(?<sender>[0-9+]+)\\..*?TrxID\\s+(?<trx_id>[A-Z0-9]+)',
+      sample: 'You have received Tk 500.00 from 01711223344. Fee Tk 0.00. Balance Tk 15,200.00. TrxID 9A8B7C6D5E at 31/08/2026 03:00'
+    },
+    {
+      gateway_slug: 'bkash',
+      name: 'bKash Merchant Payment',
+      regex: 'Payment Tk (?<amount>[0-9,.]+)\\s+from\\s+(?<sender>[0-9+]+)\\s+successful.*?TrxID\\s+(?<trx_id>[A-Z0-9]+)',
+      sample: 'Payment Tk 500.00 from 01711223344 successful. Fee Tk 0.00. Balance Tk 15,200.00. TrxID 9A8B7C6D5E at 31/08/2026 03:00'
+    },
+    {
+      gateway_slug: 'nagad',
+      name: 'Nagad Received / Cash In',
+      regex: '(?:Cash In|Payment|Received).*?Tk\\s+(?<amount>[0-9,.]+).*?from\\s+(?<sender>[0-9+]+).*?TxnID:\\s+(?<trx_id>[A-Z0-9]+)',
+      sample: 'Cash In of Tk 500.00 is successful from 01811223344. Fee Tk 0.00. Balance Tk 10,500.00. TxnID: NG9A8B7C at 31/08/2026 03:00'
+    },
+    {
+      gateway_slug: 'rocket',
+      name: 'DBBL Rocket Received',
+      regex: '(?:TxnId|Txn):\\s*(?<trx_id>[0-9]+).*?Tk\\s*(?<amount>[0-9,.]+).*?From:\\s*(?<sender>[0-9+]+)',
+      sample: 'TxnId: 1234567890 Tk 500.00 From: 01911223344'
+    }
+  ];
+
+  for (const tmpl of defaultTemplates) {
+    await c.env.DB.prepare(
+      `INSERT INTO op_sms_templates
+         (merchant_id, gateway_slug, name, regex_pattern, sample_sms, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`
+    ).bind(merchantId, tmpl.gateway_slug, tmpl.name, tmpl.regex, tmpl.sample, now, now).run();
+  }
+
+  // 7. Seed initial companion device pairing OTP (30 days validity)
+  const initialOtp = '123456';
+  const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+  await c.env.DB.prepare(
+    `INSERT INTO op_device_pairing_tokens
+       (merchant_id, user_id, token, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(merchantId, adminUserId, initialOtp, otpExpiresAt, now).run();
+
+  // 8. Mark installed (KV flag)
   await c.env.KV.put('system:installed', 'true');
 
   return c.json({
@@ -184,12 +251,13 @@ installRoutes.post('/', async (c) => {
       merchant_id: merchantId,
       admin_uuid: adminUuid,
       api_key: apiKey,
+      device_pairing_otp: initialOtp,
       install_completed: true,
-      message: 'Save this API key immediately — use it as Authorization: Bearer <api_key> for all /api/v1/* endpoints.',
+      message: 'Setup complete! Use the API key for backend requests and the OTP to pair the Android companion app.',
       next_steps: [
         `Use 'Authorization: Bearer ${apiKey}' for all /api/v1/* requests`,
-        'Log in to the admin panel at /admin',
-        'Configure your first payment gateway under /admin/gateways',
+        `Use pairing OTP '${initialOtp}' to connect the Android SMS forwarding app`,
+        'Checkout is ready with bKash, Nagad, and Rocket support',
       ],
     },
   });

@@ -151,7 +151,7 @@ app.use('/api/admin/*', accessAuthMiddleware());
 // APIs use the native Ratelimit binding per API key instead (mounted in
 // their controllers, after bearer auth). Mounted BEFORE installRoutes so it
 // intercepts requests to /install and /install/*.
-app.use('/install*', perIpRateLimit('otp'));
+app.use('/install*', perIpRateLimit('install'));
 app.route('/install', installRoutes);
 
 // Health check (no auth) — must be mounted BEFORE /api/v1 routes
