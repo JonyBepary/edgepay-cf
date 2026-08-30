@@ -86,7 +86,13 @@ export class PaymentService {
         now,
         now,).run();
 
-    const intentId = result.meta?.last_row_id;
+    let intentId = result.meta?.last_row_id;
+    if (!intentId) {
+      const row = await this.env.DB.prepare(
+        `SELECT id FROM op_payment_intents WHERE uuid = ? LIMIT 1`
+      ).bind(uuid).first<{ id: number }>();
+      intentId = row?.id;
+    }
     if (!intentId) {
       throw new HttpError(500, 'Failed to create payment intent', 'INTENT_CREATE_FAILED');
     }
