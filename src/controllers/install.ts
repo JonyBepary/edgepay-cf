@@ -151,8 +151,24 @@ installRoutes.post('/', async (c) => {
   const ledger = new LedgerService(c.env);
   await ledger.createDefaultChartOfAccounts(merchantId, body.currency ?? 'BDT');
 
-  // 4. Seed default currencies (if not done by migrations)
-  // (Migration handles initial data — no action needed here)
+  // 4. Generate initial Merchant API Key (admin, read, write scopes)
+  const { sha256 } = await import('../lib/crypto');
+  const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  const apiKey = `op_live_${keyPrefix}_${keyRest}`;
+  const keyHash = await sha256(apiKey);
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_api_keys
+       (merchant_id, name, key_prefix, key_hash, scopes, status, created_at)
+     VALUES (?, 'Primary Admin Key', ?, ?, ?, 'active', ?)`
+  ).bind(
+    merchantId,
+    keyPrefix,
+    keyHash,
+    JSON.stringify(['read', 'write', 'admin', '*']),
+    now
+  ).run();
 
   // 5. Mark installed (KV flag)
   await c.env.KV.put('system:installed', 'true');
@@ -162,12 +178,65 @@ installRoutes.post('/', async (c) => {
     data: {
       merchant_id: merchantId,
       admin_uuid: adminUuid,
+      api_key: apiKey,
       install_completed: true,
+      message: 'Save this API key immediately — use it as Authorization: Bearer <api_key> for all /api/v1/* endpoints.',
       next_steps: [
-        'Set the following secrets via wrangler secret put: JWT_SECRET, APP_KEY, ENCRYPTION_KEY',
+        `Use 'Authorization: Bearer ${apiKey}' for all /api/v1/* requests`,
         'Log in to the admin panel at /admin',
         'Configure your first payment gateway under /admin/gateways',
       ],
     },
+  });
+});
+
+// Step 2: Bootstrap/generate an API key using admin credentials (safe fallback for installed instances)
+installRoutes.post('/bootstrap-key', async (c) => {
+  const body = await c.req.json<{ admin_email?: string; admin_password?: string }>();
+  if (!body.admin_email || !body.admin_password) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'admin_email and admin_password required' } }, 400);
+  }
+
+  const emailHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.admin_email)).then(b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''));
+  const user = await c.env.DB.prepare(
+    `SELECT id, merchant_id, password_hash FROM op_merchant_users WHERE email_hash = ? AND status = 'active' LIMIT 1`
+  ).bind(emailHash).first<{ id: number; merchant_id: number; password_hash: string }>();
+
+  if (!user) {
+    return c.json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid admin credentials' } }, 401);
+  }
+
+  const { verifyPassword, sha256 } = await import('../lib/crypto');
+  const valid = await verifyPassword(body.admin_password, user.password_hash);
+  if (!valid) {
+    return c.json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid admin credentials' } }, 401);
+  }
+
+  // Create a new admin API key for this merchant
+  const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  const apiKey = `op_live_${keyPrefix}_${keyRest}`;
+  const keyHash = await sha256(apiKey);
+  const now = new Date().toISOString();
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_api_keys
+       (merchant_id, name, key_prefix, key_hash, scopes, status, created_at)
+     VALUES (?, 'Admin Bootstrap Key', ?, ?, ?, 'active', ?)`
+  ).bind(
+    user.merchant_id,
+    keyPrefix,
+    keyHash,
+    JSON.stringify(['read', 'write', 'admin', '*']),
+    now
+  ).run();
+
+  return c.json({
+    success: true,
+    data: {
+      merchant_id: user.merchant_id,
+      api_key: apiKey,
+      message: 'New API key generated successfully. Use as Authorization: Bearer <api_key> for /api/v1/* requests.'
+    }
   });
 });
