@@ -10,6 +10,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types/env';
 import { requireBearerApiAuth, requireScope } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import { PaymentService } from '../services/payment';
 import { ValidationError } from '../lib/error';
 import { createPaymentSchema, createRefundSchema } from '../lib/validation';
@@ -31,6 +32,7 @@ apiRoutes.use('*', rateLimitMiddleware);
 // ---------------------------------------------------------------
 apiRoutes.post(
   '/payments',
+  idempotencyMiddleware,
   zValidator('json', createPaymentSchema, (result, _c) => {
     if (!result.success) {
       throw new ValidationError('Request body validation failed', result.error.issues);
@@ -110,7 +112,7 @@ apiRoutes.get('/transactions', async (c) => {
   params.push(limit, offset);
 
   const rows = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 // ---------------------------------------------------------------
@@ -259,7 +261,7 @@ apiRoutes.get('/customers', async (c) => {
     `SELECT id, uuid, created_at FROM op_customers WHERE merchant_id = ? ORDER BY created_at DESC LIMIT ?`
 ).bind(merchantId, limit).all();
 
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 // ---------------------------------------------------------------
@@ -275,7 +277,7 @@ apiRoutes.get('/api-keys', async (c) => {
      ORDER BY created_at DESC`
 ).bind(merchantId).all();
 
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 // ---------------------------------------------------------------
@@ -345,7 +347,7 @@ apiRoutes.get('/webhooks/deliveries', async (c) => {
      LIMIT ?`
 ).bind(merchantId, limit).all();
 
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 // ---------------------------------------------------------------

@@ -154,17 +154,24 @@ export class ScheduledHandler {
   private async processPendingSmsVerifications(env: Env): Promise<void> {
     const pending = await env.DB.prepare(
       `SELECT id, merchant_id, sender, body, parsed_amount, parsed_trx_id, parsed_at
-       FROM op_sms_parsed
+       FROM op_sms_data
        WHERE match_status = 'pending'
        ORDER BY created_at DESC
        LIMIT 50`,
     ).all();
 
-    for (const _sms of pending.results) {
-      // TODO(v0.1 parity): match by amount + time window (±10 min) — port
-      // the SMS verification matcher; matched rows already post through the
-      // idempotent LedgerDO protocol, so this can never double-post.
-      void _sms;
+    for (const sms of (pending.results ?? []) as Array<{ id: number; merchant_id: number; sender: string; body: string }>) {
+      try {
+        await env.SMS_QUEUE.send({
+          merchant_id: sms.merchant_id,
+          device_id: 0,
+          sender: sms.sender,
+          body: sms.body,
+          received_at: new Date().toISOString(),
+        });
+      } catch {
+        // Continue processing batch
+      }
     }
   }
 

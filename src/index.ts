@@ -52,6 +52,8 @@ import { webhookQueueHandler } from './queues/webhook-consumer';
 import { emailQueueHandler } from './queues/email-consumer';
 import { smsQueueHandler } from './queues/sms-consumer';
 import { accessAuthMiddleware } from './middleware/cloudflare-access';
+import { domainMiddleware } from './middleware/domain';
+import { maintenanceMiddleware } from './middleware/maintenance';
 import { perIpRateLimit } from './middleware/rate-limit';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { apiReferenceRoutes } from './controllers/api-reference';
@@ -73,6 +75,8 @@ const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 // the request context when access logs are emitted.
 app.use('*', requestId());
 app.use('*', logger());
+app.use('*', maintenanceMiddleware);
+app.use('*', domainMiddleware);
 // v0.2.2 (audit P2): prettyJSON is a development convenience — in
 // production it burns CPU and response bytes on every request. Gated
 // to ENVIRONMENT=development.
@@ -143,11 +147,12 @@ app.use('/api/admin/*', accessAuthMiddleware());
 // ---------------------------------------------------------------
 // Route mounts
 // ---------------------------------------------------------------
-app.route('/install', installRoutes);
 // Install is anonymous + low-QPS — per-IP KV limiter (3/hour). Authenticated
 // APIs use the native Ratelimit binding per API key instead (mounted in
-// their controllers, after bearer auth).
-app.use('/install/*', perIpRateLimit('otp'));
+// their controllers, after bearer auth). Mounted BEFORE installRoutes so it
+// intercepts requests to /install and /install/*.
+app.use('/install*', perIpRateLimit('otp'));
+app.route('/install', installRoutes);
 
 // Health check (no auth) — must be mounted BEFORE /api/v1 routes
 app.get('/api/v1/health', (c) => {

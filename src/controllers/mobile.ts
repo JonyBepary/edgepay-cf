@@ -150,7 +150,7 @@ mobileRoutes.get('/dashboard', async (c) => {
     success: true,
     data: {
       today: todayStats,
-      recent_transactions: recent,
+      recent_transactions: recent.results,
     },
   });
 });
@@ -190,7 +190,7 @@ mobileRoutes.get('/notifications', async (c) => {
      LIMIT 50`
 ).bind(merchantId, deviceId).all();
 
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 // Acknowledge notifications

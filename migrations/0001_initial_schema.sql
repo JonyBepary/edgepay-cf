@@ -660,7 +660,7 @@ CREATE TABLE op_sms_data (
   parsed_trx_id TEXT,
   parsed_at TEXT,
   match_status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (match_status IN ('pending','matched','no_match','failed')),
+    CHECK (match_status IN ('pending','parsed','matched','no_match','failed','needs_manual_review')),
   template_id INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (merchant_id) REFERENCES op_merchants(id) ON DELETE CASCADE,

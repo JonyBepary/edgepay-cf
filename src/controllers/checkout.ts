@@ -15,26 +15,40 @@ checkoutRoutes.get('/:token', async (c) => {
   const token = c.req.param('token');
 
   const intent = await c.env.DB.prepare(
-
-    `SELECT pi.id, pi.amount, pi.currency, pi.description, pi.status, pi.expires_at,
-            g.id AS gateway_id, g.slug AS gateway_slug, g.name AS gateway_name
+    `SELECT pi.id, pi.merchant_id, pi.amount, pi.currency, pi.description, pi.status, pi.expires_at,
+            pi.gateway_id
      FROM op_payment_intents pi
-     LEFT JOIN op_gateways g ON g.id = pi.gateway_id
      WHERE pi.token = ?
      LIMIT 1`
-).bind(token).first<{
-    token: string;
+  ).bind(token).first<{
+    id: number;
+    merchant_id: number;
     amount: string;
     currency: string;
     description: string | null;
     status: string;
+    gateway_id: number | null;
   }>();
 
   if (!intent) {
     return c.html('<h1>Payment Not Found</h1>', 404);
   }
 
-  // Render checkout HTML (simplified — real impl uses a template engine)
+  // Load active gateways for this merchant
+  let gateways: Array<{ id: number; slug: string; name: string }> = [];
+  if (intent.gateway_id) {
+    const gw = await c.env.DB.prepare(
+      `SELECT id, slug, name FROM op_gateways WHERE id = ? AND merchant_id = ? AND status = 'active' LIMIT 1`,
+    ).bind(intent.gateway_id, intent.merchant_id).first<{ id: number; slug: string; name: string }>();
+    if (gw) gateways = [gw];
+  } else {
+    const gws = await c.env.DB.prepare(
+      `SELECT id, slug, name FROM op_gateways WHERE merchant_id = ? AND status = 'active' ORDER BY id ASC`,
+    ).bind(intent.merchant_id).all<{ id: number; slug: string; name: string }>();
+    gateways = gws.results ?? [];
+  }
+
+  // Render checkout HTML
   const merchant = c.get('merchant') as { name?: string; color?: string } | null;
   const brandName = merchant?.name ?? 'EdgePay';
   const brandColor = merchant?.color ?? '#0b1f3a';
@@ -47,6 +61,7 @@ checkoutRoutes.get('/:token', async (c) => {
     status: String(intent.status),
     brandName,
     brandColor,
+    gateways,
   }));
 });
 
@@ -122,6 +137,7 @@ function renderCheckoutHTML(opts: {
   status: string;
   brandName: string;
   brandColor: string;
+  gateways: Array<{ id: number; slug: string; name: string }>;
 }): string {
   const statusBadge = opts.status === 'completed' ? '✓ Paid' : opts.status === 'processing' ? 'Processing…' : 'Awaiting payment';
 
@@ -144,6 +160,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f7f8fa;color:#0b
 .status-badge.completed{background:#d1fae5;color:#065f46}
 .btn{display:block;width:100%;padding:.875rem;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1rem}
 .btn:hover{opacity:.9}
+.btn:disabled{background:#94a3b8;cursor:not-allowed}
 .description{color:#475569;font-size:.875rem;margin:.5rem 0 1rem}
 .gateway-list{margin:1rem 0}
 .gateway-list label{display:block;padding:.75rem 1rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.5rem;cursor:pointer}
@@ -163,32 +180,34 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f7f8fa;color:#0b
     <div class="description">${escapeHtml(opts.description || 'Payment for order')}</div>
 
     <div class="gateway-list">
-      <label><input type="radio" name="gateway" value="stripe" checked> 💳 Credit / Debit Card</label>
-      <label><input type="radio" name="gateway" value="paypal"> 🅿️ PayPal</label>
-      <label><input type="radio" name="gateway" value="bkash-api"> 📱 bKash</label>
-      <label><input type="radio" name="gateway" value="razorpay"> ⚡ Razorpay</label>
+      ${opts.gateways.map((gw, idx) => `
+        <label><input type="radio" name="gateway_id" value="${gw.id}" ${idx === 0 ? 'checked' : ''}> ${escapeHtml(gw.name)}</label>
+      `).join('')}
+      ${opts.gateways.length === 0 ? '<p style="color: #dc2626;">No payment methods configured</p>' : ''}
     </div>
 
-    <button class="btn" onclick="initiatePayment()">Pay ${escapeHtml(opts.currency)} ${escapeHtml(opts.amount)}</button>
+    <button class="btn" ${opts.gateways.length === 0 || opts.status === 'completed' ? 'disabled' : ''} onclick="initiatePayment()">Pay ${escapeHtml(opts.currency)} ${escapeHtml(opts.amount)}</button>
   </div>
 </div>
 
 <script>
 async function initiatePayment() {
-  const gateway = document.querySelector('input[name=gateway]:checked')?.value;
-  if (!gateway) { alert('Select a payment method'); return; }
+  const selected = document.querySelector('input[name=gateway_id]:checked');
+  if (!selected) { alert('Select a payment method'); return; }
+  const gatewayId = parseInt(selected.value, 10);
   const res = await fetch('/checkout/${opts.token}/initiate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gateway_id: gatewayIdMap[gateway] || 1 }),
+    body: JSON.stringify({ gateway_id: gatewayId }),
   });
   const data = await res.json();
   if (data.success) {
     if (data.data.redirect_url) window.location = data.data.redirect_url;
     else if (data.data.form_html) document.body.innerHTML = data.data.form_html;
+  } else {
+    alert(data.error?.message || 'Payment initiation failed');
   }
 }
-const gatewayIdMap = { stripe: 1, paypal: 2, 'bkash-api': 3, razorpay: 4 };
 </script>
 </body>
 </html>`;

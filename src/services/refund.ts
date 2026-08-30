@@ -50,9 +50,10 @@ export class RefundService {
     const tx = await env.DB
       .prepare(
         `SELECT t.id, t.trx_id, t.amount, t.currency, t.status, t.merchant_id,
-                t.gateway_trx_id, pi.gateway_slug, pi.id AS payment_intent_id
+                t.gateway_trx_id, g.slug AS gateway_slug, pi.id AS payment_intent_id
          FROM op_transactions t
          JOIN op_payment_intents pi ON pi.id = t.payment_intent_id
+         LEFT JOIN op_gateways g ON g.id = t.gateway_id
          WHERE t.id = ? AND t.merchant_id = ? LIMIT 1`,
       )
       .bind(input.transaction_id, input.merchant_id)

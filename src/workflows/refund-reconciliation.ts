@@ -229,8 +229,8 @@ async function queryGatewayRefundStatus(env: Env, refund: RefundRecord): Promise
 
   const gatewaySlug = await env.DB
     .prepare(
-      `SELECT pi.gateway_slug FROM op_transactions t
-       JOIN op_payment_intents pi ON pi.id = t.payment_intent_id
+      `SELECT g.slug AS gateway_slug FROM op_transactions t
+       JOIN op_gateways g ON g.id = t.gateway_id
        WHERE t.id = ? LIMIT 1`,
     )
     .bind(refund.transaction_id)

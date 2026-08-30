@@ -65,8 +65,24 @@ webhookRoutes.post('/:gateway', async (c) => {
   }
   const adapter = gatewayRegistry.resolve(slug);
 
-  // Get the merchant context (set by DomainMiddleware)
-  const merchantId = c.get('merchantId');
+  // Get the merchant context (set by DomainMiddleware or resolved from active gateway)
+  let merchantId = c.get('merchantId') as number | undefined;
+  if (!merchantId) {
+    const merchantMatch = await c.env.DB
+      .prepare(
+        `SELECT g.merchant_id FROM op_gateways g
+         JOIN op_merchants m ON m.id = g.merchant_id
+         WHERE g.slug = ? AND g.status = 'active' AND m.status = 'active'
+         ORDER BY m.is_platform DESC, g.id ASC LIMIT 1`,
+      )
+      .bind(slug)
+      .first<{ merchant_id: number }>();
+    if (merchantMatch) {
+      merchantId = merchantMatch.merchant_id;
+      c.set('merchantId', merchantId);
+    }
+  }
+
   if (!merchantId) {
     return c.json({ success: false, error: { code: 'NO_MERCHANT_CONTEXT' } }, 400);
   }

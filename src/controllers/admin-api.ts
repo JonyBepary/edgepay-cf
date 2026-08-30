@@ -66,7 +66,7 @@ adminApiRoutes.get('/sms-templates', async (c) => {
     )
     .bind(merchantId)
     .all();
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 adminApiRoutes.put('/sms-templates/:id', requireScope('admin'), async (c) => {
@@ -90,7 +90,7 @@ adminApiRoutes.get('/devices', async (c) => {
     `SELECT id, uuid, device_name, status, last_heartbeat_at, created_at
      FROM op_paired_devices WHERE merchant_id = ? ORDER BY created_at DESC`
 ).bind(merchantId).all();
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 adminApiRoutes.delete('/devices/:id', requireScope('admin'), async (c) => {
@@ -113,7 +113,7 @@ adminApiRoutes.get('/sms-queues', async (c) => {
     `SELECT id, sender, body, match_status, created_at
      FROM op_sms_data WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 100`
 ).bind(merchantId).all();
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.results });
 });
 
 adminApiRoutes.post('/sms-queues/:id/retries', requireScope('admin'), async (c) => {
