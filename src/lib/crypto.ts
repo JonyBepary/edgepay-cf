@@ -25,7 +25,7 @@
 const AES_KEY_LENGTH = 256;       // bits
 const AES_IV_LENGTH = 12;         // bytes (96 bits — GCM standard)
 const AES_TAG_LENGTH = 128;       // bits
-const PBKDF2_ITERATIONS = 600000; // OWASP 2023 recommendation for PBKDF2-SHA-256
+const PBKDF2_ITERATIONS = 50_000; // Fast and safe for Workers 10ms CPU budget
 const PBKDF2_ITERATIONS_MIN = 10_000;  // below this, refuse (better to fail than silently weak)
 const PBKDF2_ITERATIONS_MAX = 2_000_000; // above this, CPU-limit territory even on Paid
 const PBKDF2_SALT_LENGTH = 16;    // bytes (128 bits)
