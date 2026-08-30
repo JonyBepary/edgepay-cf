@@ -97,23 +97,46 @@ export class PaymentService {
       throw new HttpError(500, 'Failed to create payment intent', 'INTENT_CREATE_FAILED');
     }
 
+    // Resolve gateway_id (must reference valid op_gateways row for FK)
+    let gatewayId = input.gateway_id;
+    if (!gatewayId) {
+      const defaultGw = await this.env.DB.prepare(
+        `SELECT id FROM op_gateways WHERE merchant_id = ? LIMIT 1`
+      ).bind(input.merchant_id).first<{ id: number }>();
+
+      if (defaultGw) {
+        gatewayId = defaultGw.id;
+      } else {
+        const gwRes = await this.env.DB.prepare(
+          `INSERT INTO op_gateways (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+           VALUES (?, 'manual', 'Manual Payment', 'manual', 'active', 0, '["BDT","USD"]', ?, ?)`
+        ).bind(input.merchant_id, now, now).run();
+        
+        const seeded = await this.env.DB.prepare(
+          `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = 'manual' LIMIT 1`
+        ).bind(input.merchant_id).first<{ id: number }>();
+        gatewayId = seeded?.id ?? Number(gwRes.meta?.last_row_id ?? 1);
+      }
+    }
+
     // Create the initial transaction record
     const trxId = `op_${randomToken(12)}`;
     await this.env.DB.prepare(
-
       `INSERT INTO op_transactions
          (merchant_id, trx_id, payment_intent_id, gateway_id,
           amount, currency, fee, net_amount, status, gateway_type, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, '0.00', ?, 'pending', 'pending', ?, ?)`
-).bind(input.merchant_id,
-        trxId,
-        intentId,
-        input.gateway_id ?? 0,
-        input.amount,
-        input.currency.toUpperCase(),
-        input.amount,  // net_amount = amount until fee applied at completion
-        now,
-        now,).run();
+    ).bind(
+      input.merchant_id,
+      trxId,
+      intentId,
+      gatewayId,
+      input.amount,
+      input.currency.toUpperCase(),
+      input.amount,  // net_amount = amount until fee applied at completion
+      now,
+      now,
+    ).run();
 
     return {
       intent_id: intentId,
