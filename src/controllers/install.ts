@@ -103,23 +103,28 @@ installRoutes.post('/', async (c) => {
   const merchantUuid = randomUuid();
   const webhookSecret = randomBase64Key(32);
   const now = new Date().toISOString();
+  const merchantEmail = body.merchant_email ?? body.admin_email;
 
   await c.env.DB.prepare(
-
     `INSERT INTO op_merchants
        (uuid, name, slug, email, timezone, default_currency, webhook_secret, settings, status, is_platform, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'active', 1, ?, ?)`
-).bind(merchantUuid,
-      body.merchant_name,
-      body.merchant_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      body.merchant_email,
-      body.timezone ?? 'UTC',
-      body.currency ?? 'BDT',
-      webhookSecret,
-      now,
-      now,).run();
+  ).bind(
+    merchantUuid,
+    body.merchant_name,
+    body.merchant_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    merchantEmail,
+    body.timezone ?? 'Asia/Dhaka',
+    body.currency ?? 'BDT',
+    webhookSecret,
+    now,
+    now,
+  ).run();
 
-  const merchantId = (await c.env.DB.prepare(`SELECT last_insert_rowid() AS id`).first<{ id: number }>())?.id ?? 0;
+  const merchantRow = await c.env.DB.prepare(
+    `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
+  ).bind(merchantUuid).first<{ id: number }>();
+  const merchantId = merchantRow?.id ?? 1;
 
   // 2. Create super-admin user.
   //    PBKDF2 cost is env-configurable (PBKDF2_ITERATIONS): strictly-free-tier

@@ -77,7 +77,7 @@
     {
       "binding": "DB",
       "database_name": "edgepay-cf",
-      "database_id": "00000000-0000-4000-8000-000000000000",
+      "database_id": "367da328-0616-4c39-aba1-9a6e0dd9a4fb",
       "migrations_dir": "migrations"
     }
   ],
@@ -90,7 +90,7 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "00000000000000000000000000000000"
+      "id": "34916dbe0cc342cdabf8077b6eee537d"
     }
   ],
 
