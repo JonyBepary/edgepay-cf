@@ -80,12 +80,17 @@ export function extractFallbackHeuristic(cleanBody: string, sender: string): Sms
   const trxId = trxMatch ? trxMatch[1].trim() : null;
 
   // 2. Extract Amount
-  // Pattern A: "received/payment Tk 500.00"
-  let amountMatch = cleanBody.match(/(?:received|payment|cash\s*in|amount|credited|credit|paid|added)\s*(?:of\s*)?(?:tk|bdt|rs|usd|\$|€|£)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+  // Pattern A: "received/payment Tk 500.00" or "পেয়েছেন ১৮৯.০০"
+  let amountMatch = cleanBody.match(/(?:received|payment|cash\s*in|amount|credited|credit|paid|added|টাকা|পেয়েছেন|প্রাপ্ত|পেমেন্ট|জমা)\s*(?:of\s*)?(?:tk|bdt|rs|usd|\$|€|£|৳|টাকা)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
   
-  // Pattern B: "Tk 500.00 from..."
+  // Pattern B: "Tk 500.00 from..." or "৳500.00"
   if (!amountMatch) {
-    amountMatch = cleanBody.match(/(?:tk|bdt|rs|usd|\$|€|£)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+    amountMatch = cleanBody.match(/(?:tk|bdt|rs|usd|\$|€|£|৳|টাকা)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+  }
+
+  // Pattern C: "500.00 Tk" or "189.00 টাকা" (amount before currency)
+  if (!amountMatch) {
+    amountMatch = cleanBody.match(/([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:tk|bdt|rs|usd|\$|€|£|৳|টাকা)/i);
   }
 
   let extractedAmount = amountMatch ? amountMatch[1].replace(/,/g, '').trim() : null;
