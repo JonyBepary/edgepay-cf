@@ -57,6 +57,7 @@ import { maintenanceMiddleware } from './middleware/maintenance';
 import { perIpRateLimit } from './middleware/rate-limit';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { apiReferenceRoutes } from './controllers/api-reference';
+import { ensureSystemBootstrapped } from './services/bootstrap';
 
 // v0.2.1: Durable Object + Workflow exports
 import { LedgerDO } from './do/ledger-do';
@@ -75,6 +76,19 @@ const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 // the request context when access logs are emitted.
 app.use('*', requestId());
 app.use('*', logger());
+app.use('*', async (c, next) => {
+  if (c.env?.DB && c.env?.KV) {
+    const isBootstrapped = await c.env.KV.get('system:bootstrapped');
+    if (!isBootstrapped) {
+      try {
+        await ensureSystemBootstrapped(c.env);
+      } catch (err) {
+        console.warn('Auto-bootstrap check warning:', err);
+      }
+    }
+  }
+  await next();
+});
 app.use('*', maintenanceMiddleware);
 app.use('*', domainMiddleware);
 // v0.2.2 (audit P2): prettyJSON is a development convenience — in

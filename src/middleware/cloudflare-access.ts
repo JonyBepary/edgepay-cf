@@ -363,17 +363,21 @@ export function accessAuthMiddleware(): MiddlewareHandler<{
       return next();
     }
 
-    // --- Fail closed on misconfiguration ---
+    // --- If Cloudflare Access is not configured, fall through to Admin Bearer API key auth ---
     if (!teamDomain || !aud) {
+      const authHeader = c.req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        return next();
+      }
       return c.json(
         {
           success: false,
           error: {
             code: 'ACCESS_NOT_CONFIGURED',
-            message: 'CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD_TAG must be configured; access is denied until then',
+            message: 'Cloudflare Access not configured. Provide an Admin Bearer API key or configure CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD_TAG.',
           },
         },
-        503,
+        401,
       );
     }
 
