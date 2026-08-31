@@ -81,6 +81,12 @@ export function senderToGatewaySlug(sender: string | null | undefined): string |
   return null;
 }
 
+function isSameGatewayFamily(a: string, b: string): boolean {
+  if (a === b) return true;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '').replace(/(api|merchantapi|manual)$/g, '');
+  return norm(a) === norm(b);
+}
+
 /**
  * Decide whether an SMS extraction may auto-confirm an open order.
  * Pure function — unit-tested in tests/sms-corroboration.test.ts.
@@ -130,7 +136,7 @@ export function corroborateSmsPayment(
   if (
     senderGateway &&
     order.gateway_slug &&
-    order.gateway_slug !== senderGateway
+    !isSameGatewayFamily(order.gateway_slug, senderGateway)
   ) {
     // The open order was initiated on a different gateway than the SMS
     // sender — do not confirm across gateways.
