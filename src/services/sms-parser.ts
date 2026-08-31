@@ -21,6 +21,7 @@
  */
 
 import type { Env } from '../types/env';
+import { senderToGatewaySlug } from './sms-corroboration';
 
 export interface SmsParseResult {
   amount: string | null;
@@ -28,8 +29,109 @@ export interface SmsParseResult {
   currency: string | null;
   gateway_slug: string | null;
   confidence: number;          // 0.0 - 1.0
-  parser: 'regex' | 'workers-ai' | 'none';
+  parser: 'regex' | 'heuristic' | 'workers-ai' | 'none';
   raw_match?: string;
+}
+
+/**
+ * Hardened SMS normalizer:
+ * 1. Converts Bengali digits (০-৯) and Arabic-Indic numerals to ASCII (0-9)
+ * 2. Strips zero-width characters (\u200B, \u200C, \u200D, \uFEFF)
+ * 3. Normalizes non-breaking spaces (\u00A0) to standard spaces
+ * 4. Normalizes newlines and tabs to single spaces
+ * 5. Collapses multiple consecutive spaces
+ */
+export function normalizeSmsText(raw: string | null | undefined): string {
+  if (!raw) return '';
+  return raw
+    // Convert Bengali numerals (০-৯ -> 0-9)
+    .replace(/[০-৯]/g, d => String(d.charCodeAt(0) - 0x09E6))
+    // Convert Arabic-Indic numerals (٠-٩ -> 0-9)
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+    // Remove zero-width spaces, soft hyphens, byte order marks
+    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '')
+    // Normalize NBSP and special spaces
+    .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    // Replace carriage returns and newlines with space
+    .replace(/[\r\n\t]+/g, ' ')
+    // Collapse multi-spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Validates whether an amount string is a clean positive decimal.
+ */
+function isValidAmount(amt: string | null | undefined): boolean {
+  if (!amt) return false;
+  if (!/^\d+(\.\d{1,2})?$/.test(amt)) return false;
+  const num = parseFloat(amt);
+  return !isNaN(num) && num > 0 && isFinite(num);
+}
+
+/**
+ * Rule-based heuristic extractor for edge case / mangled / partial SMS.
+ */
+export function extractFallbackHeuristic(cleanBody: string, sender: string): SmsParseResult {
+  const gatewaySlug = senderToGatewaySlug(sender) || 'manual';
+
+  // 1. Extract TrxID / TxnID / Ref
+  const trxMatch = cleanBody.match(/(?:trx\s*id|transaction\s*id|txnid|txn\s*id|trans\s*id|ref\s*id|reference|invoice|id)\s*[:.\-#]?\s*([A-Za-z0-9]{5,32})/i);
+  const trxId = trxMatch ? trxMatch[1].trim() : null;
+
+  // 2. Extract Amount
+  // Pattern A: "received/payment Tk 500.00"
+  let amountMatch = cleanBody.match(/(?:received|payment|cash\s*in|amount|credited|credit|paid|added)\s*(?:of\s*)?(?:tk|bdt|rs|usd|\$|€|£)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+  
+  // Pattern B: "Tk 500.00 from..."
+  if (!amountMatch) {
+    amountMatch = cleanBody.match(/(?:tk|bdt|rs|usd|\$|€|£)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+  }
+
+  let extractedAmount = amountMatch ? amountMatch[1].replace(/,/g, '').trim() : null;
+  if (!isValidAmount(extractedAmount)) {
+    extractedAmount = null;
+  }
+
+  // 3. Extract Currency
+  let currency = 'BDT';
+  if (/usd|\$/i.test(cleanBody)) currency = 'USD';
+  else if (/eur|€/i.test(cleanBody)) currency = 'EUR';
+  else if (/gbp|£/i.test(cleanBody)) currency = 'GBP';
+  else if (/inr|₹/i.test(cleanBody)) currency = 'INR';
+
+  if (extractedAmount && trxId) {
+    return {
+      amount: extractedAmount,
+      trx_id: trxId,
+      currency,
+      gateway_slug: gatewaySlug,
+      confidence: 0.95,
+      parser: 'heuristic',
+      raw_match: cleanBody,
+    };
+  }
+
+  if (extractedAmount) {
+    return {
+      amount: extractedAmount,
+      trx_id: null,
+      currency,
+      gateway_slug: gatewaySlug,
+      confidence: 0.75,
+      parser: 'heuristic',
+      raw_match: cleanBody,
+    };
+  }
+
+  return {
+    amount: null,
+    trx_id: trxId,
+    currency: null,
+    gateway_slug: gatewaySlug,
+    confidence: 0,
+    parser: 'none',
+  };
 }
 
 const AI_FALLBACK_PROMPT = `You are an SMS payment confirmation parser for the EdgePay payment gateway platform.
@@ -55,44 +157,57 @@ export class SmsParserService {
   constructor(private readonly env: Env) {}
 
   /**
-   * Parse an SMS body. Tries regex templates first, falls back to Workers AI.
+   * Parse an SMS body. Tries regex templates first, then rule-based heuristic, falls back to Workers AI.
    */
   async parse(
     smsBody: string,
     sender: string,
     merchantId: number,
   ): Promise<SmsParseResult> {
+    const cleanBody = normalizeSmsText(smsBody);
+
     // 1. Try regex templates
     const templates = await this.env.DB.prepare(
-
       `SELECT id, gateway_slug, regex_pattern FROM op_sms_templates
        WHERE merchant_id IN (0, ?) AND status = 'active'`
-).bind(merchantId).all<{ id: number; gateway_slug: string; regex_pattern: string }>();
+    ).bind(merchantId).all<{ id: number; gateway_slug: string; regex_pattern: string }>();
 
     for (const tpl of templates.results) {
       if (!tpl.regex_pattern) continue;
       try {
         const regex = new RegExp(tpl.regex_pattern, 'i');
-        const match = regex.exec(smsBody);
+        const match = regex.exec(cleanBody);
         if (match?.groups) {
           const rawAmount = match.groups.amount ? match.groups.amount.replace(/,/g, '').trim() : null;
-          return {
-            amount: rawAmount,
-            trx_id: (match.groups.trx_id ?? match.groups.invoice ?? '').trim() || null,
-            currency: (match.groups.currency ?? 'BDT').trim(),
-            gateway_slug: tpl.gateway_slug,
-            confidence: 1.0,          // regex match = high confidence
-            parser: 'regex',
-            raw_match: match[0],
-          };
+          if (isValidAmount(rawAmount)) {
+            return {
+              amount: rawAmount,
+              trx_id: (match.groups.trx_id ?? match.groups.invoice ?? '').trim() || null,
+              currency: (match.groups.currency ?? 'BDT').trim(),
+              gateway_slug: tpl.gateway_slug,
+              confidence: 1.0,          // regex match = high confidence
+              parser: 'regex',
+              raw_match: match[0],
+            };
+          }
         }
       } catch {
         // Bad regex — skip this template
       }
     }
 
-    // 2. Fallback to Workers AI
-    return await this.parseWithAI(smsBody, sender);
+    // 2. Rule-based heuristic fallback
+    const heuristic = extractFallbackHeuristic(cleanBody, sender);
+    if (heuristic.parser !== 'none' && heuristic.amount && heuristic.trx_id) {
+      return heuristic;
+    }
+
+    // 3. Fallback to Workers AI (if binding present)
+    if (this.env.AI) {
+      return await this.parseWithAI(cleanBody, sender);
+    }
+
+    return heuristic;
   }
 
   /**

@@ -29,7 +29,7 @@ export interface SmsExtraction {
   currency: string | null;
   gateway_slug: string | null;
   confidence: number;
-  parser: 'regex' | 'workers-ai' | 'none';
+  parser: 'regex' | 'workers-ai' | 'heuristic' | 'none';
 }
 
 export interface OpenOrderCandidate {
@@ -76,7 +76,10 @@ export function senderToGatewaySlug(sender: string | null | undefined): string |
   if (!sender) return null;
   const normalized = sender.trim().toLowerCase().replace(/[^a-z]/g, '');
   for (const [key, slug] of Object.entries(SENDER_GATEWAY_MAP)) {
-    if (key.toLowerCase().replace(/[^a-z]/g, '') === normalized) return slug;
+    const normKey = key.toLowerCase().replace(/[^a-z]/g, '');
+    if (normalized === normKey || normalized.startsWith(normKey)) {
+      return slug;
+    }
   }
   return null;
 }
