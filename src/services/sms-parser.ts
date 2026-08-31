@@ -75,10 +75,11 @@ export class SmsParserService {
         const regex = new RegExp(tpl.regex_pattern, 'i');
         const match = regex.exec(smsBody);
         if (match?.groups) {
+          const rawAmount = match.groups.amount ? match.groups.amount.replace(/,/g, '').trim() : null;
           return {
-            amount: match.groups.amount ?? null,
-            trx_id: match.groups.trx_id ?? match.groups.invoice ?? null,
-            currency: match.groups.currency ?? null,
+            amount: rawAmount,
+            trx_id: (match.groups.trx_id ?? match.groups.invoice ?? '').trim() || null,
+            currency: (match.groups.currency ?? 'BDT').trim(),
             gateway_slug: tpl.gateway_slug,
             confidence: 1.0,          // regex match = high confidence
             parser: 'regex',
