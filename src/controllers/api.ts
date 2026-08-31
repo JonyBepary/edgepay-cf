@@ -16,6 +16,7 @@ import { ValidationError } from '../lib/error';
 import { createPaymentSchema, createRefundSchema } from '../lib/validation';
 import { gatewayRegistry, gatewaySelection, catalogCounts, catalogFind } from '../gateways';
 import { zValidator } from '@hono/zod-validator';
+import { randomToken } from '../lib/crypto';
 
 export const apiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
@@ -322,13 +323,69 @@ apiRoutes.post('/api-keys', requireScope('admin'), async (c) => {
 });
 
 // ---------------------------------------------------------------
+// GET /api/v1/webhooks — list merchant webhooks
+// ---------------------------------------------------------------
+apiRoutes.get('/webhooks', async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const rows = await c.env.DB.prepare(
+    `SELECT id, url, events, status, created_at, updated_at
+     FROM op_webhooks
+     WHERE merchant_id = ?
+     ORDER BY created_at DESC`
+  ).bind(merchantId).all();
+  return c.json({ success: true, data: rows.results });
+});
+
+// ---------------------------------------------------------------
+// POST /api/v1/webhooks — register a webhook
+// ---------------------------------------------------------------
+apiRoutes.post('/webhooks', async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const body = await c.req.json<{ url?: string; events?: string[] }>();
+  if (!body.url) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'url is required' } }, 400);
+  }
+  const secret = `whsec_${randomToken(24)}`;
+  const now = new Date().toISOString();
+  const res = await c.env.DB.prepare(
+    `INSERT INTO op_webhooks (merchant_id, url, secret, events, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', ?, ?)`
+  ).bind(merchantId, body.url, JSON.stringify(body.events || ['*']), now, now).run();
+  
+  return c.json({
+    success: true,
+    data: {
+      id: res.meta?.last_row_id,
+      url: body.url,
+      secret,
+      events: body.events || ['*'],
+      status: 'active'
+    }
+  }, 201);
+});
+
+// ---------------------------------------------------------------
+// DELETE /api/v1/webhooks/{id} — delete a webhook
+// ---------------------------------------------------------------
+apiRoutes.delete('/webhooks/:id', async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const id = parseInt(c.req.param('id'), 10);
+  await c.env.DB.prepare(
+    `DELETE FROM op_webhooks WHERE id = ? AND merchant_id = ?`
+  ).bind(id, merchantId).run();
+  return c.json({ success: true });
+});
+
+// ---------------------------------------------------------------
 // POST /api/v1/webhooks/tests — send a test webhook
 // ---------------------------------------------------------------
 apiRoutes.post('/webhooks/tests', async (c) => {
   const merchantId = c.get('merchantId')!;
+  let body: { url?: string } = {};
+  try { body = await c.req.json(); } catch { /* optional body */ }
   const { WebhookDispatcher } = await import('../services/webhook-dispatcher');
   const dispatcher = new WebhookDispatcher(c.env);
-  const result = await dispatcher.sendTest(merchantId as number);
+  const result = await dispatcher.sendTest(merchantId as number, body?.url);
   return c.json({ success: result.success, error: result.error });
 });
 

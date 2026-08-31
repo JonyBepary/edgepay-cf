@@ -130,7 +130,7 @@ export class SmsQueueConsumer {
          FROM op_transactions t
          JOIN op_payment_intents pi ON pi.id = t.payment_intent_id
          LEFT JOIN op_gateways g ON g.id = t.gateway_id
-         WHERE t.merchant_id = ? AND t.status = 'awaiting_verification' AND t.created_at >= ?
+         WHERE t.merchant_id = ? AND t.status IN ('pending', 'awaiting_verification', 'processing', 'created') AND t.created_at >= ?
          ORDER BY t.created_at DESC LIMIT 50`,
       )
       .bind(merchantId, since)

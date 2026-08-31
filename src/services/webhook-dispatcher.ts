@@ -102,16 +102,26 @@ export class WebhookDispatcher {
    * Send a test webhook to the merchant's first active endpoint.
    * Useful for the developer hub UI.
    */
-  async sendTest(merchantId: number): Promise<{ success: boolean; error?: string }> {
-    const webhook = await this.env.DB.prepare(
-
+  async sendTest(merchantId: number, targetUrl?: string): Promise<{ success: boolean; error?: string }> {
+    let webhook = await this.env.DB.prepare(
       `SELECT id, url, secret FROM op_webhooks
        WHERE merchant_id = ? AND status = 'active'
        ORDER BY created_at ASC LIMIT 1`
-).bind(merchantId).first<{ id: number; url: string; secret: string }>();
+    ).bind(merchantId).first<{ id: number; url: string; secret: string }>();
 
     if (!webhook) {
-      return { success: false, error: 'No webhook URL configured' };
+      const urlToUse = targetUrl || 'http://localhost:3300/mock-webhook';
+      const secret = `whsec_${crypto.randomUUID().replace(/-/g, '')}`;
+      const now = new Date().toISOString();
+      const ins = await this.env.DB.prepare(
+        `INSERT INTO op_webhooks (merchant_id, url, secret, events, status, created_at, updated_at)
+         VALUES (?, ?, ?, '["*"]', 'active', ?, ?)`
+      ).bind(merchantId, urlToUse, secret, now, now).run();
+      webhook = {
+        id: Number(ins.meta?.last_row_id ?? 1),
+        url: urlToUse,
+        secret,
+      };
     }
 
     const testPayload = this.buildPayload('webhook.test', {
