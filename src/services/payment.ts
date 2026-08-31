@@ -72,40 +72,6 @@ export class PaymentService {
       Date.now() + (input.expires_in_seconds ?? 900) * 1000,
     ).toISOString();
 
-    // Create the payment intent record
-    const result = await this.env.DB.prepare(
-      `INSERT INTO op_payment_intents
-         (uuid, merchant_id, token, amount, currency, description,
-          customer_name, customer_email, customer_phone,
-          metadata, status, expires_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
-    ).bind(
-      uuid,
-      input.merchant_id,
-      token,
-      input.amount,
-      input.currency.toUpperCase(),
-      input.description ?? null,
-      input.customer?.name ?? null,
-      input.customer?.email ?? null,
-      input.customer?.phone ?? null,
-      input.metadata ? JSON.stringify(input.metadata) : null,
-      expiresAt,
-      now,
-      now,
-    ).run();
-
-    let intentId = result.meta?.last_row_id;
-    if (!intentId) {
-      const row = await this.env.DB.prepare(
-        `SELECT id FROM op_payment_intents WHERE uuid = ? LIMIT 1`
-      ).bind(uuid).first<{ id: number }>();
-      intentId = row?.id;
-    }
-    if (!intentId) {
-      throw new HttpError(500, 'Failed to create payment intent', 'INTENT_CREATE_FAILED');
-    }
-
     // Resolve gateway_id (supports numeric ID, string slug, or falls back to merchant's default gateway)
     let gatewayId = input.gateway_id;
     if (!gatewayId && (input.gateway || input.gateway_slug)) {
@@ -136,6 +102,37 @@ export class PaymentService {
         ).bind(input.merchant_id).first<{ id: number }>();
         gatewayId = seeded?.id ?? Number(gwRes.meta?.last_row_id ?? 1);
       }
+    }
+
+    // Create the payment intent record
+    const result = await this.env.DB.prepare(
+      `INSERT INTO op_payment_intents
+         (uuid, merchant_id, token, amount, currency, description,
+          customer_id, gateway_id, status, metadata, expires_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 'pending', ?, ?, ?, ?)`
+    ).bind(
+      uuid,
+      input.merchant_id,
+      token,
+      input.amount,
+      input.currency.toUpperCase(),
+      input.description ?? null,
+      gatewayId,
+      input.metadata ? JSON.stringify(input.metadata) : null,
+      expiresAt,
+      now,
+      now,
+    ).run();
+
+    let intentId = result.meta?.last_row_id;
+    if (!intentId) {
+      const row = await this.env.DB.prepare(
+        `SELECT id FROM op_payment_intents WHERE uuid = ? LIMIT 1`
+      ).bind(uuid).first<{ id: number }>();
+      intentId = row?.id;
+    }
+    if (!intentId) {
+      throw new HttpError(500, 'Failed to create payment intent', 'INTENT_CREATE_FAILED');
     }
 
     // Create the initial transaction record
