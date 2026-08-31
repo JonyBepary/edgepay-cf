@@ -52,6 +52,7 @@ apiRoutes.post(
     description: body.description,
     customer: body.customer,
     gateway_id: body.gateway_id,
+    gateway: body.gateway || body.gateway_slug,
     metadata: body.metadata,
     expires_in_seconds: body.expires_in_seconds,
   });

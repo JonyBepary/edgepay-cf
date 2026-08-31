@@ -93,7 +93,17 @@ const envelopeSchemas = {
       gateway_id: {
         type: 'integer',
         minimum: 1,
-        description: 'Numeric id of the merchant-installed gateway to charge with. Optional at intent-creation time; the checkout page lets the customer pick when omitted.',
+        description: 'Numeric id of the merchant-installed gateway to charge with (e.g. 2 for bKash Personal, 3 for Nagad). Optional; checkout page lets customer pick when omitted.',
+      },
+      gateway: {
+        type: 'string',
+        description: 'Gateway slug (e.g. "bkash", "nagad", "rocket", "sslcommerz", "stripe"). Alternative to numeric gateway_id.',
+        example: 'bkash',
+      },
+      gateway_slug: {
+        type: 'string',
+        description: 'Alias for gateway slug.',
+        example: 'bkash',
       },
       customer: {
         type: 'object',

@@ -31,6 +31,8 @@ export const createPaymentSchema = z.object({
   currency: currencySchema,
   description: z.string().max(1000).optional(),
   gateway_id: z.number().int().positive().optional(),
+  gateway: z.string().max(50).optional(),
+  gateway_slug: z.string().max(50).optional(),
   customer: z
     .object({
       name: z.string().max(200).optional(),

@@ -39,6 +39,8 @@ export interface CreateIntentInput {
     phone?: string;
   };
   gateway_id?: number;
+  gateway?: string;
+  gateway_slug?: string;
   metadata?: Record<string, unknown>;
   expires_in_seconds?: number;       // default 15min
 }
@@ -63,28 +65,35 @@ export class PaymentService {
       throw new ValidationError('Amount must be greater than zero');
     }
 
-    const token = randomToken(32);
-    const uuid = randomUuid();
     const now = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + (input.expires_in_seconds ?? 900) * 1000).toISOString();
+    const token = randomToken(32); // 64 hex chars
+    const uuid = randomUuid();
+    const expiresAt = new Date(
+      Date.now() + (input.expires_in_seconds ?? 900) * 1000,
+    ).toISOString();
 
+    // Create the payment intent record
     const result = await this.env.DB.prepare(
-
       `INSERT INTO op_payment_intents
-         (merchant_id, uuid, token, amount, currency, description,
-          customer_id, gateway_id, status, metadata, expires_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 'pending', ?, ?, ?, ?)`
-).bind(input.merchant_id,
-        uuid,
-        token,
-        input.amount,
-        input.currency.toUpperCase(),
-        input.description ?? null,
-        input.gateway_id ?? null,
-        input.metadata ? JSON.stringify(input.metadata) : null,
-        expiresAt,
-        now,
-        now,).run();
+         (uuid, merchant_id, token, amount, currency, description,
+          customer_name, customer_email, customer_phone,
+          metadata, status, expires_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
+    ).bind(
+      uuid,
+      input.merchant_id,
+      token,
+      input.amount,
+      input.currency.toUpperCase(),
+      input.description ?? null,
+      input.customer?.name ?? null,
+      input.customer?.email ?? null,
+      input.customer?.phone ?? null,
+      input.metadata ? JSON.stringify(input.metadata) : null,
+      expiresAt,
+      now,
+      now,
+    ).run();
 
     let intentId = result.meta?.last_row_id;
     if (!intentId) {
@@ -97,8 +106,18 @@ export class PaymentService {
       throw new HttpError(500, 'Failed to create payment intent', 'INTENT_CREATE_FAILED');
     }
 
-    // Resolve gateway_id (must reference valid op_gateways row for FK)
+    // Resolve gateway_id (supports numeric ID, string slug, or falls back to merchant's default gateway)
     let gatewayId = input.gateway_id;
+    if (!gatewayId && (input.gateway || input.gateway_slug)) {
+      const slug = input.gateway || input.gateway_slug;
+      const gwRow = await this.env.DB.prepare(
+        `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
+      ).bind(input.merchant_id, slug).first<{ id: number }>();
+      if (gwRow) {
+        gatewayId = gwRow.id;
+      }
+    }
+
     if (!gatewayId) {
       const defaultGw = await this.env.DB.prepare(
         `SELECT id FROM op_gateways WHERE merchant_id = ? LIMIT 1`
