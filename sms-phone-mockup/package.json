@@ -1,0 +1,21 @@
+{
+  "name": "android-sms-phone-mockup-server",
+  "version": "1.0.0",
+  "description": "Standalone Android SMS Phone Mockup and Test Server for EdgePay and MFS gateways",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "sms",
+    "android-mockup",
+    "edgepay",
+    "simulator",
+    "bkash",
+    "nagad",
+    "rocket"
+  ],
+  "author": "",
+  "license": "MIT"
+}

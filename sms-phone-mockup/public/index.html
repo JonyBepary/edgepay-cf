@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android SMS Phone Mockup & Relay Server</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><rect x='5' y='2' width='14' height='20' rx='2'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Google+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>Android SMS Simulator</h1>
+          <span class="badge">EdgePay & MFS Test Suite</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="server-status">
+          <span class="status-dot online"></span>
+          <span class="status-text">Server Active</span>
+        </div>
+        <button id="soundToggleBtn" class="icon-btn" title="Toggle Sound">
+          <span class="icon">🔔</span>
+        </button>
+        <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme">
+          <span class="icon">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-layout">
+      <!-- Left Column: Android Smartphone Mockup -->
+      <section class="phone-column">
+        <div class="phone-wrapper">
+          <div class="android-phone">
+            <!-- Hardware Details -->
+            <div class="phone-bezel"></div>
+            <div class="phone-camera-punch"></div>
+            <div class="phone-speaker"></div>
+
+            <!-- Phone Screen -->
+            <div class="phone-screen">
+              <!-- Android Status Bar -->
+              <div class="status-bar">
+                <div class="status-left">
+                  <span id="statusBarTime">10:45</span>
+                  <span class="status-icon notif-icon">💬</span>
+                </div>
+                <div class="status-right">
+                  <span class="status-signal">5G</span>
+                  <div class="signal-bars">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                  <span class="status-wifi">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                      <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0012 4z"/>
+                    </svg>
+                  </span>
+                  <div class="battery-icon">
+                    <div class="battery-level" style="width: 88%;"></div>
+                  </div>
+                  <span class="battery-text">88%</span>
+                </div>
+              </div>
+
+              <!-- Messages App Header -->
+              <div class="messages-header">
+                <div class="header-back">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 18l-6-6 6-6"/>
+                  </svg>
+                </div>
+                <div class="sender-avatar" id="phoneAvatar">
+                  <span id="avatarText">bK</span>
+                </div>
+                <div class="sender-meta">
+                  <div class="sender-title">
+                    <span id="phoneSenderName">bKash</span>
+                    <span class="verified-badge" title="Verified Business Sender">✓</span>
+                  </div>
+                  <span class="sender-subtitle" id="phoneSenderSubtitle">Official Transaction Alert</span>
+                </div>
+                <div class="header-menu">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- SMS Chat Thread -->
+              <div class="messages-thread" id="messagesThread">
+                <div class="thread-date-chip">
+                  <span id="threadDate">Today</span>
+                </div>
+                <div class="thread-info-chip">
+                  <span>Encrypted SMS from carrier SIM 1 (Grameenphone)</span>
+                </div>
+                
+                <!-- Initial Welcome / Sample SMS Bubble -->
+                <div class="sms-bubble incoming" id="sampleBubble">
+                  <div class="bubble-content">
+                    <p id="sampleBubbleText">You have received Tk 1,500.00 from 01712345678. Ref order#101. Fee Tk 0.00. Balance Tk 5,420.50. TrxID 9X7Y2Z1A3B at 31/08/2026 22:45</p>
+                  </div>
+                  <div class="bubble-meta">
+                    <span class="sms-time" id="sampleBubbleTime">10:45 PM</span>
+                    <span class="sim-badge">SIM1</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Compose & Send Bar -->
+              <div class="compose-bar">
+                <button class="compose-attach-btn" id="quickShuffleBtn" title="Shuffle / Randomize TrxID">
+                  🎲
+                </button>
+                <div class="compose-input-wrapper">
+                  <textarea id="phoneInputPreview" rows="2" placeholder="Text message (SMS)..."></textarea>
+                </div>
+                <button class="send-fab-btn" id="phoneSendBtn" title="Send SMS to Server">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Android Navigation Bar -->
+              <div class="android-nav-bar">
+                <div class="nav-pill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Control & Customization Workspace -->
+      <section class="control-column">
+        <!-- Tab Navigation -->
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="composer">📝 SMS Composer</button>
+          <button class="tab-btn" data-tab="endpoint">🌐 Target & Auth</button>
+          <button class="tab-btn" data-tab="history">📜 Sent Log (<span id="historyCount">0</span>)</button>
+          <button class="tab-btn" data-tab="mock-server">📥 Mock Server Log</button>
+        </div>
+
+        <!-- TAB 1: SMS Composer -->
+        <div class="tab-pane active" id="tab-composer">
+          <!-- Gateway Presets -->
+          <div class="card">
+            <div class="card-header">
+              <h3>⚡ Quick Gateway Presets</h3>
+              <span class="hint">Click to load standard provider templates</span>
+            </div>
+            <div class="preset-chips">
+              <button class="chip active" data-gateway="bkash">
+                <span class="chip-dot bkash"></span> bKash
+              </button>
+              <button class="chip" data-gateway="nagad">
+                <span class="chip-dot nagad"></span> Nagad
+              </button>
+              <button class="chip" data-gateway="rocket">
+                <span class="chip-dot rocket"></span> Rocket
+              </button>
+              <button class="chip" data-gateway="upay">
+                <span class="chip-dot upay"></span> Upay
+              </button>
+              <button class="chip" data-gateway="mpesa">
+                <span class="chip-dot mpesa"></span> M-Pesa
+              </button>
+              <button class="chip" data-gateway="bank">
+                <span class="chip-dot bank"></span> Bank / Custom
+              </button>
+            </div>
+          </div>
+
+          <!-- Transaction Builder Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3>🛠️ SMS Fields & Variables</h3>
+              <div class="mode-toggle">
+                <label>
+                  <input type="radio" name="smsEditMode" value="template" checked> Template Builder
+                </label>
+                <label>
+                  <input type="radio" name="smsEditMode" value="raw"> Raw Custom Text
+                </label>
+              </div>
+            </div>
+
+            <div id="templateFieldsContainer">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inputSender">Sender Name / Shortcode</label>
+                  <input type="text" id="inputSender" value="bKash" placeholder="e.g. bKash, 16247, Nagad">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputTrxId">
+                    Transaction ID (TrxID)
+                    <button class="tiny-btn" id="genTrxBtn" type="button">🎲 Random</button>
+                  </label>
+                  <input type="text" id="inputTrxId" value="9X7Y2Z1A3B" placeholder="e.g. 9X7Y2Z1A3B">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputNumber">
+                    Customer / Sender Number
+                    <button class="tiny-btn" id="genNumBtn" type="button">🎲 Random</button>
+                  </label>
+                  <input type="text" id="inputNumber" value="01712345678" placeholder="e.g. 01712345678">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputAmount">
+                    Amount & Currency
+                  </label>
+                  <div class="input-with-select">
+                    <input type="number" id="inputAmount" step="0.01" value="1500.00" placeholder="1500.00">
+                    <select id="inputCurrency">
+                      <option value="BDT" selected>BDT (Tk)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="INR">INR (₹)</option>
+                      <option value="PKR">PKR (₨)</option>
+                      <option value="KES">KES (Ksh)</option>
+                    </select>
+                  </div>
+                  <div class="quick-amounts">
+                    <button type="button" class="amt-btn" data-amt="100">100</button>
+                    <button type="button" class="amt-btn" data-amt="500">500</button>
+                    <button type="button" class="amt-btn" data-amt="1000">1000</button>
+                    <button type="button" class="amt-btn" data-amt="1500">1500</button>
+                    <button type="button" class="amt-btn" data-amt="2500">2500</button>
+                    <button type="button" class="amt-btn" data-amt="5000">5000</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="inputFee">Fee / Charge</label>
+                  <input type="number" id="inputFee" step="0.01" value="0.00" placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputBalance">New Balance</label>
+                  <input type="number" id="inputBalance" step="0.01" value="5420.50" placeholder="5420.50">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputRef">Reference / Order ID</label>
+                  <input type="text" id="inputRef" value="order#101" placeholder="e.g. order#101 or invoice">
+                </div>
+
+                <div class="form-group">
+                  <label for="inputDateTime">
+                    Date & Time
+                    <button class="tiny-btn" id="nowBtn" type="button">⏱️ Now</button>
+                  </label>
+                  <input type="text" id="inputDateTime" value="31/08/2026 22:45">
+                </div>
+              </div>
+
+              <!-- Template Pattern Preview -->
+              <div class="form-group template-type-group">
+                <label for="templateVariant">Transaction Type Variant</label>
+                <select id="templateVariant">
+                  <option value="received_money" selected>Money Received / Cash In</option>
+                  <option value="merchant_payment">Merchant Payment Received</option>
+                  <option value="cash_in">Agent Cash In</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Raw SMS Editor Area -->
+            <div id="rawSmsContainer" style="display: none;">
+              <div class="form-group">
+                <label for="rawSmsText">Raw SMS Text (Exact carrier format)</label>
+                <textarea id="rawSmsText" rows="4" placeholder="Paste or type raw SMS body here..."></textarea>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <button id="mainSendBtn" class="primary-btn">
+                <span class="btn-icon">🚀</span> Send SMS to Server
+              </button>
+              <button id="randomSendBtn" class="secondary-btn">
+                <span class="btn-icon">🎲</span> Randomize & Send
+              </button>
+              <button id="batchModalBtn" class="outline-btn">
+                <span class="btn-icon">⚡</span> Batch Load Test
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Target & Auth Configuration -->
+        <div class="tab-pane" id="tab-endpoint">
+          <div class="card">
+            <div class="card-header">
+              <h3>🎯 Target Endpoint Configuration</h3>
+              <span class="hint">Where the simulated SMS payload is sent</span>
+            </div>
+
+            <div class="form-group">
+              <label for="targetPresetSelect">Quick Destination Presets</label>
+              <select id="targetPresetSelect">
+                <option value="https://edgepay-cf.bm-jonybepary.workers.dev/api/mobile/v1/sms" selected>Live EdgePay Cloudflare Worker (https://edgepay-cf.bm-jonybepary.workers.dev/api/mobile/v1/sms)</option>
+                <option value="http://localhost:8787/api/mobile/v1/sms">EdgePay Worker Local (http://localhost:8787/api/mobile/v1/sms)</option>
+                <option value="http://localhost:3300/api/mobile/v1/sms">Built-in Mock Server (http://localhost:3300/api/mobile/v1/sms)</option>
+                <option value="http://localhost:3300/mock-webhook">Built-in Mock Webhook (http://localhost:3300/mock-webhook)</option>
+                <option value="custom">Custom Webhook / Remote URL...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="targetUrlInput">Target HTTP URL</label>
+              <input type="text" id="targetUrlInput" value="https://edgepay-cf.bm-jonybepary.workers.dev/api/mobile/v1/sms" placeholder="https://edgepay-cf.bm-jonybepary.workers.dev/api/mobile/v1/sms">
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="httpMethodSelect">HTTP Method</label>
+                <select id="httpMethodSelect">
+                  <option value="POST" selected>POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="GET">GET</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="payloadFormatSelect">Payload Structure</label>
+                <select id="payloadFormatSelect">
+                  <option value="edgepay_mobile" selected>EdgePay Mobile Companion ({ sender, body, received_at })</option>
+                  <option value="structured_json">Structured Info ({ trx_id, number, amount, currency, sender, raw_sms })</option>
+                  <option value="both_combined">Combined (Both structured fields & full body)</option>
+                  <option value="raw_text_body">Plain Text Body</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="authTokenInput">
+                Authentication Header (Optional)
+              </label>
+              <div class="input-with-select">
+                <select id="authTypeSelect" style="width: 140px;">
+                  <option value="bearer" selected>Bearer JWT</option>
+                  <option value="apiKey">X-API-Key</option>
+                  <option value="custom">Custom</option>
+                  <option value="none">None</option>
+                </select>
+                <input type="text" id="authTokenInput" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwibWVyY2hhbnRfaWQiOjQsImRldmljZV9pZCI6Miwic2NvcGUiOlsicmVhZCIsIndyaXRlIl0sInR5cGUiOiJhY2Nlc3MiLCJpc3MiOiJlZGdlcGF5LWNmIiwiYXVkIjoibW9iaWxlIiwiaWF0IjoxNzg4MTk2MDE3LCJleHAiOjE3OTA3ODgwMTcsImp0aSI6ImIzYzUyYzlkLWEyM2MtNGE1Ny1hOGM5LWVkNWZhN2QwMTk4NCJ9.VgFUbkd8I5DIQvPhBmZi3hBnzUwr8iE6sqrm75L17Ts" placeholder="Paste JWT token or API Key">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="relayProxyCheckbox" checked>
+                Use Relay Proxy (Recommended: bypasses browser CORS restrictions when testing local/remote APIs)
+              </label>
+            </div>
+
+            <!-- Live Payload Preview -->
+            <div class="payload-preview-box">
+              <div class="box-title">Outgoing JSON Payload Preview</div>
+              <pre id="payloadPreviewCode">{}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Sent History -->
+        <div class="tab-pane" id="tab-history">
+          <div class="card">
+            <div class="card-header">
+              <h3>📜 Outgoing SMS Transmission Log</h3>
+              <button class="tiny-btn danger" id="clearHistoryBtn">Clear History</button>
+            </div>
+            <div class="history-list" id="historyList">
+              <div class="empty-state">No SMS sent yet. Hit Send or Randomize & Send!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Mock Server Received Log -->
+        <div class="tab-pane" id="tab-mock-server">
+          <div class="card">
+            <div class="card-header">
+              <h3>📥 Built-in Mock Server Live Feed</h3>
+              <div>
+                <button class="tiny-btn" id="refreshMockBtn">🔄 Refresh</button>
+                <button class="tiny-btn danger" id="clearMockBtn">Clear Feed</button>
+              </div>
+            </div>
+            <p class="card-subtitle">
+              Any requests sent to <code>http://localhost:3300/api/mobile/v1/sms</code> or <code>http://localhost:3300/mock-webhook</code> will show up here in real time.
+            </p>
+            <div class="mock-feed" id="mockFeed">
+              <div class="empty-state">Waiting for incoming SMS payloads...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Telemetry & Response Bar -->
+        <div class="card response-card" id="responseCard">
+          <div class="card-header">
+            <div class="response-title">
+              <span class="dot" id="responseStatusDot"></span>
+              <h4>Latest Server Response</h4>
+            </div>
+            <div class="response-metrics">
+              <span class="metric-badge" id="responseStatusBadge">Status: Ready</span>
+              <span class="metric-badge" id="responseTimeBadge">Latency: -- ms</span>
+            </div>
+          </div>
+          <div class="response-body-wrapper">
+            <pre id="responseBodyViewer">Hit "Send SMS to Server" to see the server's response here.</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Batch Test Modal -->
+  <div class="modal-overlay" id="batchModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚡ Automated Batch SMS Generator</h3>
+        <button class="close-modal-btn" id="closeBatchModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Stress test your worker or queue consumer by sending multiple unique SMS messages with random TrxIDs.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="batchCount">Number of Messages</label>
+            <input type="number" id="batchCount" min="1" max="100" value="5">
+          </div>
+          <div class="form-group">
+            <label for="batchInterval">Delay between SMS (ms)</label>
+            <input type="number" id="batchInterval" min="100" max="10000" step="100" value="800">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="batchGateway">Provider Mix</label>
+          <select id="batchGateway">
+            <option value="random">Random Mix (bKash, Nagad, Rocket, Upay)</option>
+            <option value="bkash">bKash Only</option>
+            <option value="nagad">Nagad Only</option>
+            <option value="rocket">Rocket Only</option>
+          </select>
+        </div>
+        <div class="batch-progress" id="batchProgressContainer" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="batchProgressFill" style="width: 0%;"></div>
+          </div>
+          <span class="progress-text" id="batchProgressText">Sent 0 / 5</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="outline-btn" id="cancelBatchBtn">Cancel</button>
+        <button class="primary-btn" id="startBatchBtn">Start Batch Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
