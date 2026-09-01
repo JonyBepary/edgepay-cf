@@ -195,11 +195,9 @@ export class PaymentService {
 
     if (!gateway) throw new NotFoundError('Gateway');
 
-    // v0.2.3: ENABLED_GATEWAYS platform gate — NEW payments may only be
-    // initiated against enabled adapters. (handleCallback below
-    // deliberately does NOT check: the customer already paid at the
-    // gateway; refusing to complete the transaction would strand funds.)
-    assertGatewayEnabled(this.env, gateway.slug);
+    if (gateway.type !== 'manual') {
+      assertGatewayEnabled(this.env, gateway.slug);
+    }
 
     // Load + decrypt credentials
     const credRows = await this.env.DB.prepare(
