@@ -1,20 +1,14 @@
 /**
  * Automated Production Self-Healing & Bootstrapping Service.
  *
- * Runs automatically on cold-start or first deploy:
- * - Initializes platform merchant
- * - Provisions GAAP double-entry 14 chart of accounts
- * - Configures standard gateways (bKash, Nagad, Rocket, SSLCommerz, Stripe)
- * - Seeds bKash/Nagad wallet numbers in op_manual_gateways
- * - Seeds verified SMS regex templates in op_sms_templates
- * - Sets default companion app device pairing OTP
- * - Registers default mock webhook endpoint
- * - Guarantees 100% idempotent self-healing across re-deploys.
+ * Fully configurable via `src/config/platform.ts` and `wrangler.jsonc` (vars / secrets).
+ * Supports explicit null / none / nil value ranges for zero-hardcoding before deploy.
  */
 
 import type { Env } from '../types/env';
-import { randomUuid, randomBase64Key, randomNumericOtp, sha256 } from '../lib/crypto';
+import { randomUuid, randomBase64Key, sha256 } from '../lib/crypto';
 import { LedgerService } from './ledger';
+import { getPlatformConfig } from '../config/platform';
 
 export interface BootstrapResult {
   merchant_id: number;
@@ -25,6 +19,12 @@ export interface BootstrapResult {
 
 export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResult> {
   const now = new Date().toISOString();
+  const cfg = getPlatformConfig(env);
+
+  const adminEmail = cfg.admin.email ?? 'admin@edgepay.internal';
+  const defaultPhone = cfg.mfs.defaultPhone;
+  const initialOtp = cfg.mfs.pairingOtp;
+  const defaultWebhook = cfg.financial.webhookUrl;
 
   // 1. Check if platform merchant exists
   let merchant = await env.DB.prepare(
@@ -34,11 +34,6 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
   let merchantId = merchant?.id;
   let newApiKey: string | undefined;
 
-  const adminEmail = env.ADMIN_EMAIL ?? 'admin@edgepay.internal';
-  const defaultPhone = env.DEFAULT_MFS_NUMBER ?? '01815300789';
-  const initialOtp = env.DEFAULT_PAIRING_OTP ?? (env.ENVIRONMENT === 'production' ? randomNumericOtp(6) : '123456');
-  const defaultWebhook = env.DEFAULT_WEBHOOK_URL ?? (env.APP_URL ? `${env.APP_URL}/mock-webhook` : '');
-
   if (!merchantId) {
     const merchantUuid = randomUuid();
     const webhookSecret = randomBase64Key(32);
@@ -46,8 +41,17 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     await env.DB.prepare(
       `INSERT INTO op_merchants
          (uuid, name, slug, email, timezone, default_currency, webhook_secret, settings, status, is_platform, created_at, updated_at)
-       VALUES (?, 'EdgePay Platform', 'edgepay-platform', ?, 'Asia/Dhaka', 'BDT', ?, NULL, 'active', 1, ?, ?)`
-    ).bind(merchantUuid, adminEmail, webhookSecret, now, now).run();
+       VALUES (?, ?, 'edgepay-platform', ?, ?, ?, ?, NULL, 'active', 1, ?, ?)`
+    ).bind(
+      merchantUuid,
+      cfg.app.name + ' Platform',
+      adminEmail,
+      cfg.admin.timezone,
+      cfg.financial.defaultCurrency,
+      webhookSecret,
+      now,
+      now
+    ).run();
 
     const row = await env.DB.prepare(
       `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
@@ -65,15 +69,26 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(adminEmail))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
     const { hashPassword } = await import('../lib/crypto');
-    const initialAdminPass = env.ADMIN_PASSWORD ?? (env.ENVIRONMENT === 'production' ? randomUuid() + '!Aa1' : 'AdminPass123456!');
+    const initialAdminPass = cfg.admin.password ?? (cfg.app.environment === 'production' ? randomUuid() + '!Aa1' : 'AdminPass123456!');
     const passwordHash = await hashPassword(initialAdminPass);
 
     await env.DB.prepare(
       `INSERT INTO op_merchant_users
          (merchant_id, uuid, name, email, email_hash, phone, phone_hash, password_hash,
           two_factor_enabled, role_id, status, language, timezone, created_at, updated_at)
-       VALUES (?, ?, 'Platform Admin', ?, ?, NULL, NULL, ?, 0, NULL, 'active', 'en', 'Asia/Dhaka', ?, ?)`
-    ).bind(merchantId, adminUserUuid, adminEmail, emailHash, passwordHash, now, now).run();
+       VALUES (?, ?, 'Platform Admin', ?, ?, ?, NULL, ?, 0, NULL, 'active', ?, ?, ?, ?)`
+    ).bind(
+      merchantId,
+      adminUserUuid,
+      adminEmail,
+      emailHash,
+      defaultPhone,
+      passwordHash,
+      cfg.admin.language,
+      cfg.admin.timezone,
+      now,
+      now
+    ).run();
   }
 
   // 2. Ensure default ledger chart of accounts
@@ -83,19 +98,11 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
   ).bind(merchantId).first<{ count: number }>();
 
   if (!accountCount || accountCount.count === 0) {
-    await ledger.createDefaultChartOfAccounts(merchantId, 'BDT');
+    await ledger.createDefaultChartOfAccounts(merchantId, cfg.financial.defaultCurrency);
   }
 
-  // 3. Ensure default gateways
-  const defaultGateways = [
-    { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
-    { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
-    { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
-    { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
-    { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
-  ];
-
-  for (const gw of defaultGateways) {
+  // 3. Ensure configured seed gateways
+  for (const gw of cfg.gateways.defaultSeedGateways) {
     const existingGw = await env.DB.prepare(
       `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
     ).bind(merchantId, gw.slug).first<{ id: number }>();
@@ -105,56 +112,26 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
         `INSERT INTO op_gateways 
            (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
          VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
-      ).bind(merchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
+      ).bind(merchantId, gw.slug, gw.name, gw.type, gw.priority, JSON.stringify(gw.currencies), now, now).run();
 
       const gwRow = await env.DB.prepare(
         `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
       ).bind(merchantId, gw.slug).first<{ id: number }>();
 
       const newGwId = gwRow?.id;
-      if (gw.slug === 'bkash' && newGwId) {
+      if (gw.type === 'manual' && newGwId) {
+        const phone = defaultPhone ?? '';
+        const instructions = phone ? `Send Money to ${gw.name} Number: ${phone}` : `Contact merchant for ${gw.name} payment details`;
         await env.DB.prepare(
           `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
            VALUES (?, ?, 'personal', ?, ?, ?)`
-        ).bind(newGwId, merchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now).run();
-      } else if (gw.slug === 'nagad' && newGwId) {
-        await env.DB.prepare(
-          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
-           VALUES (?, ?, 'personal', ?, ?, ?)`
-        ).bind(newGwId, merchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now).run();
+        ).bind(newGwId, merchantId, phone, instructions, now).run();
       }
     }
   }
 
   // 4. Ensure SMS regex templates
-  const defaultTemplates = [
-    {
-      gateway_slug: 'bkash',
-      name: 'bKash Received Money',
-      regex: 'You have received Tk (?<amount>[0-9,.]+)\\s+from\\s+(?<sender>[0-9+]+)\\..*?TrxID\\s+(?<trx_id>[A-Z0-9]+)',
-      sample: 'You have received Tk 500.00 from 01711223344. Fee Tk 0.00. Balance Tk 15,200.00. TrxID 9A8B7C6D5E at 31/08/2026 03:00'
-    },
-    {
-      gateway_slug: 'bkash',
-      name: 'bKash Merchant Payment',
-      regex: 'Payment Tk (?<amount>[0-9,.]+)\\s+from\\s+(?<sender>[0-9+]+)\\s+successful.*?TrxID\\s+(?<trx_id>[A-Z0-9]+)',
-      sample: 'Payment Tk 500.00 from 01711223344 successful. Fee Tk 0.00. Balance Tk 15,200.00. TrxID 9A8B7C6D5E at 31/08/2026 03:00'
-    },
-    {
-      gateway_slug: 'nagad',
-      name: 'Nagad Received / Cash In',
-      regex: '(?:Cash In|Payment|Received).*?Tk\\s+(?<amount>[0-9,.]+).*?from\\s+(?<sender>[0-9+]+).*?TxnID:\\s+(?<trx_id>[A-Z0-9]+)',
-      sample: 'Cash In of Tk 500.00 is successful from 01811223344. Fee Tk 0.00. Balance Tk 10,500.00. TxnID: NG9A8B7C at 31/08/2026 03:00'
-    },
-    {
-      gateway_slug: 'rocket',
-      name: 'DBBL Rocket Received',
-      regex: '(?:TxnId|Txn):\\s*(?<trx_id>[0-9]+).*?Tk\\s*(?<amount>[0-9,.]+).*?From:\\s*(?<sender>[0-9+]+)',
-      sample: 'TxnId: 1234567890 Tk 500.00 From: 01911223344'
-    }
-  ];
-
-  for (const tmpl of defaultTemplates) {
+  for (const tmpl of cfg.gateways.defaultSmsTemplates) {
     const existingTmpl = await env.DB.prepare(
       `SELECT id FROM op_sms_templates WHERE merchant_id = ? AND name = ? LIMIT 1`
     ).bind(merchantId, tmpl.name).first<{ id: number }>();
@@ -168,7 +145,7 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     }
   }
 
-  // 5. Ensure device pairing OTP (FK-safe: requires a real user row)
+  // 5. Ensure device pairing OTP (FK-safe: bound to real admin user)
   const existingOtp = await env.DB.prepare(
     `SELECT token FROM op_device_pairing_tokens WHERE merchant_id = ? AND token = ? LIMIT 1`
   ).bind(merchantId, initialOtp).first<{ token: string }>();
@@ -187,17 +164,19 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     }
   }
 
-  // 6. Ensure default webhook
-  const existingWebhook = await env.DB.prepare(
-    `SELECT id FROM op_webhooks WHERE merchant_id = ? LIMIT 1`
-  ).bind(merchantId).first<{ id: number }>();
+  // 6. Ensure default webhook (only if configured)
+  if (defaultWebhook) {
+    const existingWebhook = await env.DB.prepare(
+      `SELECT id FROM op_webhooks WHERE merchant_id = ? LIMIT 1`
+    ).bind(merchantId).first<{ id: number }>();
 
-  if (!existingWebhook) {
-    const secret = `whsec_${randomBase64Key(24).replace(/[^a-zA-Z0-9]/g, '')}`;
-    await env.DB.prepare(
-      `INSERT INTO op_webhooks (merchant_id, url, secret, events, status, created_at, updated_at)
-       VALUES (?, ?, ?, '["*"]', 'active', ?, ?)`
-    ).bind(merchantId, defaultWebhook, secret, now, now).run();
+    if (!existingWebhook) {
+      const secret = `whsec_${randomBase64Key(24).replace(/[^a-zA-Z0-9]/g, '')}`;
+      await env.DB.prepare(
+        `INSERT INTO op_webhooks (merchant_id, url, secret, events, status, created_at, updated_at)
+         VALUES (?, ?, ?, '["*"]', 'active', ?, ?)`
+      ).bind(merchantId, defaultWebhook, secret, now, now).run();
+    }
   }
 
   // 7. Ensure active API Key

@@ -298,7 +298,9 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
     const adminUserUuid = crypto.randomUUID();
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
-    const passwordHash = '$2a$12$e8Y7z7r0w7Z4q6l1s0j8yOPf0x0g9z9a8b7c6d5e4f3g2h1i0j9k8';
+    const { hashPassword, randomNumericOtp, sha256 } = await import('../lib/crypto');
+    const initialPassword = crypto.randomUUID() + '!Aa1';
+    const passwordHash = await hashPassword(initialPassword);
 
     await c.env.DB.prepare(
       `INSERT INTO op_merchant_users
@@ -318,7 +320,6 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
     await ledger.createDefaultChartOfAccounts(newMerchantId, body.currency ?? 'BDT');
 
     // 3. Generate Primary API Key
-    const { sha256 } = await import('../lib/crypto');
     const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
     const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
     const apiKey = `op_live_${keyPrefix}_${keyRest}`;
@@ -336,44 +337,35 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
       now
     ).run();
 
-    // 4. Seed default gateways
-    const defaultGateways = [
-      { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
-      { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
-      { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
-      { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
-      { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
-    ];
+    // 4. Seed default gateways from centralized configuration
+    const { getPlatformConfig } = await import('../config/platform');
+    const cfg = getPlatformConfig(c.env);
+    const defaultPhone = body.phone ?? cfg.mfs.defaultPhone ?? null;
 
-    const defaultPhone = body.phone || '01700000000';
-
-    for (const gw of defaultGateways) {
+    for (const gw of cfg.gateways.defaultSeedGateways) {
       await c.env.DB.prepare(
         `INSERT INTO op_gateways 
            (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
          VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
-      ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
+      ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, JSON.stringify(gw.currencies), now, now).run();
 
       const gwRow = await c.env.DB.prepare(
         `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
       ).bind(newMerchantId, gw.slug).first<{ id: number }>();
 
       const gwId = gwRow?.id;
-      if (gw.slug === 'bkash' && gwId) {
+      if (gw.type === 'manual' && gwId) {
+        const phone = defaultPhone ?? '';
+        const instructions = phone ? `Send Money to ${gw.name} Number: ${phone}` : `Contact merchant for ${gw.name} payment details`;
         await c.env.DB.prepare(
           `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
            VALUES (?, ?, 'personal', ?, ?, ?)`
-        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now).run();
-      } else if (gw.slug === 'nagad' && gwId) {
-        await c.env.DB.prepare(
-          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
-           VALUES (?, ?, 'personal', ?, ?, ?)`
-        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now).run();
+        ).bind(gwId, newMerchantId, phone, instructions, now).run();
       }
     }
 
-    // 5. Seed companion pairing OTP
-    const pairingOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 5. Seed companion pairing OTP using CSPRNG
+    const pairingOtp = randomNumericOtp(6);
     const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
     await c.env.DB.prepare(
       `INSERT INTO op_device_pairing_tokens

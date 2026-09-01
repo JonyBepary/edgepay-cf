@@ -77,6 +77,7 @@ export interface Env {
   WEBHOOK_BACKOFF_MS: string;
   RATE_LIMIT_WINDOW_SECONDS: string;
   RATE_LIMIT_MAX_REQUESTS: string;
+  SESSION_TTL_SECONDS?: string;
   // CORS origin allowlist, comma-separated. Empty/undefined
   // = fail closed (no cross-origin browser access). Read by cors() in index.ts.
   ALLOWED_ORIGINS?: string;
