@@ -164,8 +164,9 @@ apiRoutes.post(
      JOIN op_gateways g ON g.id = t.gateway_id
      WHERE t.trx_id = ? AND t.merchant_id = ?
      LIMIT 1`
-).bind(body.transaction_id, merchantId).first<{
+  ).bind(body.transaction_id, merchantId).first<{
     id: number;
+    trx_id: string;
     amount: string;
     currency: string;
     status: string;
@@ -183,9 +184,7 @@ apiRoutes.post(
 
   const refundAmount = body.amount ?? tx.amount;
 
-  // v0.2.3: NEW refunds are gated by ENABLED_GATEWAYS. (In-flight refund
-  // workflows keep polling their adapter even after a gateway is disabled —
-  // blocking mid-flight reconciliation would strand funds.)
+  // v0.2.3: NEW refunds are gated by ENABLED_GATEWAYS.
   if (!gatewaySelection(c.env.ENABLED_GATEWAYS).enabled.includes(tx.gateway_slug)) {
     return c.json({
       success: false,
@@ -196,62 +195,37 @@ apiRoutes.post(
     }, 422);
   }
 
-  // Issue refund via gateway (static import — see top of file)
-  const adapter = gatewayRegistry.resolve(tx.gateway_slug);
+  const { RefundService } = await import('../services/refund');
+  const refundService = new RefundService(c.env);
+  
+  try {
+    const result = await refundService.createRefund({
+      merchant_id: merchantId,
+      transaction_id: tx.id,
+      amount: refundAmount,
+      reason: body.reason,
+      initiated_by: c.get('authSubject') as number | null ?? null,
+    });
 
-  // Load credentials (simplified — in production cache these)
-  const credRows = await c.env.DB.prepare(
-
-    `SELECT gc.field_name, gc.field_value
-     FROM op_gateway_configs gc
-     JOIN op_transactions t ON t.gateway_id = gc.gateway_id
-     WHERE t.id = ? AND gc.merchant_id = ?`
-).bind(tx.id, merchantId).all<{ field_name: string; field_value: string }>();
-
-  const { decrypt } = await import('../lib/crypto');
-  const credentials: Record<string, string> = {};
-  for (const row of credRows.results) {
-    try {
-      credentials[row.field_name] = await decrypt(row.field_value, c.env.ENCRYPTION_KEY);
-    } catch { /* skip */ }
-  }
-
-  const refundResult = await adapter.refund(tx.gateway_trx_id, refundAmount, credentials, { kv: c.env.KV });
-  if (!refundResult.success) {
+    return c.json({
+      success: true,
+      data: {
+        refund_id: result.refund_id,
+        transaction_id: tx.trx_id,
+        amount: refundAmount,
+        currency: tx.currency,
+        status: 'pending',
+        gateway_refund_id: result.gateway_refund_id,
+        workflow_instance_id: result.workflow_instance_id,
+      },
+    }, 202);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return c.json({
       success: false,
-      error: { code: 'REFUND_FAILED', message: refundResult.error ?? 'Refund failed' },
-    }, 502);
+      error: { code: 'REFUND_REJECTED', message },
+    }, 422);
   }
-
-  // Create refund record
-  const refundTrxId = `ref_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-  await c.env.DB.prepare(
-
-    `INSERT INTO op_refunds
-       (merchant_id, refund_id, transaction_id, gateway_refund_id, amount, currency, reason, status, initiated_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`
-).bind(merchantId,
-      refundTrxId,
-      tx.id,
-      refundResult.refund_id ?? null,
-      refundAmount,
-      tx.currency,
-      body.reason ?? null,
-      c.get('authSubject') ?? 0,
-      new Date().toISOString(),
-      new Date().toISOString(),).run();
-
-  return c.json({
-    success: true,
-    data: {
-      refund_id: refundTrxId,
-      gateway_refund_id: refundResult.refund_id,
-      amount: refundAmount,
-      currency: tx.currency,
-      status: 'completed',
-    },
-  }, 201);
   },
 );
 

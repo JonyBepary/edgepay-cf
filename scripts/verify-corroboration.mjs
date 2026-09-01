@@ -1,9 +1,25 @@
 import fs from 'fs';
 
-const BASE_URL = 'https://edgepay-cf.bm-jonybepary.workers.dev';
-const M8_KEY = 'op_live_ee20ec953fb7_a52c0b001c0948bfa8dbecddad2929b8';
+function loadEnv() {
+  if (fs.existsSync('.dev.vars')) {
+    const lines = fs.readFileSync('.dev.vars', 'utf8').split('\n');
+    for (const line of lines) {
+      const match = line.match(/^\s*([\w_]+)\s*=\s*(.*)?\s*$/);
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+      }
+    }
+  }
+}
+loadEnv();
+
+const BASE_URL = process.env.EDGE_PAY_BASE_URL || 'https://edgepay-cf.bm-jonybepary.workers.dev';
+const M8_KEY = process.env.EDGE_PAY_KEY || process.env.M8_KEY || 'op_live_ee20ec953fb7_a52c0b001c0948bfa8dbecddad2929b8';
 
 async function getFreshJwt() {
+  if (!fs.existsSync('sms-phone-mockup/.companion-state.json')) {
+    throw new Error('Missing sms-phone-mockup/.companion-state.json. Pair the phone simulator first.');
+  }
   const state = JSON.parse(fs.readFileSync('sms-phone-mockup/.companion-state.json', 'utf8'));
   const res = await fetch(BASE_URL + '/api/mobile/v1/refresh', {
     method: 'POST',
@@ -11,6 +27,9 @@ async function getFreshJwt() {
     body: JSON.stringify({ refresh_token: state.refresh_token })
   });
   const data = await res.json();
+  if (!data.success || !data.data?.access_token) {
+    throw new Error('Failed to refresh mobile access token: ' + JSON.stringify(data));
+  }
   return data.data.access_token;
 }
 

@@ -27,7 +27,6 @@ import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { NonRetryableError } from 'cloudflare:workflows';
 import type { Env } from '../types/env';
-import { LedgerService } from '../services/ledger';
 import { WebhookDispatcher } from '../services/webhook-dispatcher';
 import { gatewayRegistry } from '../gateways/base';
 import { decrypt } from '../lib/crypto';
@@ -169,23 +168,22 @@ export class RefundReconciliationWorkflow extends WorkflowEntrypoint<Env, Refund
   private async finalizeRefund(step: WorkflowStep, refund: RefundRecord): Promise<void> {
     const env = this.env;
 
-    // Ledger reversal is IDEMPOTENT: its tx_id derives from the original
-    // transaction's uuid, so step retries / workflow replays cannot
-    // double-reverse (review fix #2: tx_id dedup at the ledger).
+    // Ledger reversal is IDEMPOTENT: its tx_id derives from the refund's
+    // public ID (`m{merchant}:refund:{refund_id}`), so step retries / workflow replays cannot
+    // double-reverse (EDGE-P0-002 fix).
     await step.do(
       'post-ledger-reversal',
       { retries: STEP_RETRIES, timeout: '30 seconds' },
       async (): Promise<{ ledger_transaction_id?: number }> => {
-        const ledger = new LedgerService(env);
-        // The original tx row may already be 'reversed' from a prior
-        // partial run — treat that as success, not failure.
-        try {
-          const result = await ledger.reverse(refund.transaction_id, `Refund ${refund.refund_id}`);
-          return { ledger_transaction_id: result.ledger_transaction_id };
-        } catch (err) {
-          if (String(err).includes('already reversed')) return {};
-          throw err;
-        }
+        const { postRefundLedgerEntry } = await import('../services/ledger');
+        const result = await postRefundLedgerEntry(
+          env,
+          refund.merchant_id,
+          refund.refund_id,
+          refund.amount,
+          refund.currency,
+        );
+        return { ledger_transaction_id: result.ledger_transaction_id };
       },
     );
 

@@ -385,3 +385,45 @@ export async function postPaymentLedgerEntry(
 
   return { ledger_transaction_id: result.ledger_transaction_id ?? 0, tx_id: result.tx_id, status: result.status };
 }
+
+/**
+ * Post a refund ledger entry. Idempotent per refund ID: the
+ * tx_id is `m{merchant}:refund:{refundPublicId}`.
+ * Accurately debits revenue and credits clearing for full or partial amounts.
+ */
+export async function postRefundLedgerEntry(
+  env: Env,
+  merchantId: number,
+  refundPublicId: string,
+  amount: Money,
+  currency: string,
+): Promise<{ ledger_transaction_id: number; tx_id: string; status: string }> {
+  const ledger = new LedgerService(env);
+
+  const [clearingAccount, revenueAccount] = await Promise.all([
+    ledger.getAccountByCode(merchantId, '1010', currency),
+    ledger.getAccountByCode(merchantId, '4000', currency),
+  ]);
+
+  if (!clearingAccount || !revenueAccount) {
+    throw new Error('Default ledger accounts not initialized for merchant');
+  }
+
+  const entries: PostEntryInput[] = [
+    { account_id: revenueAccount.id, direction: 'debit', amount },
+    { account_id: clearingAccount.id, direction: 'credit', amount },
+  ];
+
+  const result = await ledger.post(
+    {
+      merchant_id: merchantId,
+      reference_type: 'refund',
+      reference_id: refundPublicId,
+      description: `Refund ${refundPublicId} — ${amount} ${currency}`,
+      entries,
+    },
+    { idempotency_key: `m${merchantId}:refund:${refundPublicId}` },
+  );
+
+  return { ledger_transaction_id: result.ledger_transaction_id ?? 0, tx_id: result.tx_id, status: result.status };
+}

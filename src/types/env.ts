@@ -88,6 +88,7 @@ export interface Env {
   DEFAULT_PAIRING_OTP?: string;
   ADMIN_EMAIL?: string;
   DEFAULT_WEBHOOK_URL?: string;
+  ADMIN_PASSWORD?: string;
 
   // Secrets — set via `wrangler secret put`
   JWT_SECRET: string;

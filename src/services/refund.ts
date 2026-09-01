@@ -76,6 +76,30 @@ export class RefundService {
       throw new Error(`Only completed transactions can be refunded (status: ${tx.status})`);
     }
 
+    // Enforce cumulative refund bounds: amount <= captured - sum(prior refunds)
+    const priorRefunds = await env.DB
+      .prepare(
+        `SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as total_refunded
+         FROM op_refunds 
+         WHERE transaction_id = ? AND merchant_id = ? AND status IN ('completed', 'pending', 'processing')`
+      )
+      .bind(input.transaction_id, input.merchant_id)
+      .first<{ total_refunded: number }>();
+
+    const totalRefunded = priorRefunds?.total_refunded ?? 0;
+    const requestedRefund = parseFloat(input.amount);
+    const capturedAmount = parseFloat(tx.amount);
+
+    if (isNaN(requestedRefund) || requestedRefund <= 0) {
+      throw new Error('Refund amount must be a positive decimal');
+    }
+
+    if (totalRefunded + requestedRefund > capturedAmount + 0.001) {
+      throw new Error(
+        `Refund amount (${input.amount}) exceeds remaining refundable amount (${(capturedAmount - totalRefunded).toFixed(2)})`
+      );
+    }
+
     // 2. Ask the gateway to issue the refund (best effort — manual
     //    gateways return unsupported and the refund is processed off-band;
     //    the workflow polls and eventually pages if it never settles).

@@ -312,12 +312,32 @@ export class PaymentService {
     const verifyResult = await adapter.verify(callbackData, credentials, { kv: this.env.KV });
 
     if (verifyResult.success) {
+      // 1. Enforce amount equality if returned by provider (EDGE-P0-004)
+      if (verifyResult.amount) {
+        const returnedAmount = parseFloat(verifyResult.amount);
+        const expectedAmount = parseFloat(intent.amount);
+        if (isNaN(returnedAmount) || Math.abs(returnedAmount - expectedAmount) > 0.001) {
+          await this.env.DB.prepare(
+            `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ? AND status IN ('pending', 'processing', 'created')`
+          ).bind(new Date().toISOString(), intent.trx_db_id).run();
+          return { success: false, status: 'amount_mismatch' };
+        }
+      }
+
+      // 2. Enforce transaction reference binding if echoed by provider (EDGE-P0-004)
+      if (verifyResult.trx_id && verifyResult.trx_id !== intent.trx_id) {
+        await this.env.DB.prepare(
+          `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ? AND status IN ('pending', 'processing', 'created')`
+        ).bind(new Date().toISOString(), intent.trx_db_id).run();
+        return { success: false, status: 'trx_id_mismatch' };
+      }
+
       await this.completeTransaction(intent.trx_db_id, intent.id, verifyResult.gateway_trx_id);
     } else {
+      // Terminal state guard: Only regress to 'failed' if not already completed! (EDGE-P1-006)
       await this.env.DB.prepare(
-
-        `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ?`
-).bind(new Date().toISOString(), intent.trx_db_id).run();
+        `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ? AND status IN ('pending', 'processing', 'created')`
+      ).bind(new Date().toISOString(), intent.trx_db_id).run();
     }
 
     return { success: verifyResult.success, status: verifyResult.status };

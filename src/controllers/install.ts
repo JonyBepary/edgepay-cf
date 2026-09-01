@@ -42,8 +42,11 @@ installRoutes.get('/', async (c) => {
   const installed = await c.env.KV.get('system:installed');
   const acceptHeader = c.req.header('Accept') || '';
   const isJsonReq = acceptHeader.includes('application/json') || c.req.query('format') === 'json';
-  if (installed === 'true' && !isJsonReq) {
-    return c.redirect('/');
+  if (installed === 'true') {
+    if (!isJsonReq) {
+      return c.redirect('/');
+    }
+    return c.json({ success: true, message: 'Platform is already installed and locked.' });
   }
 
   // v0.2.3: surface the gateway-plugin selection (ENABLED_GATEWAYS) so

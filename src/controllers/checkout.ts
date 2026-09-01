@@ -12,6 +12,15 @@ type CheckoutContext = Context<{ Bindings: Env; Variables: Record<string, unknow
 
 export const checkoutRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
+// Mount Content-Security-Policy & anti-framing on checkout surfaces (EDGE-P0-006 fix)
+checkoutRoutes.use('*', async (c, next) => {
+  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none';");
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  await next();
+});
+
 // GET /checkout/{token} — render checkout UI
 checkoutRoutes.get('/:token', async (c) => {
   const token = c.req.param('token');
@@ -178,14 +187,14 @@ const handleCustomerTrxVerify = async (c: CheckoutContext) => {
   }>();
 
   if (matchingSms) {
-    // Exact amount verification
+    // Exact amount verification (EDGE-P0-007 fix)
     const { cmp } = await import('../lib/money');
-    if (matchingSms.parsed_amount && cmp(matchingSms.parsed_amount, intent.amount) !== 0) {
+    if (!matchingSms.parsed_amount || cmp(matchingSms.parsed_amount, intent.amount) !== 0) {
       return c.json({
         success: false,
         error: {
           code: 'AMOUNT_MISMATCH',
-          message: `The payment received for TrxID ${normalizedTrxId} (Tk ${matchingSms.parsed_amount}) does not match the order amount (Tk ${intent.amount}).`
+          message: `The payment received for TrxID ${normalizedTrxId} does not match the order amount (Tk ${intent.amount}).`
         }
       }, 400);
     }
@@ -309,6 +318,7 @@ function renderCheckoutHTML(opts: {
   gateways: Array<{ id: number; slug: string; name: string; type: string; account_number?: string | null; instructions?: string | null }>;
 }): string {
   const isCompleted = opts.status === 'completed';
+  const primaryColor = sanitizeBrandColor(opts.brandColor);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -318,7 +328,7 @@ function renderCheckoutHTML(opts: {
 <title>Secure Checkout — ${escapeHtml(opts.brandName)}</title>
 <style>
 :root {
-  --primary: ${opts.brandColor};
+  --primary: ${primaryColor};
   --primary-hover: #0043a8;
   --bg: #f8fafc;
   --card-bg: #ffffff;
@@ -595,7 +605,7 @@ body {
       <div class="section-label">1. Select Payment Method</div>
       <div class="gateway-list">
         ${opts.gateways.map((gw, idx) => `
-          <label class="gateway-option ${idx === 0 ? 'selected' : ''}" onclick="selectGateway(this, ${gw.id}, '${escapeHtml(gw.account_number || '')}', '${escapeHtml(gw.instructions || '')}', '${escapeHtml(gw.type)}')">
+          <label class="gateway-option ${idx === 0 ? 'selected' : ''}" data-id="${gw.id}" data-account="${escapeHtml(gw.account_number || '')}" data-instructions="${escapeHtml(gw.instructions || '')}" data-type="${escapeHtml(gw.type)}">
             <div class="gw-left">
               <input type="radio" name="gateway_id" value="${gw.id}" ${idx === 0 ? 'checked' : ''} style="display:none">
               <span>${escapeHtml(gw.name)}</span>
@@ -647,23 +657,31 @@ let pollInterval = null;
 function selectGateway(el, id, accountNumber, instructions, type) {
   document.querySelectorAll('.gateway-option').forEach(g => g.classList.remove('selected'));
   el.classList.add('selected');
-  el.querySelector('input').checked = true;
-  currentGatewayId = id;
+  const radio = el.querySelector('input');
+  if (radio) radio.checked = true;
+  currentGatewayId = Number(id);
 
   const mfsBox = document.getElementById('mfsDetails');
-  if (accountNumber || type === 'manual') {
+  if (mfsBox) {
     mfsBox.style.display = 'block';
-    document.getElementById('mfsAccount').innerText = accountNumber || 'Contact Merchant';
-    document.getElementById('mfsInstructions').innerText = instructions || 'Send exact payment amount to this personal account number.';
-  } else {
-    mfsBox.style.display = 'block';
+    const accEl = document.getElementById('mfsAccount');
+    if (accEl) accEl.innerText = accountNumber || 'Contact Merchant';
+    const instEl = document.getElementById('mfsInstructions');
+    if (instEl) instEl.innerText = instructions || 'Send exact payment amount to this personal account number.';
   }
 }
 
+document.querySelectorAll('.gateway-option').forEach(el => {
+  el.addEventListener('click', function() {
+    selectGateway(this, this.dataset.id, this.dataset.account, this.dataset.instructions, this.dataset.type);
+  });
+});
+
 // Initialize default gateway
-${opts.gateways[0]?.account_number ? `
-selectGateway(document.querySelector('.gateway-option'), ${opts.gateways[0].id}, '${escapeHtml(opts.gateways[0].account_number || '')}', '${escapeHtml(opts.gateways[0].instructions || '')}', '${escapeHtml(opts.gateways[0].type)}');
-` : ''}
+const firstOption = document.querySelector('.gateway-option');
+if (firstOption) {
+  selectGateway(firstOption, firstOption.dataset.id, firstOption.dataset.account, firstOption.dataset.instructions, firstOption.dataset.type);
+}
 
 function copyAccount() {
   const num = document.getElementById('mfsAccount').innerText;
@@ -752,10 +770,18 @@ ${!isCompleted ? 'startPolling();' : ''}
 }
 
 function escapeHtml(s: string): string {
-  return String(s)
+  return String(s || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeBrandColor(color: string | undefined): string {
+  if (color && /^#[0-9a-fA-F]{6}$/.test(color.trim())) {
+    return color.trim();
+  }
+  return '#2563eb';
 }
 

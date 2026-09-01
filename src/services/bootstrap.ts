@@ -13,7 +13,7 @@
  */
 
 import type { Env } from '../types/env';
-import { randomUuid, randomBase64Key, sha256 } from '../lib/crypto';
+import { randomUuid, randomBase64Key, randomNumericOtp, sha256 } from '../lib/crypto';
 import { LedgerService } from './ledger';
 
 export interface BootstrapResult {
@@ -36,7 +36,7 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
 
   const adminEmail = env.ADMIN_EMAIL ?? 'admin@edgepay.internal';
   const defaultPhone = env.DEFAULT_MFS_NUMBER ?? '01815300789';
-  const initialOtp = env.DEFAULT_PAIRING_OTP ?? '123456';
+  const initialOtp = env.DEFAULT_PAIRING_OTP ?? (env.ENVIRONMENT === 'production' ? randomNumericOtp(6) : '123456');
   const defaultWebhook = env.DEFAULT_WEBHOOK_URL ?? (env.APP_URL ? `${env.APP_URL}/mock-webhook` : '');
 
   if (!merchantId) {
@@ -65,7 +65,8 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(adminEmail))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
     const { hashPassword } = await import('../lib/crypto');
-    const passwordHash = await hashPassword('AdminPass123456!');
+    const initialAdminPass = env.ADMIN_PASSWORD ?? (env.ENVIRONMENT === 'production' ? randomUuid() + '!Aa1' : 'AdminPass123456!');
+    const passwordHash = await hashPassword(initialAdminPass);
 
     await env.DB.prepare(
       `INSERT INTO op_merchant_users

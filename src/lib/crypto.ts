@@ -270,6 +270,20 @@ export function randomBase64Key(length: number = 32): string {
   return bytesToBase64(randomBytes(length));
 }
 
+/**
+ * Generates a cryptographically secure numeric OTP using Web Crypto CSPRNG.
+ * Uniformly distributed and resistant to PRNG prediction attacks.
+ */
+export function randomNumericOtp(digits: number = 6): string {
+  const min = Math.pow(10, digits - 1);
+  const max = Math.pow(10, digits) - 1;
+  const range = max - min + 1;
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  const otp = min + (array[0] % range);
+  return String(otp);
+}
+
 // ---------------------------------------------------------------
 // Timing-safe comparison (constant time)
 // ---------------------------------------------------------------
