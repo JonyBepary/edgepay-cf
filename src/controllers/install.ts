@@ -40,7 +40,9 @@ function secretPosture(value: string | undefined, kind: 'raw' | 'base64'): 'ok' 
 // Step 0: requirements check
 installRoutes.get('/', async (c) => {
   const installed = await c.env.KV.get('system:installed');
-  if (installed === 'true') {
+  const acceptHeader = c.req.header('Accept') || '';
+  const isJsonReq = acceptHeader.includes('application/json') || c.req.query('format') === 'json';
+  if (installed === 'true' && !isJsonReq) {
     return c.redirect('/');
   }
 

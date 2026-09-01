@@ -101,9 +101,12 @@ export function requireBearerApiAuth(scopes: string[] = ['read', 'write', 'admin
     c.set('authSubject', keyRow.id);
     c.set('authScopes', grantedScopes);
 
-    // Resolve merchant from domain middleware OR from API key
-    const merchantId = c.get('merchantId') ?? keyRow.merchant_id;
-    c.set('merchantId', merchantId);
+    // Tenant isolation: if domain middleware resolved a merchant, the API key must belong to the same merchant
+    const domainMerchantId = c.get('merchantId');
+    if (domainMerchantId != null && domainMerchantId !== keyRow.merchant_id) {
+      throw new ForbiddenError('Tenant mismatch: API key does not belong to this domain');
+    }
+    c.set('merchantId', keyRow.merchant_id);
 
     // Update last_used_at (fire-and-forget)
     c.executionCtx.waitUntil(
@@ -144,6 +147,11 @@ export function requireJwtAuth(): MiddlewareHandler<{ Bindings: Env; Variables: 
     c.set('authType', 'jwt');
     c.set('authSubject', parseInt(payload.sub, 10));
     c.set('authScopes', payload.scope);
+    // Tenant isolation: if domain middleware resolved a merchant, the JWT must belong to the same merchant
+    const domainMerchantIdForJwt = c.get('merchantId');
+    if (domainMerchantIdForJwt != null && domainMerchantIdForJwt !== payload.merchant_id) {
+      throw new ForbiddenError('Tenant mismatch: JWT does not belong to this domain');
+    }
     c.set('merchantId', payload.merchant_id);
 
     await next();

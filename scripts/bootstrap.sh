@@ -30,8 +30,8 @@ npx wrangler r2 bucket create edgepay-uploads-preview || true
 
 # Queues (requires Workers Paid plan)
 echo "→ Creating Queues (requires Workers Paid plan $5/mo)..."
-for q in webhook-out webhook-out-dlq email-out sms-parse; do
-  npx wrangler queues create $q || true
+for q in webhook-out webhook-out-dlq email-out email-out-dlq sms-parse sms-parse-dlq; do
+  npx wrangler queues create "$q" || true
 done
 
 echo ""

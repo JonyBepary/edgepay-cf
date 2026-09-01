@@ -71,4 +71,9 @@ export class TokenCache {
       // Same policy as get(): cache is an optimization, not a dependency.
     }
   }
+
+  /** Test helper: clear memory cache */
+  static _clearForTests(): void {
+    memCache.clear();
+  }
 }

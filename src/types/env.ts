@@ -61,7 +61,7 @@ export interface D1ExecResult {
  */
 export interface Env {
   // Non-secret vars (from wrangler.jsonc "vars")
-  ENVIRONMENT: 'development' | 'staging' | 'production';
+  ENVIRONMENT: 'development' | 'staging' | 'production' | 'test';
   APP_NAME: string;
   APP_VERSION: string;
   APP_URL: string;

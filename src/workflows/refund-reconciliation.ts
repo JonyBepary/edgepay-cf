@@ -23,7 +23,8 @@
  *     original transaction's uuid; status flips guarded by WHERE).
  */
 
-import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+import { WorkflowEntrypoint } from 'cloudflare:workers';
+import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { NonRetryableError } from 'cloudflare:workflows';
 import type { Env } from '../types/env';
 import { LedgerService } from '../services/ledger';
@@ -150,6 +151,15 @@ export class RefundReconciliationWorkflow extends WorkflowEntrypoint<Env, Refund
     // Poll window exhausted (~24h). Halt the instance as ERRORED — this
     // is the DLQ. Alerting on errored instances (dashboard alert policy
     // or Workers Logs rule on REFUND_STUCK) pages a human.
+    // Terminal failure observability: page BEFORE throwing so the errored
+    // status + structured log both fire without inventing a custom Workflow
+    // onFailure hook (no such API exists — paging is via logs/metrics).
+    page(env, 'REFUND_STUCK', {
+      refund_id: refund.refund_id,
+      merchant_id: refund.merchant_id,
+      attempts: REFUND_POLL_MAX_ATTEMPTS,
+      window_hours: Math.round(refundPollWindowMs() / 3_600_000),
+    });
     throw new NonRetryableError(
       `REFUND_STUCK: refund ${refund.refund_id} unresolved after ${REFUND_POLL_MAX_ATTEMPTS} polls (~${Math.round(refundPollWindowMs() / 3_600_000)}h)`,
     );

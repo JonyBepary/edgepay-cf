@@ -245,6 +245,60 @@ export interface TriggerResult {
 }
 
 /**
+ * Build a Workflow instance id for a refund. Idempotent and deterministic:
+ * `refund-{id}` for the initial run, `refund-{id}-{suffix}` for sweep
+ * re-drives. Suffix is sanitized to [a-zA-Z0-9_-] and truncated so the
+ * final id stays well within the Workflow id length limit.
+ */
+function buildRefundInstanceId(refundId: number, suffix?: string): string {
+  const base = `refund-${refundId}`;
+  if (!suffix) return base;
+  const safe = suffix.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32);
+  return `${base}-${safe}`;
+}
+
+function buildSweepInstanceId(date: string): string {
+  const safe = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : date.replace(/[^0-9-]/g, '').slice(0, 10);
+  return `sweep-${safe}`;
+}
+
+/**
+ * Typed duplicate-instance detection. Cloudflare Workflows' create() throws
+ * when the id already exists; the shape varies by runtime (Error with
+ * message "already exists", or an object with code/status 409). We handle
+ * all known shapes without relying on a single substring that could miss a
+ * future message change. This is intentionally conservative: only true
+ * idempotent duplicates are swallowed; everything else rethrows so callers
+ * and queue DLQ/retry see it.
+ */
+function isWorkflowDuplicateError(err: unknown): boolean {
+  if (!err) return false;
+
+  // Check numeric codes first — most precise, least fragile.
+  const maybe = err as Record<string, unknown>;
+  if (typeof maybe['code'] === 'number' && maybe['code'] === 409) return true;
+  if (typeof maybe['status'] === 'number' && maybe['status'] === 409) return true;
+  // Workers runtime may nest the cause
+  const cause = (maybe['cause'] as unknown) as Record<string, unknown> | undefined;
+  if (cause && typeof cause['code'] === 'number' && cause['code'] === 409) return true;
+
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  // Official message as of 2025-2026 is "already exists"; also handle
+  // "duplicate" and "conflict" variants for resilience.
+  if (lower.includes('already exists')) return true;
+  if (lower.includes('duplicate') && lower.includes('workflow')) return true;
+  if (lower.includes('already exists') || lower.includes('workflow already exists')) return true;
+
+  // Name-based check for typed errors (future-proof if runtime introduces a
+  // named WorkflowDuplicateError).
+  const name = err instanceof Error ? err.name.toLowerCase() : String(maybe['name'] ?? '').toLowerCase();
+  if (name.includes('duplicate') || name.includes('conflicterror') || name.includes('alreadyexists')) return true;
+
+  return false;
+}
+
+/**
  * Trigger the refund reconciliation workflow for one refund.
  * Instance-per-refund: id `refund-{id}` (or `refund-{id}-{suffix}` for
  * sweep re-drives) so replays and re-drives are idempotent by id.
@@ -254,12 +308,12 @@ export async function triggerRefundReconciliation(
   refundId: number,
   suffix?: string,
 ): Promise<TriggerResult> {
-  const instanceId = `refund-${refundId}${suffix ? `-${suffix}` : ''}`;
+  const instanceId = buildRefundInstanceId(refundId, suffix);
   try {
     await env.REFUND_WORKFLOW.create({ id: instanceId, params: { refund_id: refundId } });
     return { instance_id: instanceId, created: true };
   } catch (err) {
-    if (String(err).toLowerCase().includes('already exists')) {
+    if (isWorkflowDuplicateError(err)) {
       return { instance_id: instanceId, created: false };
     }
     throw err;
@@ -269,12 +323,12 @@ export async function triggerRefundReconciliation(
 /** Trigger the daily reconciliation sweep (idempotent per UTC day). */
 export async function triggerDailySweep(env: Env, dateStr?: string): Promise<TriggerResult> {
   const date = dateStr ?? new Date().toISOString().slice(0, 10);
-  const instanceId = `sweep-${date}`;
+  const instanceId = buildSweepInstanceId(date);
   try {
     await env.SWEEP_WORKFLOW.create({ id: instanceId, params: { date } });
     return { instance_id: instanceId, created: true };
   } catch (err) {
-    if (String(err).toLowerCase().includes('already exists')) {
+    if (isWorkflowDuplicateError(err)) {
       return { instance_id: instanceId, created: false };
     }
     throw err;

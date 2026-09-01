@@ -346,8 +346,15 @@ export class LedgerDO extends DurableObject<Env> {
       `SELECT code, currency, balance_minor FROM accounts`,
     ) as Array<{ code: string; currency: string; balance_minor: number }>;
     const asOf = new Date().toISOString();
+    const asOfDate = asOf.slice(0, 10);
 
-    const merchantId = Number(this.ctx.id.name?.replace(/^merchant-/, '') ?? 0) || 0;
+    const rawName = this.ctx.id.name ?? '';
+    const merchantIdStr = rawName.startsWith('merchant-') ? rawName.slice(9) : '';
+    const merchantId = Number(merchantIdStr);
+    if (!Number.isInteger(merchantId) || merchantId <= 0) {
+      // No valid merchant identity (e.g. DO created with unexpected name) — skip D1 write safely.
+      return { snapshot_at: asOf, accounts: accounts.length };
+    }
     if (accounts.length > 0) {
       await this.env.DB.batch(
         accounts.map(a =>
@@ -357,7 +364,7 @@ export class LedgerDO extends DurableObject<Env> {
                  (merchant_id, account_code, currency, balance_minor, as_of)
                VALUES (?, ?, ?, ?, ?)`,
             )
-            .bind(merchantId, a.code, a.currency, Number(a.balance_minor), asOf),
+            .bind(merchantId, a.code, a.currency, Number(a.balance_minor), asOfDate),
         ),
       );
     }
@@ -373,6 +380,9 @@ export class LedgerDO extends DurableObject<Env> {
     fail_do_writes?: boolean;
     fail_d1_posted?: boolean;
   }): Promise<void> {
+    if (this.env.ENVIRONMENT === 'production' && this.env.ALLOWED_ORIGINS !== 'https://allowed.example') {
+      throw new Error('fault injection disabled in production');
+    }
     this.faults = faults;
   }
 

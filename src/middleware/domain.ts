@@ -67,9 +67,21 @@ export const domainMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: App
     return await next();
   }
 
-  // Check if installed (skip during /install wizard)
+  // Safe bypass: fresh installs and static assets must never 404 on unknown hosts
+  // Must run before any KV/D1 work and before the install-flag gate.
+  const earlyPath = c.req.path;
+  if (
+    earlyPath.startsWith('/install') ||
+    earlyPath.startsWith('/assets/') ||
+    earlyPath.startsWith('/storage/') ||
+    earlyPath === '/favicon.ico'
+  ) {
+    return await next();
+  }
+
+  // If system not yet installed, skip brand resolution entirely (install wizard territory)
   const installFlag = await c.env.KV.get('system:installed');
-  if (installFlag !== 'true' && !c.req.path.startsWith('/install')) {
+  if (installFlag !== 'true') {
     return await next();
   }
 

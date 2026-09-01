@@ -76,21 +76,38 @@ const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 // the request context when access logs are emitted.
 app.use('*', requestId());
 app.use('*', logger());
+// Bootstrap: non-blocking — schedule via waitUntil so no request pays the
+// multi-step D1/KV bootstrap cost synchronously. Deduplicated promise ensures
+// concurrent cold-start requests share one bootstrap.
+let bootstrapPromise: Promise<unknown> | null = null;
 app.use('*', async (c, next) => {
+  const pathname = new URL(c.req.url).pathname;
+  if (pathname.startsWith('/install')) {
+    return next();
+  }
   if (c.env?.DB && c.env?.KV) {
-    const isBootstrapped = await c.env.KV.get('system:bootstrapped');
-    if (!isBootstrapped) {
-      try {
-        await ensureSystemBootstrapped(c.env);
-      } catch (err) {
-        console.warn('Auto-bootstrap check warning:', err);
+    try {
+      const isBootstrapped = await c.env.KV.get('system:bootstrapped');
+      if (!isBootstrapped) {
+        if (!bootstrapPromise) {
+          bootstrapPromise = ensureSystemBootstrapped(c.env)
+            .catch((err) => {
+              console.warn('Auto-bootstrap warning:', err);
+            })
+            .finally(() => {
+              bootstrapPromise = null;
+            });
+        }
+        c.executionCtx.waitUntil(bootstrapPromise);
       }
+    } catch (err) {
+      console.warn('Auto-bootstrap check warning:', err);
     }
   }
   await next();
 });
-app.use('*', maintenanceMiddleware);
 app.use('*', domainMiddleware);
+app.use('*', maintenanceMiddleware);
 // v0.2.2 (audit P2): prettyJSON is a development convenience — in
 // production it burns CPU and response bytes on every request. Gated
 // to ENVIRONMENT=development.
@@ -232,20 +249,26 @@ export default {
   },
 
   /** Queue consumer handler — processes webhook, email, SMS queues */
-  async queue(batch: MessageBatch<unknown>, env: Env, ctx: ExecutionContext): Promise<void> {
+  async queue(batch: MessageBatch<unknown>, env: Env, _ctx: ExecutionContext): Promise<void> {
     const queueName = batch.queue ?? 'unknown';
+    // Awaiting is intentional: the runtime's retry/DLQ machinery depends on
+    // this handler's promise. waitUntil would return before ack()/retry()
+    // settle and would swallow per-message ack/retry rejections. Awaiting
+    // preserves Cloudflare Queues' at-least-once semantics: if any ack/retry
+    // throws, the batch throws and the queue retries according to the
+    // wrangler.jsonc max_retries / DLQ policy.
     if (queueName === 'webhook-out') {
-      ctx.waitUntil(webhookQueueHandler.process(
-        batch as unknown as Parameters<typeof webhookQueueHandler.process>[0], env, ctx,
-      ));
+      await webhookQueueHandler.process(
+        batch as unknown as Parameters<typeof webhookQueueHandler.process>[0], env, _ctx,
+      );
     } else if (queueName === 'email-out') {
-      ctx.waitUntil(emailQueueHandler.process(
-        batch as unknown as Parameters<typeof emailQueueHandler.process>[0], env, ctx,
-      ));
+      await emailQueueHandler.process(
+        batch as unknown as Parameters<typeof emailQueueHandler.process>[0], env, _ctx,
+      );
     } else if (queueName === 'sms-parse') {
-      ctx.waitUntil(smsQueueHandler.process(
-        batch as unknown as Parameters<typeof smsQueueHandler.process>[0], env, ctx,
-      ));
+      await smsQueueHandler.process(
+        batch as unknown as Parameters<typeof smsQueueHandler.process>[0], env, _ctx,
+      );
     }
   },
 } satisfies ExportedHandler<Env>;

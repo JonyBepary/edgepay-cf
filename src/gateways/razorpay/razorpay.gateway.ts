@@ -13,6 +13,7 @@
 import { BaseGatewayAdapter, type GatewayMetadata, type GatewayField, type InitiateParams, type InitiateResult, type VerifyResult, type RefundResult, type VerifyWebhookInput, type Credentials } from '../base';
 import { hmacSha256, timingSafeEqual } from '../../lib/crypto';
 import { toMinorUnits, fromMinorUnits } from '../../lib/money';
+import { gwJson } from '../kit/http';
 
 const API_BASE = 'https://api.razorpay.com/v1';
 const SUPPORTED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'SGD', 'AED', 'BDT'];
@@ -47,7 +48,8 @@ export class RazorpayGateway extends BaseGatewayAdapter {
     const amountMinor = toMinorUnits(params.amount, 2);
     const basicAuth = btoa(`${keyId}:${keySecret}`);
 
-    const response = await fetch(`${API_BASE}/orders`, {
+    const response = await gwJson<{ id: string }>({
+      url: `${API_BASE}/orders`,
       method: 'POST',
       headers: {
         'Authorization': `Basic ${basicAuth}`,
@@ -59,14 +61,15 @@ export class RazorpayGateway extends BaseGatewayAdapter {
         receipt: params.trx_id,
         payment_capture: 1,
       }),
+      timeoutMs: 15000,
     });
 
-    if (!response.ok) {
-      const err = await response.json() as { error?: { description?: string } };
-      throw new Error(`Razorpay create order failed: ${err?.error?.description ?? response.status}`);
+    if (!response.ok || response.data === null) {
+      const err = response.data as { error?: { description?: string } } | null;
+      throw new Error(`Razorpay create order failed: ${err?.error?.description ?? response.text ?? String(response.status)}`);
     }
 
-    const data = await response.json() as { id: string };
+    const data = response.data;
 
     // Build auto-submit form (same approach as PHP original)
     const formHtml = `
@@ -92,37 +95,58 @@ export class RazorpayGateway extends BaseGatewayAdapter {
   }
 
   async verify(callbackData: Record<string, unknown>, credentials: Credentials): Promise<VerifyResult> {
-    const orderId = String(callbackData.razorpay_order_id ?? '');
-    const paymentId = String(callbackData.razorpay_payment_id ?? '');
-    const signature = String(callbackData.razorpay_signature ?? '');
+    const orderId = String(callbackData.razorpay_order_id ?? '').trim();
+    const paymentId = String(callbackData.razorpay_payment_id ?? '').trim();
+    const signature = String(callbackData.razorpay_signature ?? '').trim();
 
     if (!orderId || !paymentId || !signature) {
       return { success: false, gateway_trx_id: '', amount: null, status: 'failed', error: 'Missing Razorpay callback params' };
     }
 
     const keySecret = credentials.key_secret;
+    if (!keySecret) {
+      return { success: false, gateway_trx_id: paymentId, amount: null, status: 'failed', error: 'Missing key_secret' };
+    }
     const expectedSig = await hmacSha256(`${orderId}|${paymentId}`, keySecret);
 
     if (!timingSafeEqual(expectedSig, signature)) {
       return { success: false, gateway_trx_id: paymentId, amount: null, status: 'failed', error: 'Signature mismatch' };
     }
 
-    // Fetch payment details for amount verification
+    // Fetch payment details for amount verification and status check
     const basicAuth = btoa(`${credentials.key_id}:${keySecret}`);
-    const response = await fetch(`${API_BASE}/payments/${paymentId}`, {
+    const response = await gwJson<{ amount: number; currency: string; status: string }>({
+      url: `${API_BASE}/payments/${encodeURIComponent(paymentId)}`,
+      method: 'GET',
       headers: { 'Authorization': `Basic ${basicAuth}` },
+      timeoutMs: 15000,
     });
 
     let amount: string | null = null;
-    if (response.ok) {
-      const data = await response.json() as { amount: number; currency: string; status: string };
-      amount = fromMinorUnits(data.amount, 2);
+    let paymentStatus: string | undefined;
+    let currency: string | undefined;
+    if (response.ok && response.data !== null) {
+      paymentStatus = response.data.status;
+      currency = response.data.currency?.toUpperCase();
+      amount = fromMinorUnits(response.data.amount, 2);
+      // If payment is not captured/authorized, treat as failed
+      if (paymentStatus !== 'captured' && paymentStatus !== 'authorized') {
+        return {
+          success: false,
+          gateway_trx_id: paymentId,
+          amount,
+          currency,
+          status: 'failed',
+          error: `Payment status: ${paymentStatus}`,
+        };
+      }
     }
 
     return {
       success: true,
       gateway_trx_id: paymentId,
       amount,
+      currency,
       status: 'completed',
       trx_id: String(callbackData.trx_id ?? ''),
     };
@@ -132,7 +156,9 @@ export class RazorpayGateway extends BaseGatewayAdapter {
     const webhookSecret = input.credentials.webhook_secret;
     if (!webhookSecret) return false;
 
-    const sigHeader = input.headers['x-razorpay-signature'] ?? input.headers['X-Razorpay-Signature'];
+    // Case-insensitive header lookup for X-Razorpay-Signature
+    const headerKey = Object.keys(input.headers).find(k => k.toLowerCase() === 'x-razorpay-signature');
+    const sigHeader = headerKey ? input.headers[headerKey] : undefined;
     if (!sigHeader) return false;
 
     const expectedSig = await hmacSha256(input.rawBody, webhookSecret);
@@ -140,24 +166,33 @@ export class RazorpayGateway extends BaseGatewayAdapter {
   }
 
   async refund(gatewayTrxId: string, amount: string, credentials: Credentials): Promise<RefundResult> {
+    if (!gatewayTrxId) return { success: false, error: 'Missing gateway transaction ID' };
+    let amountMinor: number;
+    try {
+      amountMinor = toMinorUnits(amount, 2);
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Invalid amount' };
+    }
     const basicAuth = btoa(`${credentials.key_id}:${credentials.key_secret}`);
-    const response = await fetch(`${API_BASE}/payments/${gatewayTrxId}/refund`, {
+    const response = await gwJson<{ id: string; status: string }>({
+      url: `${API_BASE}/payments/${encodeURIComponent(gatewayTrxId)}/refund`,
       method: 'POST',
       headers: {
         'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: toMinorUnits(amount, 2),
+        amount: amountMinor,
       }),
+      timeoutMs: 15000,
     });
 
-    if (!response.ok) {
-      const err = await response.json() as { error?: { description?: string } };
-      return { success: false, error: err?.error?.description ?? response.statusText };
+    if (!response.ok || response.data === null) {
+      const err = response.data as { error?: { description?: string } } | null;
+      return { success: false, error: err?.error?.description ?? response.text ?? String(response.status) };
     }
 
-    const data = await response.json() as { id: string; status: string };
+    const data = response.data;
     return {
       success: data.status === 'processed' || data.status === 'pending',
       refund_id: data.id,

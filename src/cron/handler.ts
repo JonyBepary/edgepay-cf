@@ -231,8 +231,12 @@ export class ScheduledHandler {
           await env.DB.prepare(
             `UPDATE op_domains SET dns_verified = 1, status = 'active', updated_at = ? WHERE id = ?`,
           ).bind(new Date().toISOString(), d.id).run();
-          // Invalidate KV cache
-          await env.KV.delete(`domain:${d.domain}`);
+          // Invalidate KV cache (both prefix variants, normalized)
+          const normalized = d.domain.toLowerCase().trim();
+          await Promise.all([
+            env.KV.delete(`domain:${normalized}`),
+            env.KV.delete(`domain-v2:${normalized}`),
+          ]);
         }
       } catch (err) {
         console.error(`DNS verification failed for ${d.domain}:`, err);

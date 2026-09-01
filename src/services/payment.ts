@@ -250,16 +250,16 @@ export class PaymentService {
       );
     }
 
-    // Update transaction to processing
-    await this.env.DB.prepare(
-
-      `UPDATE op_transactions SET status = 'processing', updated_at = ? WHERE payment_intent_id = ?`
-).bind(new Date().toISOString(), intentId).run();
-
-    await this.env.DB.prepare(
-
-      `UPDATE op_payment_intents SET status = 'processing', gateway_id = ?, updated_at = ? WHERE id = ?`
-).bind(gatewayId, new Date().toISOString(), intentId).run();
+    // Update transaction + intent to processing atomically (batch)
+    const nowProc = new Date().toISOString();
+    await this.env.DB.batch([
+      this.env.DB.prepare(
+        `UPDATE op_transactions SET status = 'processing', updated_at = ? WHERE payment_intent_id = ?`,
+      ).bind(nowProc, intentId),
+      this.env.DB.prepare(
+        `UPDATE op_payment_intents SET status = 'processing', gateway_id = ?, updated_at = ? WHERE id = ?`,
+      ).bind(gatewayId, nowProc, intentId),
+    ]);
 
     return result;
   }
@@ -334,6 +334,17 @@ export class PaymentService {
    * response instead of racing a waitUntil promise. (v0.2.0 referenced
    * an undefined execution context here — the posting could silently
    * never run.)
+   *
+   * v0.3.x (payment-integrity): ledger posting MUST occur BEFORE marking the
+   * transaction completed. The posting's write-ahead row (op_ledger_postings
+   * status='pending') is the recoverable point — if the DO crashes after
+   * committing but before the audit trail lands, reconciliation heals. If we
+   * marked completed first and the ledger failed, the payment would appear
+   * completed with no ledger entry (money without audit). The new order:
+   *   1. post ledger (pending -> DO commit -> audit trail -> posted)
+   *   2. atomically mark transaction + intent completed via D1 batch
+   * Retry is idempotent on both steps (ledger dedups by tx_id; batch updates
+   * are idempotent).
    */
   async completeTransaction(
     transactionDbId: number,
@@ -361,27 +372,10 @@ export class PaymentService {
 
     const now = new Date().toISOString();
 
-    // Mark transaction completed
-    await this.env.DB
-      .prepare(
-        `UPDATE op_transactions
-         SET status = 'completed', gateway_trx_id = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .bind(gatewayTrxId, now, transactionDbId)
-      .run();
-
-    await this.env.DB
-      .prepare(
-        `UPDATE op_payment_intents SET status = 'completed', completed_at = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .bind(now, now, paymentIntentId)
-      .run();
-
-    // Post double-entry ledger — AWAITED (idempotent per payment intent:
+    // 1. Post double-entry ledger FIRST — AWAITED (idempotent per payment intent:
     // a webhook redelivery or SMS race cannot double-post; see
-    // services/ledger.ts + docs/POSTING-PROTOCOL.md)
+    // services/ledger.ts + docs/POSTING-PROTOCOL.md). This creates the
+    // recoverable pending row before we claim completion.
     await postPaymentLedgerEntry(
       this.env,
       tx.merchant_id,
@@ -390,6 +384,19 @@ export class PaymentService {
       tx.fee,
       tx.currency,
     );
+
+    // 2. Atomically mark transaction + intent completed (D1 batch is atomic)
+    await this.env.DB.batch([
+      this.env.DB.prepare(
+        `UPDATE op_transactions
+         SET status = 'completed', gateway_trx_id = ?, updated_at = ?
+         WHERE id = ?`,
+      ).bind(gatewayTrxId, now, transactionDbId),
+      this.env.DB.prepare(
+        `UPDATE op_payment_intents SET status = 'completed', completed_at = ?, updated_at = ?
+         WHERE id = ?`,
+      ).bind(now, now, paymentIntentId),
+    ]);
 
     // Dispatch merchant webhook (queue producer send — quick, and the
     // queue consumer owns delivery retries)

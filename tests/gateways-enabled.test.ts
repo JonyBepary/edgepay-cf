@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SELF } from 'cloudflare:test';
+import { SELF, env } from 'cloudflare:test';
 import {
   parseEnabledGateways,
   gatewaySelection,
@@ -126,11 +126,12 @@ describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = full catalog de
   });
 
   it('GET /install surfaces the gateway selection + secret posture', async () => {
+    await (env as unknown as { KV: KVNamespace }).KV.delete('system:installed');
     // Unique per-call client IP: the /install/* surface is rate limited at
     // 3/hour per IP — unique IPs keep the test deterministic across runs.
     const ip = `203.0.113.${(Math.random() * 254 + 1) | 0}`;
     const res = await SELF.fetch('http://localhost/install', {
-      headers: { 'CF-Connecting-IP': ip },
+      headers: { 'CF-Connecting-IP': ip, Accept: 'application/json' },
     });
     expect(res.status).toBe(200);
     const body = await res.json() as {

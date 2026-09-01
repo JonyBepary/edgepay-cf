@@ -14,6 +14,18 @@ import { runReconciliation } from '../services/reconciliation';
 
 export const adminApiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
+function normalizeHostname(hostname: string): string {
+  return hostname.toLowerCase().trim();
+}
+
+async function invalidateDomainCache(env: Env, hostname: string): Promise<void> {
+  const normalized = normalizeHostname(hostname);
+  await Promise.all([
+    env.KV.delete(`domain:${normalized}`),
+    env.KV.delete(`domain-v2:${normalized}`),
+  ]);
+}
+
 adminApiRoutes.use('*', requireBearerApiAuth(['admin']));
 // Per-API-KEY rate limiting via the native Ratelimit binding
 adminApiRoutes.use('*', rateLimitMiddleware);
@@ -47,8 +59,8 @@ adminApiRoutes.post('/domains/verifications', requireScope('admin'), async (c) =
     `UPDATE op_domains SET dns_verified = ?, status = ?, updated_at = ? WHERE id = ?`
 ).bind(verified ? 1 : 0, verified ? 'active' : 'pending', new Date().toISOString(), domain.id).run();
 
-  // Invalidate KV domain cache
-  await c.env.KV.delete(`domain:${body.domain}`);
+  // Invalidate KV domain cache (both prefix variants, normalized)
+  await invalidateDomainCache(c.env, body.domain);
 
   return c.json({
     success: true,

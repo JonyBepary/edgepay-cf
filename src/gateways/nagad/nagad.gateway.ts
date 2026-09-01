@@ -21,6 +21,7 @@
 
 import { BaseGatewayAdapter, type GatewayMetadata, type GatewayField, type InitiateParams, type InitiateResult, type VerifyResult, type Credentials } from '../base';
 import { base64ToBytes, bytesToBase64 } from '../../lib/crypto';
+import { gwJson } from '../kit/http';
 
 const SANDBOX_BASE = 'https://sandbox-ssl.mynagad.com/api/1.0';
 const LIVE_BASE = 'https://api.mynagad.com/api/1.0';
@@ -60,11 +61,12 @@ export class NagadGateway extends BaseGatewayAdapter {
 
     // Build payload
     const merchantId = credentials.merchant_id;
+    if (!merchantId) throw new Error('Nagad: missing merchant_id');
     const datetime = new Date().toISOString();
     const orderId = params.trx_id;
     const challenge = crypto.randomUUID().replace(/-/g, '');
 
-    // Encrypt sensitive payload with Nagad's public key (RSA-OAEP-SHA1)
+    // Encrypt sensitive payload with Nagad's public key (RSA-OAEP-SHA256)
     const sensitiveData = JSON.stringify({
       merchantId,
       datetime,
@@ -74,7 +76,8 @@ export class NagadGateway extends BaseGatewayAdapter {
 
     const publicKey = await this.importPublicKey(credentials.public_key);
     const encryptedSensitive = await crypto.subtle.encrypt(
-      { name: 'RSA-OAEP' },
+      // Nagad RSA-OAEP should explicitly use SHA-256 (not default SHA-1)
+      { name: 'RSA-OAEP', hash: 'SHA-256' } as any,
       publicKey,
       new TextEncoder().encode(sensitiveData),
     );
@@ -87,7 +90,13 @@ export class NagadGateway extends BaseGatewayAdapter {
       new Uint8Array(encryptedSensitive),
     );
 
-    const response = await fetch(`${baseUrl}/merchant/initiate`, {
+    const response = await gwJson<{
+      status?: string;
+      callBackUrl?: string;
+      paymentReferenceId?: string;
+      message?: string;
+    }>({
+      url: `${baseUrl}/merchant/initiate`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -98,18 +107,14 @@ export class NagadGateway extends BaseGatewayAdapter {
         sensitiveData: bytesToBase64(new Uint8Array(encryptedSensitive)),
         signature: bytesToBase64(new Uint8Array(signature)),
       }),
+      timeoutMs: 15000,
     });
 
-    if (!response.ok) {
-      throw new Error(`Nagad initiate failed: ${response.status}`);
+    if (!response.ok || response.data === null) {
+      throw new Error(`Nagad initiate failed: ${response.status} ${response.text}`);
     }
 
-    const data = await response.json() as {
-      status?: string;
-      callBackUrl?: string;
-      paymentReferenceId?: string;
-      message?: string;
-    };
+    const data = response.data;
 
     if (data.status !== 'Success' || !data.callBackUrl) {
       throw new Error(`Nagad error: ${data.message ?? 'Unknown'}`);
@@ -124,8 +129,8 @@ export class NagadGateway extends BaseGatewayAdapter {
   async verify(callbackData: Record<string, unknown>, credentials: Credentials): Promise<VerifyResult> {
     const baseUrl = credentials.mode === 'live' ? LIVE_BASE : SANDBOX_BASE;
     const merchantId = credentials.merchant_id;
-    const orderId = String(callbackData.mer_reference ?? '');
-    const paymentRefId = String(callbackData.payment_ref_id ?? '');
+    const orderId = String(callbackData.mer_reference ?? callbackData.order_id ?? '').trim();
+    const paymentRefId = String(callbackData.payment_ref_id ?? callbackData.paymentReferenceId ?? '').trim();
 
     if (!orderId || !paymentRefId) {
       return { success: false, gateway_trx_id: '', amount: null, status: 'failed', error: 'Missing Nagad callback params' };
@@ -147,7 +152,14 @@ export class NagadGateway extends BaseGatewayAdapter {
       new TextEncoder().encode(sensitiveData),
     );
 
-    const response = await fetch(`${baseUrl}/merchant/verify`, {
+    const response = await gwJson<{
+      status?: string;
+      orderId?: string;
+      amount?: string;
+      trxID?: string;
+      message?: string;
+    }>({
+      url: `${baseUrl}/merchant/verify`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -158,19 +170,14 @@ export class NagadGateway extends BaseGatewayAdapter {
         sensitiveData,
         signature: bytesToBase64(new Uint8Array(signature)),
       }),
+      timeoutMs: 15000,
     });
 
-    if (!response.ok) {
+    if (!response.ok || response.data === null) {
       return { success: false, gateway_trx_id: '', amount: null, status: 'failed', error: `Nagad verify failed: ${response.status}` };
     }
 
-    const data = await response.json() as {
-      status?: string;
-      orderId?: string;
-      amount?: string;
-      trxID?: string;
-      message?: string;
-    };
+    const data = response.data;
 
     const success = data.status === 'Success';
 
@@ -193,7 +200,7 @@ export class NagadGateway extends BaseGatewayAdapter {
     return crypto.subtle.importKey(
       'spki',
       spkiDer,
-      { name: 'RSA-OAEP', hash: 'SHA-1' },  // Nagad uses SHA-1 with RSA-OAEP for encryption
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
       false,
       ['encrypt'],
     );

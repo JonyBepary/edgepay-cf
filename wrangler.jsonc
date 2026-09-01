@@ -129,13 +129,15 @@
         "queue": "email-out",
         "max_batch_size": 25,
         "max_batch_timeout": 30,
-        "max_retries": 5
+        "max_retries": 5,
+        "dead_letter_queue": "email-out-dlq"
       },
       {
         "queue": "sms-parse",
         "max_batch_size": 50,
         "max_batch_timeout": 10,
-        "max_retries": 3
+        "max_retries": 3,
+        "dead_letter_queue": "sms-parse-dlq"
       }
     ]
   },

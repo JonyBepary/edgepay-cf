@@ -275,18 +275,19 @@ export function randomBase64Key(length: number = 32): string {
 // ---------------------------------------------------------------
 
 export function timingSafeEqual(a: string, b: string): boolean {
-  const aBytes = new TextEncoder().encode(a);
-  const bBytes = new TextEncoder().encode(b);
+  const enc = new TextEncoder();
+  const aBytes = enc.encode(a);
+  const bBytes = enc.encode(b);
 
-  if (aBytes.byteLength !== bBytes.byteLength) {
-    return false;
-  }
+  const max = Math.max(aBytes.length, bBytes.length);
+  let diff = aBytes.length ^ bBytes.length;
 
-  let result = 0;
-  for (let i = 0; i < aBytes.byteLength; i++) {
-    result |= aBytes[i] ^ bBytes[i];
+  for (let i = 0; i < max; i++) {
+    const av = i < aBytes.length ? aBytes[i] : 0;
+    const bv = i < bBytes.length ? bBytes[i] : 0;
+    diff |= av ^ bv;
   }
-  return result === 0;
+  return diff === 0;
 }
 
 // ---------------------------------------------------------------

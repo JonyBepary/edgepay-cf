@@ -10,7 +10,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types/env';
 import { requireBearerApiAuth, requireScope } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
-import { idempotencyMiddleware } from '../middleware/idempotency';
+import { createIdempotencyMiddleware, idempotencyMiddleware } from '../middleware/idempotency';
 import { PaymentService } from '../services/payment';
 import { ValidationError } from '../lib/error';
 import { createPaymentSchema, createRefundSchema } from '../lib/validation';
@@ -140,9 +140,13 @@ apiRoutes.get('/transactions/:trx_id', async (c) => {
 // POST /api/v1/refunds — issue a refund
 // v0.2.2 (audit P2): zod-validated body (typed c.req.valid('json'));
 // failures map onto the pre-existing 400 VALIDATION_ERROR contract.
+// v0.3.x: idempotency is REQUIRED for refunds (X-Idempotency-Key) to
+// prevent double-refund on retry; uses the same D1 idempotency table as
+// payments (tenant-scoped, body-hash checked, 4xx not cached, concurrent-safe).
 // ---------------------------------------------------------------
 apiRoutes.post(
   '/refunds',
+  createIdempotencyMiddleware({ required: true }),
   requireScope('write'),
   zValidator('json', createRefundSchema, (result, _c) => {
     if (!result.success) {
