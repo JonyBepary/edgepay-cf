@@ -5,29 +5,31 @@
  * Used by the EdgePay mobile companion app (Flutter).
  */
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { Env } from '../types/env';
 import { requireJwtAuth } from '../middleware/auth';
 import { createJwtService } from '../lib/jwt';
 
+type MobileContext = Context<{ Bindings: Env; Variables: Record<string, unknown> }>;
+
 export const mobileRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
 // Device pairing (no auth — uses OTP)
-mobileRoutes.post('/devices', async (c) => {
-  const body = await c.req.json<{ otp?: string; device_name?: string }>();
+const handlePairing = async (c: MobileContext) => {
+  const body = await c.req.json<{ otp?: string; token?: string; device_name?: string }>();
+  const otpCode = body.otp || body.token;
 
-  if (!body.otp || !/^\d{6}$/.test(body.otp)) {
+  if (!otpCode || !/^\d{6}$/.test(otpCode.trim())) {
     return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'OTP must be 6 digits' } }, 400);
   }
 
   // Look up OTP in pairing tokens table
   const tokenRow = await c.env.DB.prepare(
-
     `SELECT id, merchant_id, user_id, expires_at, used_at
      FROM op_device_pairing_tokens
      WHERE token = ? AND used_at IS NULL
      LIMIT 1`
-).bind(body.otp).first<{ id: number; merchant_id: number; user_id: number; expires_at: string }>();
+  ).bind(otpCode.trim()).first<{ id: number; merchant_id: number; user_id: number; expires_at: string }>();
 
   if (!tokenRow) {
     return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or used OTP' } }, 404);
@@ -39,24 +41,24 @@ mobileRoutes.post('/devices', async (c) => {
 
   // Mark OTP used
   await c.env.DB.prepare(
-
     `UPDATE op_device_pairing_tokens SET used_at = ? WHERE id = ?`
-).bind(new Date().toISOString(), tokenRow.id).run();
+  ).bind(new Date().toISOString(), tokenRow.id).run();
 
   // Register the device
   const deviceUuid = crypto.randomUUID();
   await c.env.DB.prepare(
-
     `INSERT INTO op_paired_devices
        (merchant_id, user_id, uuid, device_name, fingerprint, status, last_heartbeat_at, created_at)
      VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`
-).bind(tokenRow.merchant_id,
-      tokenRow.user_id,
-      deviceUuid,
-      body.device_name ?? 'Unknown device',
-      '', // fingerprint (set by mobile app)
-      new Date().toISOString(),
-      new Date().toISOString(),).run();
+  ).bind(
+    tokenRow.merchant_id,
+    tokenRow.user_id,
+    deviceUuid,
+    body.device_name ?? 'Android SMS Companion',
+    '', // fingerprint (set by mobile app)
+    new Date().toISOString(),
+    new Date().toISOString(),
+  ).run();
 
   const deviceId = (await c.env.DB.prepare(
     `SELECT last_insert_rowid() AS id`,
@@ -78,13 +80,18 @@ mobileRoutes.post('/devices', async (c) => {
     success: true,
     data: {
       device_id: deviceUuid,
+      merchant_id: tokenRow.merchant_id,
+      token: accessToken,
       access_token: accessToken,
       refresh_token: refreshToken,
       token_type: 'Bearer',
       expires_in: parseInt(c.env.JWT_TTL_SECONDS ?? '3600', 10),
     },
   }, 201);
-});
+};
+
+mobileRoutes.post('/devices', handlePairing);
+mobileRoutes.post('/pair', handlePairing);
 
 // Token refresh
 mobileRoutes.post('/devices/token-refreshes', async (c) => {
@@ -112,14 +119,16 @@ mobileRoutes.post('/devices/token-refreshes', async (c) => {
 mobileRoutes.use('*', requireJwtAuth());
 
 // Heartbeat
-mobileRoutes.post('/devices/heartbeats', async (c) => {
+const handleHeartbeat = async (c: MobileContext) => {
   const deviceId = c.get('authSubject')!;
   await c.env.DB.prepare(
-
     `UPDATE op_paired_devices SET last_heartbeat_at = ? WHERE id = ?`
-).bind(new Date().toISOString(), deviceId).run();
+  ).bind(new Date().toISOString(), deviceId).run();
   return c.json({ success: true, data: { status: 'ok' } });
-});
+};
+
+mobileRoutes.post('/devices/heartbeats', handleHeartbeat);
+mobileRoutes.post('/heartbeat', handleHeartbeat);
 
 // Get dashboard summary
 mobileRoutes.get('/dashboard', async (c) => {
