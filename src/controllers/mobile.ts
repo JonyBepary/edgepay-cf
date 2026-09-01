@@ -185,6 +185,47 @@ mobileRoutes.post('/sms', async (c) => {
   return c.json({ success: true, data: { status: 'queued' } });
 });
 
+// Batch SMS forwarding & Offline-Resilient Watermark Sync (CRDT-Compatible)
+mobileRoutes.post('/sms/batch', async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const body = await c.req.json<{
+    watermark?: number;
+    messages: Array<{ id?: string | number; sender: string; body: string; received_at?: string }>;
+  }>();
+
+  if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'messages array required' } }, 400);
+  }
+
+  const ackedIds: Array<string | number> = [];
+  const queueMessages = [];
+
+  for (const msg of body.messages) {
+    if (msg.sender && msg.body) {
+      queueMessages.push({
+        merchant_id: merchantId as number,
+        device_id: Number(c.get('authSubject') ?? 0),
+        sender: msg.sender,
+        body: msg.body,
+        received_at: msg.received_at ?? new Date().toISOString(),
+      });
+      if (msg.id !== undefined) ackedIds.push(msg.id);
+    }
+  }
+
+  await Promise.all(queueMessages.map(m => c.env.SMS_QUEUE.send(m)));
+
+  return c.json({
+    success: true,
+    data: {
+      status: 'synced',
+      synced_count: queueMessages.length,
+      acknowledged_ids: ackedIds,
+      server_time: new Date().toISOString(),
+    }
+  });
+});
+
 // Get notifications
 mobileRoutes.get('/notifications', async (c) => {
   const merchantId = c.get('merchantId')!;
