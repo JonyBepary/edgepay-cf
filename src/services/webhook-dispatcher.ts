@@ -110,7 +110,10 @@ export class WebhookDispatcher {
     ).bind(merchantId).first<{ id: number; url: string; secret: string }>();
 
     if (!webhook) {
-      const urlToUse = targetUrl || 'http://localhost:3300/mock-webhook';
+      const urlToUse = targetUrl || this.env.DEFAULT_WEBHOOK_URL;
+      if (!urlToUse) {
+        return { success: false, error: 'No webhook endpoint registered for merchant' };
+      }
       const secret = `whsec_${crypto.randomUUID().replace(/-/g, '')}`;
       const now = new Date().toISOString();
       const ins = await this.env.DB.prepare(

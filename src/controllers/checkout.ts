@@ -375,7 +375,7 @@ body {
         <div style="font-weight: 600; margin-bottom: 0.25rem;">Payment Instructions:</div>
         <div id="mfsInstructions" style="color: #475569; margin-bottom: 0.5rem;"></div>
         <div class="copy-row">
-          <span id="mfsAccount">01815300789</span>
+          <span id="mfsAccount"></span>
           <button class="copy-btn" onclick="copyAccount()">Copy Number</button>
         </div>
       </div>

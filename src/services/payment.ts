@@ -224,8 +224,8 @@ export class PaymentService {
 
       result = {
         action: 'manual_payment',
-        account_number: manual?.account_number ?? '01815300789',
-        instructions: manual?.instructions ?? 'Send money to account',
+        account_number: manual?.account_number ?? (this.env.DEFAULT_MFS_NUMBER ?? ''),
+        instructions: manual?.instructions ?? 'Send payment to the merchant account number',
       };
     } else {
       // Resolve adapter

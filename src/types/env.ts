@@ -83,6 +83,12 @@ export interface Env {
   // Gateway-plugin selector — comma-separated gateway slugs/aliases.
   ENABLED_GATEWAYS?: string;
 
+  // Optional bootstrap configuration overrides (defaults used if absent)
+  DEFAULT_MFS_NUMBER?: string;
+  DEFAULT_PAIRING_OTP?: string;
+  ADMIN_EMAIL?: string;
+  DEFAULT_WEBHOOK_URL?: string;
+
   // Secrets — set via `wrangler secret put`
   JWT_SECRET: string;
   APP_KEY: string;              // base64-encoded 32-byte key (HMAC operations)
