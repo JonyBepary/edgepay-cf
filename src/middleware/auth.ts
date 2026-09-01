@@ -126,6 +126,16 @@ export function requireBearerApiAuth(scopes: string[] = ['read', 'write', 'admin
  */
 export function requireJwtAuth(): MiddlewareHandler<{ Bindings: Env; Variables: ApiVariables }> {
   return async (c, next) => {
+    const pathname = new URL(c.req.url).pathname;
+    if (
+      pathname.endsWith('/pair') ||
+      pathname.endsWith('/devices') ||
+      pathname.endsWith('/refresh') ||
+      pathname.endsWith('/devices/token-refreshes')
+    ) {
+      return next();
+    }
+
     const authHeader = c.req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedError('Missing Authorization header');

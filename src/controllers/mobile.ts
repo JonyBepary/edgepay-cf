@@ -94,7 +94,7 @@ mobileRoutes.post('/devices', handlePairing);
 mobileRoutes.post('/pair', handlePairing);
 
 // Token refresh
-mobileRoutes.post('/devices/token-refreshes', async (c) => {
+const handleTokenRefresh = async (c: MobileContext) => {
   const body = await c.req.json<{ refresh_token?: string }>();
   if (!body.refresh_token) {
     return c.json({ success: false, error: { code: 'MISSING_TOKEN', message: 'refresh_token required' } }, 400);
@@ -109,11 +109,14 @@ mobileRoutes.post('/devices/token-refreshes', async (c) => {
       device_id: payload.device_id,
       scope: payload.scope,
     });
-    return c.json({ success: true, data: { access_token: accessToken, token_type: 'Bearer', expires_in: parseInt(c.env.JWT_TTL_SECONDS ?? '3600', 10) } });
+    return c.json({ success: true, data: { access_token: accessToken, token: accessToken, token_type: 'Bearer', expires_in: parseInt(c.env.JWT_TTL_SECONDS ?? '3600', 10) } });
   } catch {
     return c.json({ success: false, error: { code: 'INVALID_REFRESH', message: 'Invalid or expired refresh token' } }, 401);
   }
-});
+};
+
+mobileRoutes.post('/devices/token-refreshes', handleTokenRefresh);
+mobileRoutes.post('/refresh', handleTokenRefresh);
 
 // All subsequent routes require JWT
 mobileRoutes.use('*', requireJwtAuth());
