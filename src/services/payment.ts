@@ -190,9 +190,8 @@ export class PaymentService {
 
     // Resolve gateway
     const gateway = await this.env.DB.prepare(
-
-      `SELECT id, slug, name FROM op_gateways WHERE id = ? AND merchant_id = ? AND status = 'active' LIMIT 1`
-).bind(gatewayId, intent.merchant_id).first<{ id: number; slug: string; name: string }>();
+      `SELECT id, slug, name, type FROM op_gateways WHERE id = ? AND merchant_id = ? AND status = 'active' LIMIT 1`
+    ).bind(gatewayId, intent.merchant_id).first<{ id: number; slug: string; name: string; type: string }>();
 
     if (!gateway) throw new NotFoundError('Gateway');
 
@@ -218,26 +217,40 @@ export class PaymentService {
       }
     }
 
-    // Resolve adapter
-    const adapter = gatewayRegistry.resolve(gateway.slug);
+    let result: { redirect_url?: string; form_html?: string; action?: string; account_number?: string; instructions?: string } = {};
 
-    // Build redirect/cancel URLs (using brand domain if set)
-    const baseUrl = this.env.APP_URL;
-    const redirectUrl = `${baseUrl}/checkout/${intent.token}/callback`;
-    const cancelUrl = `${baseUrl}/checkout/${intent.token}/cancel`;
+    if (gateway.type === 'manual') {
+      const manual = await this.env.DB.prepare(
+        `SELECT account_number, instructions FROM op_manual_gateways WHERE gateway_id = ? LIMIT 1`
+      ).bind(gatewayId).first<{ account_number: string; instructions: string }>();
 
-    // Call adapter
-    const result = await adapter.initiate(
-      {
-        amount: intent.amount,
-        currency: intent.currency,
-        trx_id: intent.trx_id,
-        redirect_url: redirectUrl,
-        cancel_url: cancelUrl,
-      },
-      credentials,
-      { kv: this.env.KV },
-    );
+      result = {
+        action: 'manual_payment',
+        account_number: manual?.account_number ?? '01815300789',
+        instructions: manual?.instructions ?? 'Send money to account',
+      };
+    } else {
+      // Resolve adapter
+      const adapter = gatewayRegistry.resolve(gateway.slug);
+
+      // Build redirect/cancel URLs (using brand domain if set)
+      const baseUrl = this.env.APP_URL;
+      const redirectUrl = `${baseUrl}/checkout/${intent.token}/callback`;
+      const cancelUrl = `${baseUrl}/checkout/${intent.token}/cancel`;
+
+      // Call adapter
+      result = await adapter.initiate(
+        {
+          amount: intent.amount,
+          currency: intent.currency,
+          trx_id: intent.trx_id,
+          redirect_url: redirectUrl,
+          cancel_url: cancelUrl,
+        },
+        credentials,
+        { kv: this.env.KV },
+      );
+    }
 
     // Update transaction to processing
     await this.env.DB.prepare(
