@@ -233,7 +233,7 @@ const handleCustomerTrxVerify = async (c: CheckoutContext) => {
   const nowIso = new Date().toISOString();
   await c.env.DB.batch([
     c.env.DB.prepare(
-      `UPDATE op_payment_intents SET metadata = ?, status = 'awaiting_verification', updated_at = ? WHERE id = ?`
+      `UPDATE op_payment_intents SET metadata = ?, status = 'processing', updated_at = ? WHERE id = ?`
     ).bind(JSON.stringify(meta), nowIso, intent.id),
     c.env.DB.prepare(
       `UPDATE op_transactions SET gateway_trx_id = ?, status = 'awaiting_verification', updated_at = ? WHERE payment_intent_id = ?`
