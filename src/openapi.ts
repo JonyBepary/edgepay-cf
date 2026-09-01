@@ -1426,7 +1426,7 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
                       success: { type: 'boolean' },
                       data: {
                         type: 'object',
-                        properties: { status: { type: 'string' }, paid: { type: 'boolean' } },
+                        properties: { status: { type: 'string' }, amount: { type: 'string' }, currency: { type: 'string' }, trx_id: { type: 'string', nullable: true } },
                       },
                     },
                   },
@@ -1434,6 +1434,54 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
               },
             },
             ...errorResponses(404),
+          },
+        },
+      },
+      '/checkout/{token}/verify': {
+        post: {
+          tags: ['Checkout'],
+          summary: 'Submit customer TrxID & sender phone for payment corroboration',
+          description: 'Used by customers on personal MFS checkout (bKash Personal, Nagad Personal, Rocket). Atomically checks incoming carrier SMS from the paired companion phone. If already matched, confirms immediately; if SMS is pending, records customer TrxID for bi-directional completion.',
+          security: [],
+          parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['trx_id'],
+                  properties: {
+                    trx_id: { type: 'string', description: 'Transaction ID from customer confirmation SMS/app statement', example: 'BK998877' },
+                    sender_phone: { type: 'string', description: 'Sender mobile number', example: '01711223344' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Verification result (completed or awaiting carrier SMS confirmation).',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['completed', 'awaiting_sms'] },
+                          trx_id: { type: 'string' },
+                          message: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 404, 409),
           },
         },
       },

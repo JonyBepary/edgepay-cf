@@ -126,7 +126,7 @@ export class SmsQueueConsumer {
     const since = new Date(Date.now() - MATCH_WINDOW_MS).toISOString();
     const rows = await env.DB
       .prepare(
-        `SELECT t.id, t.payment_intent_id, t.amount, t.currency, g.slug AS gateway_slug
+        `SELECT t.id, t.payment_intent_id, t.amount, t.currency, t.gateway_trx_id, pi.metadata, g.slug AS gateway_slug
          FROM op_transactions t
          JOIN op_payment_intents pi ON pi.id = t.payment_intent_id
          LEFT JOIN op_gateways g ON g.id = t.gateway_id
@@ -139,15 +139,25 @@ export class SmsQueueConsumer {
         payment_intent_id: number;
         amount: string;
         currency: string;
+        gateway_trx_id: string | null;
+        metadata: string | null;
         gateway_slug: string | null;
       }>();
-    return rows.results.map(r => ({
-      transaction_row_id: r.id,
-      payment_intent_id: r.payment_intent_id,
-      amount: r.amount,
-      currency: r.currency,
-      gateway_slug: r.gateway_slug,
-    }));
+    return rows.results.map(r => {
+      let meta: Record<string, unknown> = {};
+      try {
+        if (r.metadata) meta = JSON.parse(r.metadata);
+      } catch {}
+      return {
+        transaction_row_id: r.id,
+        payment_intent_id: r.payment_intent_id,
+        amount: r.amount,
+        currency: r.currency,
+        gateway_slug: r.gateway_slug,
+        customer_trx_id: (meta.customer_trx_id as string) ?? r.gateway_trx_id ?? null,
+        customer_phone: (meta.customer_phone as string) ?? null,
+      };
+    });
   }
 }
 

@@ -38,6 +38,8 @@ export interface OpenOrderCandidate {
   amount: Money;
   currency: string;
   gateway_slug: string | null;
+  customer_trx_id?: string | null;
+  customer_phone?: string | null;
 }
 
 export type CorroborationDecision =
@@ -51,11 +53,13 @@ export type CorroborationDecision =
       action: 'manual_review';
       reason:
         | 'no_extraction'
+        | 'no_trx_id'
         | 'no_open_orders'
         | 'no_amount_match'
         | 'currency_mismatch'
         | 'ambiguous_match'
-        | 'gateway_conflict';
+        | 'gateway_conflict'
+        | 'awaiting_customer_trx';
     };
 
 /**
@@ -92,7 +96,7 @@ function isSameGatewayFamily(a: string, b: string): boolean {
 
 /**
  * Decide whether an SMS extraction may auto-confirm an open order.
- * Pure function — unit-tested in tests/sms-corroboration.test.ts.
+ * Strictly requires TrxID matching to eliminate fraud and ambiguity.
  */
 export function corroborateSmsPayment(
   extraction: SmsExtraction,
@@ -101,6 +105,10 @@ export function corroborateSmsPayment(
 ): CorroborationDecision {
   if (extraction.parser === 'none' || !extraction.amount) {
     return { action: 'manual_review', reason: 'no_extraction' };
+  }
+  if (!extraction.trx_id) {
+    // TrxID is strictly mandatory for financial corroboration
+    return { action: 'manual_review', reason: 'no_trx_id' };
   }
   if (openOrders.length === 0) {
     return { action: 'manual_review', reason: 'no_open_orders' };
@@ -121,18 +129,26 @@ export function corroborateSmsPayment(
     candidates = byCurrency;
   }
 
-  // 3. trx_id disambiguates when present (matches a gateway trx we
-  //    already recorded, or simply narrows by uniqueness below)
-  // 4. Ambiguity is a dead end — never pick one of many
-  if (candidates.length > 1) {
+  // 3. Match against customer-submitted TrxID
+  const normalizedSmsTrx = extraction.trx_id.trim().toUpperCase();
+  const trxMatched = candidates.filter(o => {
+    if (!o.customer_trx_id) return false;
+    return o.customer_trx_id.trim().toUpperCase() === normalizedSmsTrx;
+  });
+
+  if (trxMatched.length === 1) {
+    candidates = trxMatched;
+  } else if (trxMatched.length > 1) {
     return { action: 'manual_review', reason: 'ambiguous_match' };
+  } else {
+    // If no candidate has submitted this specific TrxID yet,
+    // do NOT auto-confirm blindly — await customer submission or manual review.
+    return { action: 'manual_review', reason: 'awaiting_customer_trx' };
   }
 
   const order = candidates[0];
 
-  // 5. Gateway resolution: verified sender ID WINS over the LLM guess.
-  //    A conflict between them means either the SMS is spoofed or the
-  //    LLM hallucinated the provider — both go to manual review.
+  // 4. Gateway resolution: verified sender ID WINS over the LLM guess.
   const senderGateway = verifiedGatewaySlug ?? senderToGatewaySlug(null);
   const chosenGateway = senderGateway ?? extraction.gateway_slug ?? order.gateway_slug;
 
@@ -141,8 +157,6 @@ export function corroborateSmsPayment(
     order.gateway_slug &&
     !isSameGatewayFamily(order.gateway_slug, senderGateway)
   ) {
-    // The open order was initiated on a different gateway than the SMS
-    // sender — do not confirm across gateways.
     return { action: 'manual_review', reason: 'gateway_conflict' };
   }
 
