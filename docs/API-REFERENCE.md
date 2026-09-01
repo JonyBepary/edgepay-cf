@@ -97,8 +97,10 @@ The Scalar UI is the always-current source; the groups at a glance:
   devices, SMS templates, domain verification.
 - **Inbound Webhooks** (`/webhook/{gateway}`) — gateway → platform events,
   protected by IP allowlist → geo fallback → signature verification.
-- **Checkout** (`/checkout/{token}`) — hosted browser flow (HTML; also mounted
-  at `/invoice/{token}` and `/pay/{slug}`).
+- **Checkout API & Browser Flow** (`/checkout/{token}`) — hosted browser UI with MFS payment steps, copy-number button, and two-way verification:
+  - `GET /checkout/{token}` — render HTML checkout page.
+  - `POST /checkout/{token}/verify` (or `/submit-trx`) — submit customer TrxID (`{ trx_id: "BK998877", sender_phone: "01711..." }`) for two-way SMS corroboration.
+  - `GET /checkout/{token}/status` — lightweight JSON polling endpoint returning `{ status: "completed" | "processing" | "awaiting_sms", trx_id: "..." }`.
 - **Setup** (`/install`) — pre-install requirements check + wizard.
 - **Documentation** — `/api/reference`, `/api/openapi.json`.
 
@@ -117,10 +119,15 @@ curl -s -X POST "$BASE/api/v1/payments" \
   -d '{"amount":"100.50","currency":"BDT","description":"Test payment"}'
 # → { "success": true, "data": { "intent_id":1, "token":"…", "checkout_url":"$BASE/checkout/…" } }
 
-# 2. Open checkout_url in a browser (or drive /checkout/{token} yourself)
+# 2. Customer completes payment via MFS App & submits TrxID
+curl -s -X POST "$BASE/checkout/<token>/verify" \
+  -H "Content-Type: application/json" \
+  -d '{"trx_id":"BK998877","sender_phone":"01711002233"}'
+# → { "success": true, "data": { "status": "completed", "trx_id": "BK998877", "message": "Payment verified and confirmed!" } }
 
-# 3. Poll status
-curl -s "$BASE/api/v1/payments/1" -H "Authorization: Bearer op_live_…"
+# 3. Poll payment status anytime
+curl -s "$BASE/checkout/<token>/status"
+# → { "success": true, "data": { "status": "completed", "amount": "100.50", "currency": "BDT", "trx_id": "BK998877" } }
 
 # 4. (Later) refund it
 curl -s -X POST "$BASE/api/v1/refunds" \

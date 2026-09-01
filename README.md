@@ -1,7 +1,7 @@
 # EdgePay-CF — Edge-Native Self-Hosted Payment Engine & Ledger
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
-[![Vitest Unit Tests](https://img.shields.io/badge/tests-173%20passed-brightgreen.svg)](tests/)
+[![Vitest Unit Tests](https://img.shields.io/badge/tests-212%20passed-brightgreen.svg)](tests/)
 [![TypeScript Strict](https://img.shields.io/badge/typescript-strict%205.9-blue.svg)](tsconfig.json)
 [![Cloudflare Workers](https://img.shields.io/badge/runtime-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com)
 [![Interactive Scalar Docs](https://img.shields.io/badge/docs-Scalar%20OpenAPI%203.1-purple.svg)](https://edgepay-cf.bm-jonybepary.workers.dev/api/reference)
@@ -15,42 +15,51 @@ It operates **100% on the Cloudflare Free Tier** (~3.3K payments/day practical c
 ## ⚡ Key Highlights & Core Capabilities
 
 ```mermaid
-graph LR
-    subgraph Edge["Cloudflare Global Network (330+ Cities)"]
-        W["Hono Worker Router"]
-        D1[("D1 Database\nMulti-Tenant")]
-        DO["Durable Objects\nPer-Tenant LedgerDO"]
-        AI["Workers AI GPU\nLlama 3.1 8B"]
-        Q["Cloudflare Queues\nOutbound Webhooks"]
-    end
+sequenceDiagram
+    autonumber
+    actor Customer as Customer (Checkout UI)
+    participant EdgePay as Cloudflare Edge (EdgePay Worker)
+    actor Phone as Merchant's Android Phone / Daemon
+    participant Carrier as MFS Carrier (bKash/Nagad/Rocket)
 
-    subgraph Rails["Payment Rails & MFS"]
-        bKash["bKash MFS"]
-        Nagad["Nagad MFS"]
-        Rocket["DBBL Rocket"]
-        Stripe["Stripe Global"]
-        SSL["SSLCommerz"]
-    end
+    Note over Customer,EdgePay: 1. Customer initiates checkout
+    Customer->>EdgePay: GET /checkout/:token
+    EdgePay-->>Customer: Render Checkout UI (Merchant Account, Copy Button, TrxID Input Form)
 
-    subgraph Companion["Android Companion Daemon"]
-        Phone["Physical Phone / Mockup\nPort 3300"]
-        Loop["Auto-Relay & Heartbeat Loop"]
-    end
+    Note over Customer,Carrier: 2. Customer sends money via MFS App
+    Customer->>Carrier: Transfer exact BDT to Merchant Personal Number
+    Carrier-->>Customer: TrxID issued (SMS/Statement e.g. BK998877)
+    Carrier-->>Phone: Inbound carrier SMS delivered with TrxID (BK998877)
 
-    Phone -->|SMS Ingest / Heartbeat| W
-    W --> D1
-    W --> DO
-    W --> AI
-    W --> Q
-    W --> Rails
+    alt Scenario A: Customer Submits TrxID First
+        Customer->>EdgePay: POST /checkout/:token/verify { trx_id: "BK998877", sender_phone: "01711..." }
+        EdgePay->>EdgePay: Record customer TrxID on payment intent (status: awaiting_sms)
+        Phone->>EdgePay: POST /api/mobile/v1/sms (Relays carrier SMS)
+        EdgePay->>EdgePay: Queue extracts TrxID -> matches customer_trx_id + amount + merchant_id
+        EdgePay->>EdgePay: Complete transaction & post GAAP ledger entry
+        Customer->>EdgePay: GET /checkout/:token/status (Polls)
+        EdgePay-->>Customer: { status: "completed", trx_id: "BK998877" } (Payment Confirmed!)
+    else Scenario B: Carrier SMS Arrives First
+        Phone->>EdgePay: POST /api/mobile/v1/sms (Relays carrier SMS with TrxID BK998877)
+        EdgePay->>EdgePay: Stored in op_sms_data pool (status: parsed, strictly holds)
+        Customer->>EdgePay: POST /checkout/:token/verify { trx_id: "BK998877", sender_phone: "01711..." }
+        EdgePay->>EdgePay: Query op_sms_data for matching TrxID + amount + merchant_id
+        EdgePay->>EdgePay: Complete transaction, post GAAP ledger & mark SMS matched
+        EdgePay-->>Customer: { status: "completed", trx_id: "BK998877" } (Instant Confirmation!)
+    end
 ```
 
-* **Multi-Tenant Architecture**: Host unlimited independent merchants on a single deploy. Each merchant gets isolated API keys, gateway settings, custom domains, and a dedicated **Durable Object Double-Entry Ledger** (`merchant:${id}`).
+* **Multi-Tenant Isolation**: Host unlimited independent merchants on a single deployment. Each merchant gets isolated API keys, gateway settings, custom domains, and a dedicated **Durable Object Double-Entry Ledger** (`merchant:${id}`).
+* **Strict Two-Way TrxID Corroboration**: Eliminates fraud and ambiguous amount matching. Every manual MFS payment intent requires an exact, verified TrxID match from the carrier SMS network before money is cleared.
+* **Anti-Replay & Anti-Double-Spending Protection**:
+  - Replay attacks on claimed TrxIDs are rejected immediately with `409 TRX_ALREADY_USED`.
+  - Global linearizability and single-threaded execution via **Cloudflare Durable Objects (`LedgerDO`)**.
+  - Single-primary Raft consensus and atomic Compare-And-Swap (CAS) state transitions in **D1 SQLite**.
 * **Self-Healing Auto-Bootstrap**: Zero manual SQL needed. Cold-starts provision GAAP charts of accounts, default gateway catalogs, and pairing OTPs automatically.
-* **3-Tier SMS Corroboration Pipeline**: High-speed Regex (Tier 1) $\to$ Adversarial Normalizer & Heuristic (Tier 2) $\to$ **Workers AI Llama 3.1 8B LLM** (Tier 3) with JSON Schema structured output.
+* **3-Tier SMS Parser**: High-speed Regex (Tier 1) $\to$ Adversarial Normalizer & Heuristic (Tier 2) $\to$ **Workers AI Llama 3.1 8B LLM** (Tier 3) with JSON Schema structured output.
 * **Interactive Scalar OpenAPI 3.1**: Built-in API reference and test console live at `/api/reference`.
 * **Zero-Trust Security**: Cloudflare Access JWT validation for operators, AES-256-GCM PII encryption, scoped Bearer API keys, SSRF loopback blocking, and CSP headers.
-* **Autonomous Companion Daemon**: Android forwarder daemon with 30s heartbeat telemetry, local FIFO outbox queue, exponential retry backoff, and live MFS payment simulator.
+* **Autonomous Companion Daemon**: Android forwarder daemon with 30s heartbeat telemetry, local FIFO outbox queue, exponential retry backoff, auto token refresh, and live MFS payment simulator.
 
 ---
 
@@ -88,18 +97,21 @@ openssl rand -base64 32
 
 ## 🧠 SMS Parsing & Fallback LLM Architecture
 
-EdgePay uses a hardened 3-tier cascade to parse and corroborate carrier SMS payment alerts:
+EdgePay uses a hardened 3-tier cascade to parse carrier SMS payment alerts:
 
 ```mermaid
 graph TD
     Raw["Raw Incoming Carrier SMS"] --> Norm["1. Normalizer (Bengali Digits, Zero-Width Stripping)"]
     Norm --> T1{"Tier 1: Regex Template\n(op_sms_templates)"}
-    T1 -->|Match Found| Post["Instant Ledger Post"]
+    T1 -->|TrxID + Amount Extracted| Pool["Stored in SMS Receipt Pool (status: parsed)"]
     T1 -->|No Match| T2{"Tier 2: Fallback Heuristic\n(Anti-Adversarial Pattern)"}
-    T2 -->|Match Found| Post
+    T2 -->|TrxID + Amount Extracted| Pool
     T2 -->|Ambiguous| T3["Tier 3: Workers AI LLM\n(@cf/meta/llama-3.1-8b-instruct)"]
-    T3 -->|JSON Schema Valid| Post
-    T3 -->|Low Confidence| Review["Flag for Operator Manual Review"]
+    T3 -->|JSON Schema Valid| Pool
+    T3 -->|Low Confidence / Missing TrxID| Review["Flag for Operator Manual Review"]
+    
+    Pool --> Match{"Two-Way Corroboration\n(Matches Customer TrxID + Amount)"}
+    Match -->|Verified Match| Post["Complete Intent & Post GAAP Ledger"]
 ```
 
 ### Fallback LLM Specification
@@ -135,9 +147,10 @@ npm start
 
 ### Automated Background Loops
 1. **Heartbeat Telemetry Loop (30s)**: Pings `POST /api/mobile/v1/heartbeat` with battery level, charging status, and carrier name to keep the device active in the merchant portal.
-2. **FIFO Outbox Queue & Retry Loop (2s)**: Buffers SMS events locally if the phone loses connectivity. Retries automatically with exponential backoff ($2s \to 4s \to 8s \to 16s$).
-3. **1-Click 6-Digit OTP Pairing Loop**: Enter the merchant's pairing OTP (e.g. `622568`) to automatically authenticate and store the mobile JWT.
-4. **Traffic Generator Loop**: Toggle background synthetic payment generation (every 5s/10s) to stress-test live checkout reconciliation.
+2. **Auto Token Refresh Loop**: Automatically catches HTTP 401s and rotates expired access tokens seamlessly via `POST /api/mobile/v1/refresh`.
+3. **FIFO Outbox Queue & Retry Loop (2s)**: Buffers SMS events locally if the phone loses connectivity. Retries automatically with exponential backoff ($2s \to 4s \to 8s \to 16s$).
+4. **1-Click 6-Digit OTP Pairing Loop**: Enter the merchant's pairing OTP (e.g. `622568`) to automatically authenticate and store the mobile JWT.
+5. **Traffic Generator Loop**: Toggle background synthetic payment generation (every 5s/10s) to stress-test live checkout reconciliation.
 
 ---
 
@@ -171,16 +184,19 @@ curl -H "Authorization: Bearer $ADMIN_KEY" \
 | **Admin API** | `/api/admin/v1/merchants` | Admin Bearer / Access | Provision new merchant tenants dynamically |
 | **Admin API** | `/api/admin/v1/ledger/trial-balance` | Admin Bearer / Access | Real-time GAAP ledger audit |
 | **Companion API**| `/api/mobile/v1/pair` | Anonymous (OTP) | Pair device & receive JWT |
+| **Companion API**| `/api/mobile/v1/refresh` | Refresh Token | Seamless token rotation |
 | **Companion API**| `/api/mobile/v1/heartbeat` | Mobile JWT | Background telemetry sync |
 | **Companion API**| `/api/mobile/v1/sms` | Mobile JWT | Ingest & corroborate carrier SMS |
-| **Customer UI** | `/checkout/:token` | Public | Hosted checkout with real-time polling |
+| **Customer Checkout** | `/checkout/:token` | Public | Hosted checkout UI with MFS payment steps |
+| **Customer Checkout** | `/checkout/:token/verify` | Public | Submit customer TrxID & sender phone for 2-way verification |
+| **Customer Checkout** | `/checkout/:token/status` | Public | Real-time polling endpoint |
 | **Docs Portal** | `/api/reference` | Public | Interactive Scalar OpenAPI console |
 
 ---
 
 ## 🧪 Verification & Testing Suite
 
-Run the full battery of 173 Vitest unit tests inside workerd:
+Run the full battery of 212 Vitest unit tests inside workerd:
 
 ```bash
 npm run typecheck && npm test
@@ -191,6 +207,7 @@ Run the live edge multi-role penetration and blackbox suite:
 ```bash
 node scratch/test_all_roles.mjs
 node scratch/blackbox_adversarial_suite.mjs
+node scratch/test_manual_corroboration.mjs
 ```
 
 ---

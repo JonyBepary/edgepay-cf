@@ -98,6 +98,19 @@ Both webhook directions are verified, never trusted:
   signature verification over the raw body. Events dedup on
   `(merchant, gateway, event_id)`, so replays complete no second posting.
 
+## Anti-Double-Spending & Two-Way Corroboration Controls
+
+- **Elimination of Heuristic Auto-Confirmation**: Heuristic amount-only matching on personal MFS accounts is strictly prohibited. An order is NEVER marked completed without an exact, cryptographically verified `TrxID` match.
+- **Two-Way Cryptographic Matching**:
+  - If a customer submits their `TrxID` first, the intent records the expected `customer_trx_id` and waits in `awaiting_sms`.
+  - Inbound carrier SMS from the companion phone is parsed into `op_sms_data`. The queue consumer verifies `trx_id`, `amount`, and `merchant_id`.
+  - When verified, the transaction completes and the carrier SMS receipt is atomically flagged `matched`.
+- **Anti-Replay Attack Protection**: If a customer attempts to claim a `TrxID` that was already matched to another completed order, the request is immediately rejected with `409 TRX_ALREADY_USED`.
+- **Global Concurrency & Linearizability (`LedgerDO`)**:
+  - Double-entry postings route to a per-merchant Cloudflare Durable Object (`LedgerDO`).
+  - Single-threaded execution inside `blockConcurrencyWhile` and SQLite-backed `posted_transactions` registry prevents concurrent edge races from double-posting to ledger accounts.
+  - D1 SQLite atomic Compare-And-Swap (`UPDATE ... WHERE status IN ('pending', 'processing')`) ensures only one edge request can execute payment settlement.
+
 ## Abuse controls
 
 - **Per-API-key rate limits** via native Ratelimit bindings (120 reads/min, 30
