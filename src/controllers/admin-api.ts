@@ -349,14 +349,14 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
       const gwId = gwRow?.id;
       if (gw.slug === 'bkash' && gwId) {
         await c.env.DB.prepare(
-          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
-           VALUES (?, ?, 'personal', ?, ?, ?, ?)`
-        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now, now).run();
+          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
+           VALUES (?, ?, 'personal', ?, ?, ?)`
+        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now).run();
       } else if (gw.slug === 'nagad' && gwId) {
         await c.env.DB.prepare(
-          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
-           VALUES (?, ?, 'personal', ?, ?, ?, ?)`
-        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now, now).run();
+          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
+           VALUES (?, ?, 'personal', ?, ?, ?)`
+        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now).run();
       }
     }
 
