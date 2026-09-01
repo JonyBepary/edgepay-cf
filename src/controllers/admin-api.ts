@@ -335,13 +335,17 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
   const defaultPhone = body.phone || '01700000000';
 
   for (const gw of defaultGateways) {
-    const gwRes = await c.env.DB.prepare(
+    await c.env.DB.prepare(
       `INSERT INTO op_gateways 
          (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
     ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
 
-    const gwId = gwRes.meta?.last_row_id;
+    const gwRow = await c.env.DB.prepare(
+      `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
+    ).bind(newMerchantId, gw.slug).first<{ id: number }>();
+
+    const gwId = gwRow?.id;
     if (gw.slug === 'bkash' && gwId) {
       await c.env.DB.prepare(
         `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
