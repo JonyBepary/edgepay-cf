@@ -232,9 +232,9 @@ export class PaymentService {
       const adapter = gatewayRegistry.resolve(gateway.slug);
 
       // Build redirect/cancel URLs (using brand domain if set)
-      const baseUrl = this.env.APP_URL;
-      const redirectUrl = `${baseUrl}/checkout/${intent.token}/callback`;
-      const cancelUrl = `${baseUrl}/checkout/${intent.token}/cancel`;
+      const baseUrl = (this.env.APP_URL || '').replace(/\/$/, '');
+      const redirectUrl = baseUrl ? `${baseUrl}/checkout/${intent.token}/callback` : `/checkout/${intent.token}/callback`;
+      const cancelUrl = baseUrl ? `${baseUrl}/checkout/${intent.token}/cancel` : `/checkout/${intent.token}/cancel`;
 
       // Call adapter
       result = await adapter.initiate(
