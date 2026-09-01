@@ -242,144 +242,150 @@ adminApiRoutes.get('/merchants', requireScope('admin'), async (c) => {
 
 // Create / Provision a new merchant tenant (Platform Admin)
 adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
-  const body = await c.req.json<{
-    name?: string;
-    email?: string;
-    currency?: string;
-    timezone?: string;
-    phone?: string;
-  }>();
+  try {
+    const body = await c.req.json<{
+      name?: string;
+      email?: string;
+      currency?: string;
+      timezone?: string;
+      phone?: string;
+    }>();
 
-  if (!body.name || !body.email) {
-    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name and email are required' } }, 400);
-  }
+    if (!body.name || !body.email) {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name and email are required' } }, 400);
+    }
 
-  const merchantUuid = crypto.randomUUID();
-  const webhookSecret = crypto.randomUUID().replace(/-/g, '');
-  const now = new Date().toISOString();
-  const slug = body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const merchantUuid = crypto.randomUUID();
+    const webhookSecret = crypto.randomUUID().replace(/-/g, '');
+    const now = new Date().toISOString();
+    const slug = body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-  await c.env.DB.prepare(
-    `INSERT INTO op_merchants
-       (uuid, name, slug, email, timezone, default_currency, webhook_secret, settings, status, is_platform, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'active', 0, ?, ?)`
-  ).bind(
-    merchantUuid,
-    body.name,
-    slug,
-    body.email,
-    body.timezone ?? 'Asia/Dhaka',
-    body.currency ?? 'BDT',
-    webhookSecret,
-    now,
-    now
-  ).run();
-
-  const merchantRow = await c.env.DB.prepare(
-    `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
-  ).bind(merchantUuid).first<{ id: number }>();
-  const newMerchantId = merchantRow?.id;
-  if (!newMerchantId) throw new Error('Failed to retrieve new merchant ID');
-
-  // 1. Provision default admin user for merchant
-  const adminUserUuid = crypto.randomUUID();
-  const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))
-    .map(x => x.toString(16).padStart(2, '0')).join('');
-  const passwordHash = '$2a$12$e8Y7z7r0w7Z4q6l1s0j8yOPf0x0g9z9a8b7c6d5e4f3g2h1i0j9k8';
-
-  await c.env.DB.prepare(
-    `INSERT INTO op_merchant_users
-       (merchant_id, uuid, name, email, email_hash, phone, phone_hash, password_hash,
-        two_factor_enabled, role_id, status, language, timezone, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, 0, NULL, 'active', 'en', ?, ?, ?)`
-  ).bind(newMerchantId, adminUserUuid, body.name + ' Admin', body.email, emailHash, passwordHash, body.timezone ?? 'Asia/Dhaka', now, now).run();
-
-  const adminUserRow = await c.env.DB.prepare(
-    `SELECT id FROM op_merchant_users WHERE uuid = ? LIMIT 1`
-  ).bind(adminUserUuid).first<{ id: number }>();
-  const adminUserId = adminUserRow?.id ?? 1;
-
-  // 2. Provision default ledger chart of accounts
-  const { LedgerService } = await import('../services/ledger');
-  const ledger = new LedgerService(c.env);
-  await ledger.createDefaultChartOfAccounts(newMerchantId, body.currency ?? 'BDT');
-
-  // 3. Generate Primary API Key
-  const { sha256 } = await import('../lib/crypto');
-  const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-  const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
-  const apiKey = `op_live_${keyPrefix}_${keyRest}`;
-  const keyHash = await sha256(apiKey);
-
-  await c.env.DB.prepare(
-    `INSERT INTO op_api_keys
-       (merchant_id, name, key_prefix, key_hash, scopes, status, created_at)
-     VALUES (?, 'Primary Live Key', ?, ?, ?, 'active', ?)`
-  ).bind(
-    newMerchantId,
-    keyPrefix,
-    keyHash,
-    JSON.stringify(['read', 'write', 'admin', '*']),
-    now
-  ).run();
-
-  // 4. Seed default gateways
-  const defaultGateways = [
-    { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
-    { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
-    { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
-    { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
-    { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
-  ];
-
-  const defaultPhone = body.phone || '01700000000';
-
-  for (const gw of defaultGateways) {
     await c.env.DB.prepare(
-      `INSERT INTO op_gateways 
-         (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
-    ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
-
-    const gwRow = await c.env.DB.prepare(
-      `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
-    ).bind(newMerchantId, gw.slug).first<{ id: number }>();
-
-    const gwId = gwRow?.id;
-    if (gw.slug === 'bkash' && gwId) {
-      await c.env.DB.prepare(
-        `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
-         VALUES (?, ?, 'personal', ?, ?, ?, ?)`
-      ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now, now).run();
-    } else if (gw.slug === 'nagad' && gwId) {
-      await c.env.DB.prepare(
-        `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
-         VALUES (?, ?, 'personal', ?, ?, ?, ?)`
-      ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now, now).run();
-    }
-  }
-
-  // 5. Seed companion pairing OTP
-  const pairingOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-  await c.env.DB.prepare(
-    `INSERT INTO op_device_pairing_tokens
-       (merchant_id, user_id, token, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).bind(newMerchantId, adminUserId, pairingOtp, otpExpiresAt, now).run();
-
-  return c.json({
-    success: true,
-    data: {
-      merchant_id: newMerchantId,
-      uuid: merchantUuid,
-      name: body.name,
+      `INSERT INTO op_merchants
+         (uuid, name, slug, email, timezone, default_currency, webhook_secret, settings, status, is_platform, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'active', 0, ?, ?)`
+    ).bind(
+      merchantUuid,
+      body.name,
       slug,
-      email: body.email,
-      api_key: apiKey,
-      pairing_otp: pairingOtp,
-      webhook_secret: webhookSecret,
-      created_at: now,
+      body.email,
+      body.timezone ?? 'Asia/Dhaka',
+      body.currency ?? 'BDT',
+      webhookSecret,
+      now,
+      now
+    ).run();
+
+    const merchantRow = await c.env.DB.prepare(
+      `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
+    ).bind(merchantUuid).first<{ id: number }>();
+    const newMerchantId = merchantRow?.id;
+    if (!newMerchantId) throw new Error('Failed to retrieve new merchant ID');
+
+    // 1. Provision default admin user for merchant
+    const adminUserUuid = crypto.randomUUID();
+    const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))
+      .map(x => x.toString(16).padStart(2, '0')).join('');
+    const passwordHash = '$2a$12$e8Y7z7r0w7Z4q6l1s0j8yOPf0x0g9z9a8b7c6d5e4f3g2h1i0j9k8';
+
+    await c.env.DB.prepare(
+      `INSERT INTO op_merchant_users
+         (merchant_id, uuid, name, email, email_hash, phone, phone_hash, password_hash,
+          two_factor_enabled, role_id, status, language, timezone, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, 0, NULL, 'active', 'en', ?, ?, ?)`
+    ).bind(newMerchantId, adminUserUuid, body.name + ' Admin', body.email, emailHash, passwordHash, body.timezone ?? 'Asia/Dhaka', now, now).run();
+
+    const adminUserRow = await c.env.DB.prepare(
+      `SELECT id FROM op_merchant_users WHERE uuid = ? LIMIT 1`
+    ).bind(adminUserUuid).first<{ id: number }>();
+    const adminUserId = adminUserRow?.id ?? 1;
+
+    // 2. Provision default ledger chart of accounts
+    const { LedgerService } = await import('../services/ledger');
+    const ledger = new LedgerService(c.env);
+    await ledger.createDefaultChartOfAccounts(newMerchantId, body.currency ?? 'BDT');
+
+    // 3. Generate Primary API Key
+    const { sha256 } = await import('../lib/crypto');
+    const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+    const apiKey = `op_live_${keyPrefix}_${keyRest}`;
+    const keyHash = await sha256(apiKey);
+
+    await c.env.DB.prepare(
+      `INSERT INTO op_api_keys
+         (merchant_id, name, key_prefix, key_hash, scopes, status, created_at)
+       VALUES (?, 'Primary Live Key', ?, ?, ?, 'active', ?)`
+    ).bind(
+      newMerchantId,
+      keyPrefix,
+      keyHash,
+      JSON.stringify(['read', 'write', 'admin', '*']),
+      now
+    ).run();
+
+    // 4. Seed default gateways
+    const defaultGateways = [
+      { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
+      { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
+      { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
+      { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
+      { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
+    ];
+
+    const defaultPhone = body.phone || '01700000000';
+
+    for (const gw of defaultGateways) {
+      await c.env.DB.prepare(
+        `INSERT INTO op_gateways 
+           (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+      ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
+
+      const gwRow = await c.env.DB.prepare(
+        `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
+      ).bind(newMerchantId, gw.slug).first<{ id: number }>();
+
+      const gwId = gwRow?.id;
+      if (gw.slug === 'bkash' && gwId) {
+        await c.env.DB.prepare(
+          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
+           VALUES (?, ?, 'personal', ?, ?, ?, ?)`
+        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now, now).run();
+      } else if (gw.slug === 'nagad' && gwId) {
+        await c.env.DB.prepare(
+          `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
+           VALUES (?, ?, 'personal', ?, ?, ?, ?)`
+        ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now, now).run();
+      }
     }
-  }, 201);
+
+    // 5. Seed companion pairing OTP
+    const pairingOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+    await c.env.DB.prepare(
+      `INSERT INTO op_device_pairing_tokens
+         (merchant_id, user_id, token, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(newMerchantId, adminUserId, pairingOtp, otpExpiresAt, now).run();
+
+    return c.json({
+      success: true,
+      data: {
+        merchant_id: newMerchantId,
+        uuid: merchantUuid,
+        name: body.name,
+        slug,
+        email: body.email,
+        api_key: apiKey,
+        pairing_otp: pairingOtp,
+        webhook_secret: webhookSecret,
+        created_at: now,
+      }
+    }, 201);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('Merchant provisioning error:', err);
+    return c.json({ success: false, error: { code: 'PROVISION_ERROR', message: msg } }, 500);
+  }
 });
