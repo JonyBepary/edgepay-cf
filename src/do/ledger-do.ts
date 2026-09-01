@@ -85,6 +85,10 @@ export class LedgerDO extends DurableObject<Env> {
     // missing table.
     ctx.blockConcurrencyWhile(async () => {
       this.ensureTables();
+      const currentAlarm = await this.ctx.storage.getAlarm();
+      if (!currentAlarm) {
+        await this.ctx.storage.setAlarm(Date.now() + SNAPSHOT_INTERVAL_MS);
+      }
     });
   }
 
