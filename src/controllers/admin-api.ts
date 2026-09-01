@@ -230,3 +230,130 @@ adminApiRoutes.get('/ledger/trial-balance', requireScope('admin'), async (c) => 
   ]);
   return c.json({ success: true, data: { trial_balance: trial, consistency } });
 });
+
+// List all merchants (Platform Admin)
+adminApiRoutes.get('/merchants', requireScope('admin'), async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT id, uuid, name, slug, email, timezone, default_currency, status, is_platform, created_at
+     FROM op_merchants ORDER BY id ASC`
+  ).all();
+  return c.json({ success: true, data: rows.results });
+});
+
+// Create / Provision a new merchant tenant (Platform Admin)
+adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
+  const body = await c.req.json<{
+    name?: string;
+    email?: string;
+    currency?: string;
+    timezone?: string;
+    phone?: string;
+  }>();
+
+  if (!body.name || !body.email) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name and email are required' } }, 400);
+  }
+
+  const merchantUuid = crypto.randomUUID();
+  const webhookSecret = crypto.randomUUID().replace(/-/g, '');
+  const now = new Date().toISOString();
+  const slug = body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  const ins = await c.env.DB.prepare(
+    `INSERT INTO op_merchants
+       (uuid, name, slug, email, timezone, default_currency, webhook_secret, settings, status, is_platform, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'active', 0, ?, ?)`
+  ).bind(
+    merchantUuid,
+    body.name,
+    slug,
+    body.email,
+    body.timezone ?? 'Asia/Dhaka',
+    body.currency ?? 'BDT',
+    webhookSecret,
+    now,
+    now
+  ).run();
+
+  const newMerchantId = Number(ins.meta?.last_row_id);
+
+  // 1. Provision default ledger chart of accounts
+  const { LedgerService } = await import('../services/ledger');
+  const ledger = new LedgerService(c.env);
+  await ledger.createDefaultChartOfAccounts(newMerchantId, body.currency ?? 'BDT');
+
+  // 2. Generate Primary API Key
+  const { sha256 } = await import('../lib/crypto');
+  const keyPrefix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const keyRest = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  const apiKey = `op_live_${keyPrefix}_${keyRest}`;
+  const keyHash = await sha256(apiKey);
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_api_keys
+       (merchant_id, name, key_prefix, key_hash, scopes, status, created_at)
+     VALUES (?, 'Primary Live Key', ?, ?, ?, 'active', ?)`
+  ).bind(
+    newMerchantId,
+    keyPrefix,
+    keyHash,
+    JSON.stringify(['read', 'write', 'admin', '*']),
+    now
+  ).run();
+
+  // 3. Seed default gateways
+  const defaultGateways = [
+    { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 1 },
+    { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', currencies: '["BDT"]', priority: 2 },
+    { slug: 'rocket', name: 'DBBL Rocket', type: 'manual', currencies: '["BDT"]', priority: 3 },
+    { slug: 'sslcommerz', name: 'SSLCommerz', type: 'api', currencies: '["BDT","USD"]', priority: 4 },
+    { slug: 'stripe', name: 'Stripe Global Cards', type: 'api', currencies: '["USD","EUR","GBP","BDT"]', priority: 5 },
+  ];
+
+  const defaultPhone = body.phone || '01700000000';
+
+  for (const gw of defaultGateways) {
+    const gwRes = await c.env.DB.prepare(
+      `INSERT INTO op_gateways 
+         (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+    ).bind(newMerchantId, gw.slug, gw.name, gw.type, gw.priority, gw.currencies, now, now).run();
+
+    const gwId = gwRes.meta?.last_row_id;
+    if (gw.slug === 'bkash' && gwId) {
+      await c.env.DB.prepare(
+        `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
+         VALUES (?, ?, 'personal', ?, ?, ?, ?)`
+      ).bind(gwId, newMerchantId, defaultPhone, `Send Money to bKash Personal Number: ${defaultPhone}`, now, now).run();
+    } else if (gw.slug === 'nagad' && gwId) {
+      await c.env.DB.prepare(
+        `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_type, account_number, instructions, created_at, updated_at)
+         VALUES (?, ?, 'personal', ?, ?, ?, ?)`
+      ).bind(gwId, newMerchantId, defaultPhone, `Send Money to Nagad Personal Number: ${defaultPhone}`, now, now).run();
+    }
+  }
+
+  // 4. Seed companion pairing OTP
+  const pairingOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+  await c.env.DB.prepare(
+    `INSERT INTO op_device_pairing_tokens
+       (merchant_id, user_id, token, expires_at, created_at)
+     VALUES (?, 1, ?, ?, ?)`
+  ).bind(newMerchantId, pairingOtp, otpExpiresAt, now).run();
+
+  return c.json({
+    success: true,
+    data: {
+      merchant_id: newMerchantId,
+      uuid: merchantUuid,
+      name: body.name,
+      slug,
+      email: body.email,
+      api_key: apiKey,
+      pairing_otp: pairingOtp,
+      webhook_secret: webhookSecret,
+      created_at: now,
+    }
+  }, 201);
+});
