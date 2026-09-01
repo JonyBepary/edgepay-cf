@@ -15,8 +15,17 @@ function loadEnv() {
 loadEnv();
 
 const BASE_URL = process.env.EDGE_PAY_BASE_URL || 'https://edgepay-cf.bm-jonybepary.workers.dev';
-const ADMIN_API_KEY = process.env.EDGE_PAY_ADMIN_KEY || process.env.EDGE_PAY_KEY || 'op_live_9e9b2a89581d_1be4697dbc9b453cbe513bea64ef4613';
-const JWT_SECRET = process.env.JWT_SECRET || 'f14d30e9a38c97b57ac7c3845b64d8307d6233896f7b6d6571892f06c40272f5';
+const ADMIN_API_KEY = process.env.EDGE_PAY_ADMIN_KEY || process.env.EDGE_PAY_KEY;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!ADMIN_API_KEY) {
+  console.error('ERROR: Missing EDGE_PAY_KEY / EDGE_PAY_ADMIN_KEY. Please set in environment or .dev.vars');
+  process.exit(1);
+}
+if (!JWT_SECRET) {
+  console.error('ERROR: Missing JWT_SECRET. Please set in environment or .dev.vars');
+  process.exit(1);
+}
 
 function createMobileToken(secret, merchantId = 4, userId = 3, deviceId = 2) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');

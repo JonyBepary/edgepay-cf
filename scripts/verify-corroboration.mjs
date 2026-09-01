@@ -14,7 +14,12 @@ function loadEnv() {
 loadEnv();
 
 const BASE_URL = process.env.EDGE_PAY_BASE_URL || 'https://edgepay-cf.bm-jonybepary.workers.dev';
-const M8_KEY = process.env.EDGE_PAY_KEY || process.env.M8_KEY || 'op_live_ee20ec953fb7_a52c0b001c0948bfa8dbecddad2929b8';
+const M8_KEY = process.env.EDGE_PAY_KEY || process.env.M8_KEY;
+
+if (!M8_KEY) {
+  console.error('ERROR: Missing EDGE_PAY_KEY / M8_KEY. Please set in environment or .dev.vars');
+  process.exit(1);
+}
 
 async function getFreshJwt() {
   if (!fs.existsSync('sms-phone-mockup/.companion-state.json')) {

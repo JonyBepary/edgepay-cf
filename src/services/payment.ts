@@ -312,11 +312,18 @@ export class PaymentService {
     const verifyResult = await adapter.verify(callbackData, credentials, { kv: this.env.KV });
 
     if (verifyResult.success) {
-      // 1. Enforce amount equality if returned by provider (EDGE-P0-004)
-      if (verifyResult.amount) {
-        const returnedAmount = parseFloat(verifyResult.amount);
-        const expectedAmount = parseFloat(intent.amount);
-        if (isNaN(returnedAmount) || Math.abs(returnedAmount - expectedAmount) > 0.001) {
+      const { cmp } = await import('../lib/money');
+
+      // 1. Mandatory amount verification for API gateways & exact decimal comparison (NEW-P2-002/003 fix)
+      if (verifyResult.amount == null) {
+        if (intent.gateway_slug && intent.gateway_slug !== 'manual') {
+          await this.env.DB.prepare(
+            `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ? AND status IN ('pending', 'processing', 'created')`
+          ).bind(new Date().toISOString(), intent.trx_db_id).run();
+          return { success: false, status: 'amount_unverified' };
+        }
+      } else {
+        if (cmp(String(verifyResult.amount), intent.amount) !== 0) {
           await this.env.DB.prepare(
             `UPDATE op_transactions SET status = 'failed', updated_at = ? WHERE id = ? AND status IN ('pending', 'processing', 'created')`
           ).bind(new Date().toISOString(), intent.trx_db_id).run();

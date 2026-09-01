@@ -19,7 +19,11 @@ import { z } from 'zod';
 /** Decimal amount string: optional leading digits, 0-2 fraction digits. */
 export const moneySchema = z
   .string({ required_error: 'amount is required', invalid_type_error: 'amount must be a string' })
-  .regex(/^\d+(\.\d{1,2})?$/, 'amount must be a valid monetary amount (e.g. "100.50", max 2 fraction digits)');
+  .regex(/^\d+(\.\d{1,2})?$/, 'amount must be a valid monetary amount (e.g. "100.50", max 2 fraction digits)')
+  .refine(v => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 && n <= 1_000_000_000;
+  }, 'amount must be greater than 0 and not exceed 1,000,000,000');
 
 /** ISO 4217 alphabetic code, case-insensitive (upper-cased by the handler). */
 export const currencySchema = z

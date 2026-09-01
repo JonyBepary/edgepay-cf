@@ -22,7 +22,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds.sql",
     "db:backup": "wrangler d1 export DB --remote --output=backup.sql",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src tests",
     "format": "prettier --write 'src/**/*.ts'"
   },
   "cloudflare": {

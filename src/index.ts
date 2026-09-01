@@ -178,11 +178,29 @@ app.use('/api/admin/*', accessAuthMiddleware());
 // ---------------------------------------------------------------
 // Route mounts
 // ---------------------------------------------------------------
-// Install is anonymous + low-QPS — per-IP KV limiter (3/hour). Authenticated
-// APIs use the native Ratelimit binding per API key instead (mounted in
-// their controllers, after bearer auth). Mounted BEFORE installRoutes so it
-// intercepts requests to /install and /install/*.
+// Security & Rate Limiting Mounts (NEW-P1-002, EDGE-P1-002, NEW-P2-005, P1-003)
+// ---------------------------------------------------------------
+
+// Body size cap: max 128 KB for JSON / Webhook / Checkout payloads
+app.use('*', async (c, next) => {
+  const cl = c.req.header('content-length');
+  if (cl && parseInt(cl, 10) > 128 * 1024) {
+    return c.json({
+      success: false,
+      error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 128 KB limit' },
+    }, 413);
+  }
+  return next();
+});
+
+// Specific anonymous credential / pairing / checkout rate limiters
+app.use('/install/bootstrap-key', perIpRateLimit('password'));
 app.use('/install*', perIpRateLimit('install'));
+app.use('/api/mobile/v1/pair*', perIpRateLimit('otp'));
+app.use('/api/mobile/v1/devices', perIpRateLimit('otp'));
+app.use('/checkout/*/verify', perIpRateLimit('checkout'));
+app.use('/checkout/*/submit-trx', perIpRateLimit('checkout'));
+
 app.route('/install', installRoutes);
 
 // Health check (no auth) — must be mounted BEFORE /api/v1 routes

@@ -149,7 +149,7 @@ export function corroborateSmsPayment(
   const order = candidates[0];
 
   // 4. Gateway resolution: verified sender ID WINS over the LLM guess.
-  const senderGateway = verifiedGatewaySlug ?? senderToGatewaySlug(null);
+  const senderGateway = verifiedGatewaySlug;
   const chosenGateway = senderGateway ?? extraction.gateway_slug ?? order.gateway_slug;
 
   if (

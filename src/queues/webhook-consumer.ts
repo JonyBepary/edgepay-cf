@@ -9,6 +9,7 @@
 
 import type { Env, WebhookMessage } from '../types/env';
 import { hmacSha256 } from '../lib/crypto';
+import { isAllowedWebhookUrl } from '../lib/url-guard';
 
 const HTTP_TIMEOUT_MS = 15000;
 
@@ -32,8 +33,8 @@ export class WebhookQueueConsumer {
     const startTime = Date.now();
 
     try {
-      // SSRF protection — block private + loopback IPs
-      if (!isAllowedWebhookUrl(webhook.url)) {
+      // SSRF protection — block private + loopback + encoded IPs (EDGE-P1-004 fix)
+      if (!isAllowedWebhookUrl(webhook.url, env.ENVIRONMENT !== 'production')) {
         await this.logDelivery(env, webhook, 0, 0, false, 'blocked_ssrf');
         await msg.ack();
         return;
@@ -42,6 +43,7 @@ export class WebhookQueueConsumer {
       const jsonPayload = JSON.stringify(webhook.payload);
       const signature = await hmacSha256(jsonPayload, webhook.secret);
       const timestamp = Math.floor(Date.now() / 1000);
+      const deliveryId = `whdel_${crypto.randomUUID()}`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
@@ -52,9 +54,12 @@ export class WebhookQueueConsumer {
           'Content-Type': 'application/json',
           'X-EdgePay-Signature': signature,
           'X-EdgePay-Timestamp': String(timestamp),
+          'X-EdgePay-Delivery-ID': deliveryId,
+          'X-EdgePay-Event': webhook.event,
           'User-Agent': 'EdgePay-Webhook/1.0-cf',
         },
         body: jsonPayload,
+        redirect: 'error',
         signal: controller.signal,
       });
 
@@ -68,12 +73,11 @@ export class WebhookQueueConsumer {
       if (success) {
         await msg.ack();
       } else {
-        // Retry on 4xx (except 410 Gone) and 5xx
-        if (response.status === 410 || response.status === 422) {
-          // Permanent failure — don't retry
+        // Client errors (4xx) are permanent client configuration failures — do not waste retry queue
+        if (response.status >= 400 && response.status < 500) {
           await msg.ack();
         } else {
-          // Exponential backoff: 60s, 300s, 1800s
+          // 5xx Server errors — Exponential backoff: 60s, 300s, 1800s
           const delay = [60, 300, 1800][Math.min(webhook.attempt - 1, 2)];
           await msg.retry({ delaySeconds: delay });
         }
@@ -96,73 +100,20 @@ export class WebhookQueueConsumer {
     _error: string | undefined,
   ): Promise<void> {
     await env.DB.prepare(
-
       `INSERT INTO op_webhook_deliveries
-         (merchant_id, event, url, direction, status_code, response_time_ms, attempt, status, payload_hash, gateway, created_at)
-       VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, '', ?, ?)`
-).bind(webhook.merchant_id,
-        webhook.event,
-        webhook.url,
-        statusCode,
-        elapsedMs,
-        webhook.attempt,
-        success ? 'delivered' : 'failed',
-        'system',
-        new Date().toISOString(),).run();
+         (merchant_id, webhook_id, event, url, status_code, response_time_ms, success, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      webhook.merchant_id,
+      webhook.webhook_id,
+      webhook.event,
+      webhook.url,
+      statusCode,
+      elapsedMs,
+      success ? 1 : 0,
+      new Date().toISOString(),
+    ).run();
   }
-}
-
-/**
- * SSRF protection — block private and loopback URLs.
- * Port of EdgePay's UrlValidator::isValidWebhookUrl.
- */
-export function isAllowedWebhookUrl(url: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return false;
-  }
-
-  // Only HTTPS allowed (HTTP allowed only on localhost for dev)
-  if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
-    return false;
-  }
-
-  // Block common private ranges
-  const hostname = parsed.hostname;
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1' ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('172.16.') ||
-    hostname.startsWith('172.17.') ||
-    hostname.startsWith('172.18.') ||
-    hostname.startsWith('172.19.') ||
-    hostname.startsWith('172.20.') ||
-    hostname.startsWith('172.21.') ||
-    hostname.startsWith('172.22.') ||
-    hostname.startsWith('172.23.') ||
-    hostname.startsWith('172.24.') ||
-    hostname.startsWith('172.25.') ||
-    hostname.startsWith('172.26.') ||
-    hostname.startsWith('172.27.') ||
-    hostname.startsWith('172.28.') ||
-    hostname.startsWith('172.29.') ||
-    hostname.startsWith('172.30.') ||
-    hostname.startsWith('172.31.') ||
-    hostname.startsWith('192.168.') ||
-    hostname.startsWith('169.254.') ||
-    hostname === '0.0.0.0' ||
-    hostname.endsWith('.local') ||
-    hostname.endsWith('.internal') ||
-    hostname.endsWith('.localhost')
-  ) {
-    return false;
-  }
-
-  return true;
 }
 
 export const webhookQueueHandler = new WebhookQueueConsumer();

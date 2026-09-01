@@ -201,8 +201,6 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
       JSON.stringify(['read', 'write', 'admin', '*']),
       now
     ).run();
-
-    await env.KV.put('system:root_api_key', newApiKey);
   }
 
   await env.KV.put('system:bootstrapped', 'true');

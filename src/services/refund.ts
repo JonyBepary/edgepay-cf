@@ -124,14 +124,19 @@ export class RefundService {
       });
     }
 
-    // 3. Persist the refund row
+    // 3. Atomically persist the refund row with conditional bound check (NEW-P2-001 fix)
     const refundPublicId = `rfnd_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
     const inserted = await env.DB
       .prepare(
         `INSERT INTO op_refunds
            (merchant_id, refund_id, transaction_id, gateway_refund_id, amount,
             currency, reason, status, initiated_by, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+         SELECT ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?
+         WHERE (
+           SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) FROM op_refunds
+           WHERE transaction_id = ? AND merchant_id = ?
+             AND status IN ('completed', 'pending', 'processing')
+         ) + CAST(? AS NUMERIC) <= (SELECT CAST(amount AS NUMERIC) FROM op_transactions WHERE id = ?) + 0.001`,
       )
       .bind(
         input.merchant_id,
@@ -144,8 +149,16 @@ export class RefundService {
         input.initiated_by,
         now,
         now,
+        input.transaction_id,
+        input.merchant_id,
+        input.amount,
+        input.transaction_id,
       )
       .run();
+
+    if (!inserted.meta?.changes || inserted.meta.changes === 0) {
+      throw new Error(`Refund amount (${input.amount}) exceeds remaining refundable amount`);
+    }
 
     const refundRowId = inserted.meta?.last_row_id ?? 0;
 

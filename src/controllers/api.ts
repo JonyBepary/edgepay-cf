@@ -20,8 +20,17 @@ import { randomToken } from '../lib/crypto';
 
 export const apiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
-// All routes require bearer auth with read+write scope (or admin)
+// All routes require bearer auth with read, write, or admin scope
 apiRoutes.use('*', requireBearerApiAuth(['read', 'write', 'admin']));
+
+// Enforce write scope on all mutating HTTP methods (POST, PUT, PATCH, DELETE) — EDGE-P1-008 fix
+apiRoutes.use('*', async (c, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(c.req.method)) {
+    return (requireScope('write') as any)(c, next);
+  }
+  return next();
+});
+
 // Per-API-KEY rate limiting via the native Ratelimit binding (mounted
 // AFTER auth so the counter keys on the api key id, not the IP)
 apiRoutes.use('*', rateLimitMiddleware);
@@ -323,6 +332,12 @@ apiRoutes.post('/webhooks', async (c) => {
   if (!body.url) {
     return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'url is required' } }, 400);
   }
+
+  const { isAllowedWebhookUrl } = await import('../lib/url-guard');
+  if (!isAllowedWebhookUrl(body.url, c.env.ENVIRONMENT !== 'production')) {
+    return c.json({ success: false, error: { code: 'INVALID_URL', message: 'Webhook URL must be a valid public HTTPS endpoint' } }, 400);
+  }
+
   const secret = `whsec_${randomToken(24)}`;
   const now = new Date().toISOString();
   const res = await c.env.DB.prepare(

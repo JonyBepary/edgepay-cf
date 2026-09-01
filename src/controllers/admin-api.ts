@@ -243,8 +243,23 @@ adminApiRoutes.get('/ledger/trial-balance', requireScope('admin'), async (c) => 
   return c.json({ success: true, data: { trial_balance: trial, consistency } });
 });
 
-// List all merchants (Platform Admin)
-adminApiRoutes.get('/merchants', requireScope('admin'), async (c) => {
+// Platform check middleware: only platform merchant (is_platform = 1) can manage other tenants
+async function requirePlatformAdmin(c: any, next: any) {
+  const merchantId = c.get('merchantId') as number | undefined;
+  if (!merchantId) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Platform authentication required' } }, 403);
+  }
+  const row = (await c.env.DB.prepare(
+    `SELECT is_platform FROM op_merchants WHERE id = ? LIMIT 1`
+  ).bind(merchantId).first()) as { is_platform: number } | null;
+  if (!row || row.is_platform !== 1) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Platform administrator privileges required' } }, 403);
+  }
+  return next();
+}
+
+// List all merchants (Platform Admin only)
+adminApiRoutes.get('/merchants', requireScope('admin'), requirePlatformAdmin, async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT id, uuid, name, slug, email, timezone, default_currency, status, is_platform, created_at
      FROM op_merchants ORDER BY id ASC`
@@ -252,8 +267,23 @@ adminApiRoutes.get('/merchants', requireScope('admin'), async (c) => {
   return c.json({ success: true, data: rows.results });
 });
 
-// Create / Provision a new merchant tenant (Platform Admin)
-adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
+// One-time credential claim for newly provisioned merchants
+adminApiRoutes.post('/merchants/claim', async (c) => {
+  const body = await c.req.json<{ claim_token?: string }>();
+  if (!body.claim_token) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'claim_token is required' } }, 400);
+  }
+  const key = `claim:${body.claim_token}`;
+  const creds = await c.env.KV.get(key);
+  if (!creds) {
+    return c.json({ success: false, error: { code: 'INVALID_CLAIM', message: 'Claim token is invalid or expired' } }, 404);
+  }
+  await c.env.KV.delete(key);
+  return c.json({ success: true, data: JSON.parse(creds) });
+});
+
+// Create / Provision a new merchant tenant (Platform Admin only)
+adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, async (c) => {
   try {
     const body = await c.req.json<{
       name?: string;
@@ -298,7 +328,7 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
     const adminUserUuid = crypto.randomUUID();
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
-    const { hashPassword, randomNumericOtp, sha256 } = await import('../lib/crypto');
+    const { hashPassword, randomNumericOtp, randomBase64Key, sha256 } = await import('../lib/crypto');
     const initialPassword = crypto.randomUUID() + '!Aa1';
     const passwordHash = await hashPassword(initialPassword);
 
@@ -373,6 +403,21 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
        VALUES (?, ?, ?, ?, ?)`
     ).bind(newMerchantId, adminUserId, pairingOtp, otpExpiresAt, now).run();
 
+    // 6. Generate One-Time Claim Token for credentials
+    const claimToken = randomBase64Key(24).replace(/[^a-zA-Z0-9]/g, '');
+    await c.env.KV.put(
+      `claim:${claimToken}`,
+      JSON.stringify({
+        merchant_id: newMerchantId,
+        admin_email: body.email,
+        initial_password: initialPassword,
+        api_key: apiKey,
+        pairing_otp: pairingOtp,
+        webhook_secret: webhookSecret,
+      }),
+      { expirationTtl: 900 }
+    );
+
     return c.json({
       success: true,
       data: {
@@ -381,9 +426,9 @@ adminApiRoutes.post('/merchants', requireScope('admin'), async (c) => {
         name: body.name,
         slug,
         email: body.email,
-        api_key: apiKey,
-        pairing_otp: pairingOtp,
-        webhook_secret: webhookSecret,
+        claim_token: claimToken,
+        claim_url: `/api/admin/v1/merchants/claim`,
+        claim_expires_in: '15 minutes',
         created_at: now,
       }
     }, 201);
