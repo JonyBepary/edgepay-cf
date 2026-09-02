@@ -665,13 +665,17 @@ async function handlePairing(otpCode, statusEl) {
     });
 
     const json = await res.json();
-    if (res.ok && json.data?.jwt_token) {
-      el.authTokenInput.value = json.data.jwt_token;
+    const token = json.data?.data?.access_token || json.data?.data?.token || json.data?.access_token || json.data?.token || json.data?.jwt_token;
+    if (res.ok && token) {
+      el.authTokenInput.value = token;
       el.authTypeSelect.value = 'bearer';
       statusEl.textContent = '✓ Device paired successfully! Scoped JWT applied.';
       statusEl.style.color = 'var(--accent-green)';
+      if (el.headerStatusText) el.headerStatusText.textContent = 'Paired & Active';
+      if (el.headerStatusPill) el.headerStatusPill.style.borderColor = 'var(--accent-green)';
     } else {
-      statusEl.textContent = `❌ Pairing failed: ${json.error?.message || 'Invalid OTP'}`;
+      const errMsg = json.data?.error?.message || json.error?.message || 'Invalid or expired OTP';
+      statusEl.textContent = `❌ Pairing failed: ${errMsg}`;
       statusEl.style.color = 'var(--accent-primary)';
     }
   } catch (err) {
