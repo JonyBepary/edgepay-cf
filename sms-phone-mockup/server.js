@@ -496,22 +496,23 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Forwarding Relay
-  if (pathname === '/api/forward' && req.method === 'POST') {
+  // Forwarding Relay Proxy (Bypasses Browser CORS)
+  if ((pathname === '/api/forward' || pathname === '/api/relay/send') && req.method === 'POST') {
     try {
       const payload = await parseRequestBody(req);
-      if (!payload || !payload.url) {
+      const targetUrl = payload?.target_url || payload?.url;
+      if (!targetUrl) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: 'Missing target url' }));
         return;
       }
 
-      const targetUrl = payload.url;
       const targetMethod = payload.method || 'POST';
       const targetHeaders = payload.headers || {};
-      const targetBody = typeof payload.body === 'object' ? JSON.stringify(payload.body) : payload.body;
+      const rawBody = payload.payload !== undefined ? payload.payload : payload.body;
+      const targetBody = typeof rawBody === 'object' ? JSON.stringify(rawBody) : rawBody;
 
-      if (!targetHeaders['Content-Type'] && typeof payload.body === 'object') {
+      if (!targetHeaders['Content-Type'] && typeof rawBody === 'object') {
         targetHeaders['Content-Type'] = 'application/json';
       }
 

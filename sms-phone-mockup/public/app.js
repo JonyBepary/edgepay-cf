@@ -1,18 +1,19 @@
 /**
- * Android SMS Phone Mockup & Relay Application
+ * Android SMS Simulator & MFS Relay Application
+ * Theme: Wada Sanzo Harmony & Modern Responsive Architecture
  */
 
-// State Management
+// Application State
 const state = {
   currentGateway: 'bkash',
   editMode: 'template', // 'template' | 'raw'
   soundEnabled: true,
-  theme: 'dark',
+  theme: localStorage.getItem('theme') || 'dark',
   history: [],
-  mockMessages: [],
+  batchRunning: false,
 };
 
-// Gateway Presets & Template Generators
+// Gateway Presets & Generator Engines
 const GATEWAYS = {
   bkash: {
     name: 'bKash',
@@ -102,7 +103,7 @@ const GATEWAYS = {
     name: 'Bank Alert',
     sender: 'BANK_ALERT',
     avatarText: 'BK',
-    avatarColor: '#10b981',
+    avatarColor: '#4e936b',
     currency: 'BDT',
     genTrx: () => 'TXN' + Math.floor(10000000 + Math.random() * 90000000),
     templates: {
@@ -113,8 +114,8 @@ const GATEWAYS = {
   }
 };
 
-// Audio Synthesizer for Android SMS sound
-function playSmsSound() {
+// Audio Synthesizer (Chime effect)
+function playSmsChime() {
   if (!state.soundEnabled) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,10 +123,10 @@ function playSmsSound() {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
 
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
 
     osc.connect(gain);
@@ -133,627 +134,623 @@ function playSmsSound() {
 
     osc.start();
     osc.stop(ctx.currentTime + 0.35);
-  } catch (e) {
-    console.warn('Audio not allowed yet or not supported');
-  }
+  } catch (_) {}
 }
 
 // Helpers
-function getFormattedCurrentDate() {
+function getFormattedDateTime() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  const day = pad(d.getDate());
-  const month = pad(d.getMonth() + 1);
-  const year = d.getFullYear();
-  const hours = pad(d.getHours());
-  const mins = pad(d.getMinutes());
-  return `${day}/${month}/${year} ${hours}:${mins}`;
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function getRandomPhone() {
   const prefixes = ['017', '018', '019', '016', '013', '014', '015'];
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  let num = prefix;
-  for (let i = 0; i < 8; i++) num += Math.floor(Math.random() * 10);
-  return num;
+  let rest = '';
+  for (let i = 0; i < 8; i++) rest += Math.floor(Math.random() * 10);
+  return `${prefix}${rest}`;
 }
 
-function getRandomAmount() {
-  const amounts = ['100.00', '250.00', '500.00', '750.00', '1000.00', '1250.00', '1500.00', '2000.00', '2500.00', '5000.00'];
-  return amounts[Math.floor(Math.random() * amounts.length)];
+// DOM Elements
+const doc = document;
+const el = {
+  themeToggleBtn: doc.getElementById('themeToggleBtn'),
+  themeIcon: doc.getElementById('themeIcon'),
+  soundToggleBtn: doc.getElementById('soundToggleBtn'),
+  soundIcon: doc.getElementById('soundIcon'),
+  
+  // Phone Elements
+  statusBarTime: doc.getElementById('statusBarTime'),
+  phoneAvatar: doc.getElementById('phoneAvatar'),
+  phoneSenderName: doc.getElementById('phoneSenderName'),
+  phoneSenderSubtitle: doc.getElementById('phoneSenderSubtitle'),
+  phoneMessageBubble: doc.getElementById('phoneMessageBubble'),
+  bubbleTime: doc.getElementById('bubbleTime'),
+  phoneBottomPreview: doc.getElementById('phoneBottomPreview'),
+  phoneBatteryBar: doc.getElementById('phoneBatteryBar'),
+  phoneBatteryText: doc.getElementById('phoneBatteryText'),
+  phoneQuickSendBtn: doc.getElementById('phoneQuickSendBtn'),
+
+  // Workspace Tabs
+  tabBtns: doc.querySelectorAll('.tab-btn'),
+  tabPanes: doc.querySelectorAll('.tab-pane'),
+  presetPills: doc.querySelectorAll('.preset-pill'),
+
+  // Form Fields
+  inputSender: doc.getElementById('inputSender'),
+  inputTrxId: doc.getElementById('inputTrxId'),
+  inputNumber: doc.getElementById('inputNumber'),
+  inputAmount: doc.getElementById('inputAmount'),
+  inputCurrency: doc.getElementById('inputCurrency'),
+  inputFee: doc.getElementById('inputFee'),
+  inputBalance: doc.getElementById('inputBalance'),
+  inputRef: doc.getElementById('inputRef'),
+  inputDateTime: doc.getElementById('inputDateTime'),
+  templateVariant: doc.getElementById('templateVariant'),
+  rawSmsText: doc.getElementById('rawSmsText'),
+  templateFormWrap: doc.getElementById('templateFormWrap'),
+  rawFormWrap: doc.getElementById('rawFormWrap'),
+
+  // Buttons
+  randTrxBtn: doc.getElementById('randTrxBtn'),
+  randPhoneBtn: doc.getElementById('randPhoneBtn'),
+  nowTimeBtn: doc.getElementById('nowTimeBtn'),
+  amtBtns: doc.querySelectorAll('.amt-btn'),
+  mainSendBtn: doc.getElementById('mainSendBtn'),
+  randomSendBtn: doc.getElementById('randomSendBtn'),
+
+  // Target & Auth
+  targetPresetSelect: doc.getElementById('targetPresetSelect'),
+  targetUrlInput: doc.getElementById('targetUrlInput'),
+  httpMethodSelect: doc.getElementById('httpMethodSelect'),
+  payloadFormatSelect: doc.getElementById('payloadFormatSelect'),
+  authTypeSelect: doc.getElementById('authTypeSelect'),
+  authTokenInput: doc.getElementById('authTokenInput'),
+  relayProxyCheckbox: doc.getElementById('relayProxyCheckbox'),
+  pairingOtpInput: doc.getElementById('pairingOtpInput'),
+  pairDeviceBtn: doc.getElementById('pairDeviceBtn'),
+  pairingStatusMsg: doc.getElementById('pairingStatusMsg'),
+
+  // Response Box
+  responseStatusBadge: doc.getElementById('responseStatusBadge'),
+  responseLatency: doc.getElementById('responseLatency'),
+  responsePre: doc.getElementById('responsePre'),
+
+  // History Log
+  historyTableBody: doc.getElementById('historyTableBody'),
+  historyCount: doc.getElementById('historyCount'),
+  clearHistoryBtn: doc.getElementById('clearHistoryBtn'),
+
+  // Diagnostics
+  batterySlider: doc.getElementById('batterySlider'),
+  batteryValText: doc.getElementById('batteryValText'),
+  carrierSelect: doc.getElementById('carrierSelect'),
+  serverEventLog: doc.getElementById('serverEventLog'),
+
+  // Modals
+  batchModalOverlay: doc.getElementById('batchModalOverlay'),
+  openBatchModalBtn: doc.getElementById('openBatchModalBtn'),
+  closeBatchModalBtn: doc.getElementById('closeBatchModalBtn'),
+  cancelBatchBtn: doc.getElementById('cancelBatchBtn'),
+  startBatchBtn: doc.getElementById('startBatchBtn'),
+  batchCountInput: doc.getElementById('batchCountInput'),
+  batchIntervalInput: doc.getElementById('batchIntervalInput'),
+  batchProgressWrap: doc.getElementById('batchProgressWrap'),
+  batchProgressBar: doc.getElementById('batchProgressBar'),
+  batchProgressText: doc.getElementById('batchProgressText'),
+  batchPercentText: doc.getElementById('batchPercentText'),
+
+  quickPairBtn: doc.getElementById('quickPairBtn'),
+  quickPairModalOverlay: doc.getElementById('quickPairModalOverlay'),
+  closeQuickPairModalBtn: doc.getElementById('closeQuickPairModalBtn'),
+  cancelQuickPairBtn: doc.getElementById('cancelQuickPairBtn'),
+  confirmQuickPairBtn: doc.getElementById('confirmQuickPairBtn'),
+  modalPairingOtpInput: doc.getElementById('modalPairingOtpInput'),
+  modalPairStatusMsg: doc.getElementById('modalPairStatusMsg'),
+
+  // Mobile View Switcher
+  mobileViewToggle: doc.getElementById('mobileViewToggle'),
+  showPhoneBtn: doc.getElementById('showPhoneBtn'),
+  showControlsBtn: doc.getElementById('showControlsBtn'),
+  phoneColumn: doc.getElementById('phoneColumn'),
+  controlColumn: doc.getElementById('controlColumn'),
+};
+
+// Clock Updater
+function updateClock() {
+  const d = new Date();
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (el.statusBarTime) el.statusBarTime.textContent = timeStr;
+  if (el.bubbleTime) el.bubbleTime.textContent = timeStr;
+}
+setInterval(updateClock, 10000);
+updateClock();
+
+// Theme Switcher
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  state.theme = theme;
+  if (el.themeIcon) el.themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+applyTheme(state.theme);
+
+el.themeToggleBtn?.addEventListener('click', () => {
+  applyTheme(state.theme === 'dark' ? 'light' : 'dark');
+});
+
+// Sound Toggle
+el.soundToggleBtn?.addEventListener('click', () => {
+  state.soundEnabled = !state.soundEnabled;
+  if (el.soundIcon) el.soundIcon.textContent = state.soundEnabled ? '🔔' : '🔕';
+});
+
+// Tab Navigation
+el.tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.getAttribute('data-tab');
+    el.tabBtns.forEach(b => b.classList.remove('active'));
+    el.tabPanes.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const pane = doc.getElementById(tabId);
+    if (pane) pane.classList.add('active');
+  });
+});
+
+// Mobile View Switcher
+el.showPhoneBtn?.addEventListener('click', () => {
+  el.showPhoneBtn.classList.add('active');
+  el.showControlsBtn.classList.remove('active');
+  el.phoneColumn.classList.remove('hidden-mobile');
+  el.controlColumn.classList.add('hidden-mobile');
+});
+
+el.showControlsBtn?.addEventListener('click', () => {
+  el.showControlsBtn.classList.add('active');
+  el.showPhoneBtn.classList.remove('active');
+  el.phoneColumn.classList.add('hidden-mobile');
+  el.controlColumn.classList.remove('hidden-mobile');
+});
+
+// Gateway Presets Selection
+function setGateway(gwKey) {
+  state.currentGateway = gwKey;
+  const gw = GATEWAYS[gwKey];
+  if (!gw) return;
+
+  el.presetPills.forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-gw') === gwKey);
+  });
+
+  el.inputSender.value = gw.sender;
+  el.inputCurrency.value = gw.currency;
+  el.inputTrxId.value = gw.genTrx();
+
+  el.phoneAvatar.textContent = gw.avatarText;
+  el.phoneAvatar.style.backgroundColor = gw.avatarColor;
+  el.phoneSenderName.textContent = gw.name;
+  el.phoneSenderSubtitle = `${gw.name} Official Alert`;
+
+  updateSmsPreview();
 }
 
-// Build SMS text from inputs
-function buildSmsText() {
+el.presetPills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    setGateway(pill.getAttribute('data-gw'));
+  });
+});
+
+// Build SMS Body from fields
+function getGeneratedSmsBody() {
   if (state.editMode === 'raw') {
-    return document.getElementById('rawSmsText').value.trim();
+    return el.rawSmsText.value.trim();
   }
-
   const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
-  const variant = document.getElementById('templateVariant').value || 'received_money';
+  const variant = el.templateVariant.value || 'received_money';
   const templateFn = gw.templates[variant] || gw.templates.received_money;
 
   const data = {
-    sender: document.getElementById('inputSender').value,
-    trx_id: document.getElementById('inputTrxId').value,
-    number: document.getElementById('inputNumber').value,
-    amount: parseFloat(document.getElementById('inputAmount').value || 0).toFixed(2),
-    currency: document.getElementById('inputCurrency').value,
-    fee: parseFloat(document.getElementById('inputFee').value || 0).toFixed(2),
-    balance: parseFloat(document.getElementById('inputBalance').value || 0).toFixed(2),
-    ref: document.getElementById('inputRef').value,
-    datetime: document.getElementById('inputDateTime').value,
+    amount: parseFloat(el.inputAmount.value || 0).toFixed(2),
+    currency: el.inputCurrency.value,
+    number: el.inputNumber.value.trim(),
+    trx_id: el.inputTrxId.value.trim(),
+    fee: parseFloat(el.inputFee.value || 0).toFixed(2),
+    balance: parseFloat(el.inputBalance.value || 0).toFixed(2),
+    ref: el.inputRef.value.trim(),
+    datetime: el.inputDateTime.value.trim(),
   };
 
   return templateFn(data);
 }
 
-// Build JSON payload based on selected format
+// Update Phone Screen with generated text
+function updateSmsPreview() {
+  const text = getGeneratedSmsBody();
+  if (el.phoneMessageBubble) {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    el.phoneMessageBubble.innerHTML = `
+      ${text}
+      <div class="bubble-meta">
+        <span>${timeStr}</span>
+        <span class="sim-tag">SIM1</span>
+      </div>
+    `;
+  }
+  if (el.phoneBottomPreview) {
+    el.phoneBottomPreview.textContent = text.slice(0, 36) + '...';
+  }
+}
+
+// Mode Switcher (Template vs Raw)
+doc.querySelectorAll('input[name="smsEditMode"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    state.editMode = e.target.value;
+    if (state.editMode === 'raw') {
+      el.templateFormWrap.style.display = 'none';
+      el.rawFormWrap.style.display = 'block';
+      el.rawSmsText.value = getGeneratedSmsBody();
+    } else {
+      el.templateFormWrap.style.display = 'block';
+      el.rawFormWrap.style.display = 'none';
+    }
+    updateSmsPreview();
+  });
+});
+
+// Form inputs listeners
+[
+  el.inputSender, el.inputTrxId, el.inputNumber, el.inputAmount,
+  el.inputCurrency, el.inputFee, el.inputBalance, el.inputRef,
+  el.inputDateTime, el.templateVariant, el.rawSmsText
+].forEach(input => {
+  if (input) input.addEventListener('input', updateSmsPreview);
+});
+
+// Randomizers
+el.randTrxBtn?.addEventListener('click', () => {
+  const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
+  el.inputTrxId.value = gw.genTrx();
+  updateSmsPreview();
+});
+
+el.randPhoneBtn?.addEventListener('click', () => {
+  el.inputNumber.value = getRandomPhone();
+  updateSmsPreview();
+});
+
+el.nowTimeBtn?.addEventListener('click', () => {
+  el.inputDateTime.value = getFormattedDateTime();
+  updateSmsPreview();
+});
+
+// Quick Amounts
+el.amtBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    el.inputAmount.value = parseFloat(btn.getAttribute('data-amt')).toFixed(2);
+    updateSmsPreview();
+  });
+});
+
+// Target Preset Selector
+el.targetPresetSelect?.addEventListener('change', (e) => {
+  if (e.target.value !== 'custom') {
+    el.targetUrlInput.value = e.target.value;
+  }
+});
+
+// Construct Payload
 function buildPayload() {
-  const format = document.getElementById('payloadFormatSelect').value;
-  const fullText = buildSmsText();
-  const sender = document.getElementById('inputSender').value;
-  const trxId = document.getElementById('inputTrxId').value;
-  const number = document.getElementById('inputNumber').value;
-  const amount = document.getElementById('inputAmount').value;
-  const currency = document.getElementById('inputCurrency').value;
-  const fee = document.getElementById('inputFee').value;
-  const balance = document.getElementById('inputBalance').value;
+  const sender = el.inputSender.value.trim();
+  const body = getGeneratedSmsBody();
+  const structure = el.payloadFormatSelect.value;
   const nowIso = new Date().toISOString();
 
-  if (format === 'edgepay_mobile') {
+  if (structure === 'raw_text_body') {
+    return body;
+  }
+
+  if (structure === 'structured_json') {
     return {
-      sender: sender,
-      body: fullText,
+      sender,
+      trx_id: el.inputTrxId.value.trim(),
+      amount: el.inputAmount.value.trim(),
+      currency: el.inputCurrency.value,
+      number: el.inputNumber.value.trim(),
+      fee: el.inputFee.value.trim(),
+      balance: el.inputBalance.value.trim(),
       received_at: nowIso,
     };
-  } else if (format === 'structured_json') {
+  }
+
+  if (structure === 'both_combined') {
     return {
-      trx_id: trxId,
-      sender_number: number,
-      amount: amount,
-      currency: currency,
-      sender: sender,
-      gateway: state.currentGateway,
-      fee: fee,
-      balance: balance,
-      raw_sms: fullText,
-      timestamp: nowIso,
-    };
-  } else if (format === 'both_combined') {
-    return {
-      sender: sender,
-      body: fullText,
+      sender,
+      body,
+      structured: {
+        trx_id: el.inputTrxId.value.trim(),
+        amount: el.inputAmount.value.trim(),
+        currency: el.inputCurrency.value,
+      },
       received_at: nowIso,
-      parsed: {
-        trx_id: trxId,
-        amount: amount,
-        currency: currency,
-        number: number,
-        gateway: state.currentGateway,
-      }
     };
-  } else {
-    return fullText;
-  }
-}
-
-// Update all UI elements & live previews
-function updateUI() {
-  const fullText = buildSmsText();
-  const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
-
-  // Phone screen updates
-  document.getElementById('phoneSenderName').textContent = document.getElementById('inputSender').value || gw.name;
-  document.getElementById('phoneAvatar').style.background = gw.avatarColor;
-  document.getElementById('avatarText').textContent = gw.avatarText;
-  document.getElementById('phoneInputPreview').value = fullText;
-  document.getElementById('sampleBubbleText').textContent = fullText;
-
-  // Time updates
-  const d = new Date();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const mins = String(d.getMinutes()).padStart(2, '0');
-  document.getElementById('statusBarTime').textContent = `${hours}:${mins}`;
-  document.getElementById('sampleBubbleTime').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  // Outgoing payload preview
-  const payload = buildPayload();
-  document.getElementById('payloadPreviewCode').textContent = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
-}
-
-// Select Gateway preset
-function selectGateway(gwKey) {
-  if (!GATEWAYS[gwKey]) return;
-  state.currentGateway = gwKey;
-  const gw = GATEWAYS[gwKey];
-
-  // Update preset chip buttons
-  document.querySelectorAll('.preset-chips .chip').forEach(el => {
-    el.classList.toggle('active', el.dataset.gateway === gwKey);
-  });
-
-  // Populate inputs with gateway specifics
-  document.getElementById('inputSender').value = gw.sender;
-  document.getElementById('inputCurrency').value = gw.currency;
-  document.getElementById('inputTrxId').value = gw.genTrx();
-
-  updateUI();
-}
-
-// Randomize fields
-function randomizeAllFields() {
-  const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
-  document.getElementById('inputTrxId').value = gw.genTrx();
-  document.getElementById('inputNumber').value = getRandomPhone();
-  document.getElementById('inputAmount').value = getRandomAmount();
-  const bal = (Math.random() * 8000 + 500).toFixed(2);
-  document.getElementById('inputBalance').value = bal;
-  document.getElementById('inputDateTime').value = getFormattedCurrentDate();
-  document.getElementById('inputRef').value = 'ord#' + Math.floor(100 + Math.random() * 900);
-
-  updateUI();
-}
-
-// Add bubble to phone thread
-function appendBubbleToPhone(text, isOutgoing = false) {
-  const thread = document.getElementById('messagesThread');
-  const bubble = document.createElement('div');
-  bubble.className = `sms-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
-  
-  const d = new Date();
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  bubble.innerHTML = `
-    <div class="bubble-content">
-      <p>${escapeHtml(text)}</p>
-    </div>
-    <div class="bubble-meta">
-      <span class="sms-time">${timeStr}</span>
-      <span class="sim-badge">${isOutgoing ? 'SENT' : 'SIM1'}</span>
-    </div>
-  `;
-
-  thread.appendChild(bubble);
-  thread.scrollTop = thread.scrollHeight;
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, m => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[m]);
-}
-
-// Send SMS to Server
-async function sendSms() {
-  const targetUrl = document.getElementById('targetUrlInput').value.trim();
-  const method = document.getElementById('httpMethodSelect').value;
-  const useRelay = document.getElementById('relayProxyCheckbox').checked;
-  const authType = document.getElementById('authTypeSelect').value;
-  const authToken = document.getElementById('authTokenInput').value.trim();
-  const payload = buildPayload();
-  const fullText = buildSmsText();
-
-  if (!targetUrl) {
-    alert('Please enter a target URL');
-    return;
   }
 
-  // Visual & Audio triggers
-  playSmsSound();
-  appendBubbleToPhone(fullText, false);
+  // Default: edgepay_mobile format
+  return {
+    sender,
+    body,
+    received_at: nowIso,
+  };
+}
 
-  // Headers
-  const headers = {};
-  if (typeof payload === 'object') {
-    headers['Content-Type'] = 'application/json';
-  } else {
-    headers['Content-Type'] = 'text/plain';
+// Send SMS Transmission
+async function sendSmsTransmission(payloadObj = null) {
+  const payload = payloadObj || buildPayload();
+  const targetUrl = el.targetUrlInput.value.trim();
+  const method = el.httpMethodSelect.value;
+  const useRelay = el.relayProxyCheckbox.checked;
+
+  const headers = { 'Content-Type': 'application/json' };
+  const authType = el.authTypeSelect.value;
+  const token = el.authTokenInput.value.trim();
+
+  if (token) {
+    if (authType === 'bearer') headers['Authorization'] = `Bearer ${token}`;
+    else if (authType === 'apiKey') headers['X-API-Key'] = token;
+    else if (authType === 'custom') headers['Authorization'] = token;
   }
 
-  if (authType === 'bearer' && authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  } else if (authType === 'apiKey' && authToken) {
-    headers['X-API-Key'] = authToken;
-  }
+  const startTime = performance.now();
+  el.responseStatusBadge.className = 'badge ready';
+  el.responseStatusBadge.textContent = 'Sending...';
+  el.responseLatency.textContent = 'Latency: ...';
 
-  const statusDot = document.getElementById('responseStatusDot');
-  const statusBadge = document.getElementById('responseStatusBadge');
-  const timeBadge = document.getElementById('responseTimeBadge');
-  const bodyViewer = document.getElementById('responseBodyViewer');
-
-  statusBadge.textContent = 'Sending...';
-  statusBadge.className = 'metric-badge';
-  statusDot.style.background = '#f59e0b';
-  bodyViewer.textContent = 'Transmitting request to server...';
-
-  const startTime = Date.now();
+  playSmsChime();
 
   try {
-    let result;
-
+    let res;
     if (useRelay) {
-      // Send through server-side proxy
-      const res = await fetch('/api/forward', {
+      // Use local Node.js relay proxy endpoint
+      res = await fetch('/api/relay/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: targetUrl,
-          method: method,
-          headers: headers,
-          body: payload,
+          target_url: targetUrl,
+          method,
+          headers,
+          payload,
         }),
       });
-      result = await res.json();
     } else {
-      // Direct browser fetch
-      const res = await fetch(targetUrl, {
-        method: method,
-        headers: headers,
-        body: typeof payload === 'object' ? JSON.stringify(payload) : payload,
+      // Direct fetch from browser
+      res = await fetch(targetUrl, {
+        method,
+        headers,
+        body: typeof payload === 'string' ? payload : JSON.stringify(payload),
       });
-      const timeMs = Date.now() - startTime;
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        data = await res.text();
-      }
-      result = {
-        success: res.ok,
-        status: res.status,
-        statusText: res.statusText,
-        time_ms: timeMs,
-        data: data,
-      };
     }
 
-    const duration = result.time_ms || (Date.now() - startTime);
-    const isOk = result.status >= 200 && result.status < 300;
+    const duration = Math.round(performance.now() - startTime);
+    const json = await res.json().catch(() => ({ statusText: res.statusText }));
 
-    statusBadge.textContent = `Status: ${result.status || 200} ${result.statusText || 'OK'}`;
-    statusBadge.className = `metric-badge ${isOk ? 'success' : 'error'}`;
-    statusDot.style.background = isOk ? '#10b981' : '#ef4444';
-    timeBadge.textContent = `Latency: ${duration} ms`;
+    const isOk = res.status >= 200 && res.status < 300;
+    el.responseStatusBadge.className = `badge ${isOk ? 'success' : 'error'}`;
+    el.responseStatusBadge.textContent = `${res.status} ${isOk ? 'OK' : 'Error'}`;
+    el.responseLatency.textContent = `Latency: ${duration} ms`;
+    el.responsePre.textContent = JSON.stringify(json, null, 2);
 
-    bodyViewer.textContent = typeof result.data === 'object'
-      ? JSON.stringify(result.data, null, 2)
-      : String(result.data || 'Empty Response');
-
-    // Add to sent history
-    addToHistory({
-      timestamp: new Date().toLocaleTimeString(),
-      gateway: state.currentGateway,
-      sender: document.getElementById('inputSender').value,
-      trx_id: document.getElementById('inputTrxId').value,
-      amount: document.getElementById('inputAmount').value,
-      currency: document.getElementById('inputCurrency').value,
-      status: result.status || (isOk ? 200 : 500),
-      duration: duration,
-      body: fullText,
-      targetUrl: targetUrl,
+    addHistoryEntry({
+      time: new Date().toLocaleTimeString(),
+      sender: el.inputSender.value,
+      trx_id: el.inputTrxId.value,
+      amount: `${el.inputAmount.value} ${el.inputCurrency.value}`,
+      status: res.status,
+      latency: `${duration}ms`,
+      payload,
     });
 
+    return { success: isOk, status: res.status, duration };
   } catch (err) {
-    const duration = Date.now() - startTime;
-    statusBadge.textContent = 'Status: Failed (Network Error)';
-    statusBadge.className = 'metric-badge error';
-    statusDot.style.background = '#ef4444';
-    timeBadge.textContent = `Latency: ${duration} ms`;
-    bodyViewer.textContent = `Fetch error: ${err.message}\n\nTip: Make sure the target server is running or keep "Use Relay Proxy" enabled.`;
+    const duration = Math.round(performance.now() - startTime);
+    el.responseStatusBadge.className = 'badge error';
+    el.responseStatusBadge.textContent = 'Network Error';
+    el.responseLatency.textContent = `Latency: ${duration} ms`;
+    el.responsePre.textContent = JSON.stringify({ error: err.message }, null, 2);
 
-    addToHistory({
-      timestamp: new Date().toLocaleTimeString(),
-      gateway: state.currentGateway,
-      sender: document.getElementById('inputSender').value,
-      trx_id: document.getElementById('inputTrxId').value,
-      amount: document.getElementById('inputAmount').value,
-      currency: document.getElementById('inputCurrency').value,
+    addHistoryEntry({
+      time: new Date().toLocaleTimeString(),
+      sender: el.inputSender.value,
+      trx_id: el.inputTrxId.value,
+      amount: `${el.inputAmount.value} ${el.inputCurrency.value}`,
       status: 'ERR',
-      duration: duration,
-      body: fullText,
-      targetUrl: targetUrl,
+      latency: `${duration}ms`,
+      payload,
     });
+
+    return { success: false, error: err.message };
   }
 }
 
-// History Management
-function addToHistory(item) {
-  state.history.unshift(item);
+// History Table Manager
+function addHistoryEntry(entry) {
+  state.history.unshift(entry);
   if (state.history.length > 50) state.history.pop();
-  renderHistory();
+  renderHistoryTable();
 }
 
-function renderHistory() {
-  const container = document.getElementById('historyList');
-  document.getElementById('historyCount').textContent = state.history.length;
+function renderHistoryTable() {
+  if (el.historyCount) el.historyCount.textContent = state.history.length;
+  if (!el.historyTableBody) return;
 
   if (state.history.length === 0) {
-    container.innerHTML = '<div class="empty-state">No SMS sent yet. Hit Send or Randomize & Send!</div>';
+    el.historyTableBody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+          No SMS messages transmitted yet.
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  container.innerHTML = state.history.map((item, idx) => {
-    const isOk = item.status >= 200 && item.status < 300;
-    return `
-      <div class="history-item">
-        <div class="item-left">
-          <div class="item-title">
-            <span>${item.sender}</span>
-            <span class="badge">${item.currency} ${item.amount}</span>
-            <span class="badge" style="font-family: monospace;">${item.trx_id}</span>
-          </div>
-          <div class="item-body">${escapeHtml(item.body)}</div>
-        </div>
-        <div class="item-right">
-          <span class="metric-badge ${isOk ? 'success' : 'error'}">${item.status} (${item.duration}ms)</span>
-          <button class="tiny-btn" onclick="resendHistoryItem(${idx})">Resend</button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  el.historyTableBody.innerHTML = state.history.map((h, idx) => `
+    <tr>
+      <td>${h.time}</td>
+      <td><strong>${h.sender}</strong></td>
+      <td><code>${h.trx_id}</code></td>
+      <td>${h.amount}</td>
+      <td>
+        <span class="badge ${h.status >= 200 && h.status < 300 ? 'success' : 'error'}">
+          ${h.status}
+        </span>
+      </td>
+      <td>${h.latency}</td>
+      <td>
+        <button class="tiny-btn" onclick="resendHistory(${idx})">Resend</button>
+      </td>
+    </tr>
+  `).join('');
 }
 
-window.resendHistoryItem = function(idx) {
+window.resendHistory = function(idx) {
   const item = state.history[idx];
-  if (!item) return;
-  document.getElementById('inputSender').value = item.sender;
-  document.getElementById('inputTrxId').value = item.trx_id;
-  document.getElementById('inputAmount').value = item.amount;
-  document.getElementById('inputCurrency').value = item.currency;
-  updateUI();
-  sendSms();
+  if (item) sendSmsTransmission(item.payload);
 };
 
-// Mock Server Feed Management
-function appendMockFeedItem(entry) {
-  const container = document.getElementById('mockFeed');
-  if (container.querySelector('.empty-state')) {
-    container.innerHTML = '';
+el.clearHistoryBtn?.addEventListener('click', () => {
+  state.history = [];
+  renderHistoryTable();
+});
+
+// Action Buttons
+el.mainSendBtn?.addEventListener('click', () => sendSmsTransmission());
+el.phoneQuickSendBtn?.addEventListener('click', () => sendSmsTransmission());
+
+el.randomSendBtn?.addEventListener('click', () => {
+  const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
+  el.inputTrxId.value = gw.genTrx();
+  el.inputNumber.value = getRandomPhone();
+  el.inputDateTime.value = getFormattedDateTime();
+  updateSmsPreview();
+  sendSmsTransmission();
+});
+
+// OTP Pairing Logic
+async function handlePairing(otpCode, statusEl) {
+  if (!otpCode || otpCode.length < 6) {
+    statusEl.textContent = '❌ Please enter a valid 6-digit OTP';
+    statusEl.style.color = 'var(--accent-primary)';
+    return;
   }
 
-  const d = new Date(entry.timestamp);
-  const timeStr = d.toLocaleTimeString();
+  statusEl.textContent = 'Pairing device...';
+  statusEl.style.color = 'var(--text-secondary)';
 
-  const itemEl = document.createElement('div');
-  itemEl.className = 'feed-item';
-  itemEl.innerHTML = `
-    <div class="item-left">
-      <div class="item-title">
-        <span class="status-dot online"></span>
-        <span>POST ${entry.endpoint}</span>
-        <span class="badge">${timeStr}</span>
-      </div>
-      <pre style="margin-top: 4px; max-height: 80px; overflow: auto;">${escapeHtml(JSON.stringify(entry.data, null, 2))}</pre>
-    </div>
-  `;
-
-  container.prepend(itemEl);
-}
-
-// Connect SSE stream for live mock feed
-function setupSSE() {
   try {
-    const evtSource = new EventSource('/api/events');
-    evtSource.addEventListener('sms_received', (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        appendMockFeedItem(data);
-      } catch (err) {
-        console.error('SSE JSON error', err);
-      }
+    const targetUrl = el.targetUrlInput.value.replace(/\/sms$/, '/pair');
+    const res = await fetch('/api/relay/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_url: targetUrl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        payload: {
+          token: otpCode,
+          device_name: 'Android SMS Simulator',
+          fingerprint: 'sim-dev-fp-01',
+        },
+      }),
     });
+
+    const json = await res.json();
+    if (res.ok && json.data?.jwt_token) {
+      el.authTokenInput.value = json.data.jwt_token;
+      el.authTypeSelect.value = 'bearer';
+      statusEl.textContent = '✓ Device paired successfully! Scoped JWT applied.';
+      statusEl.style.color = 'var(--accent-green)';
+    } else {
+      statusEl.textContent = `❌ Pairing failed: ${json.error?.message || 'Invalid OTP'}`;
+      statusEl.style.color = 'var(--accent-primary)';
+    }
   } catch (err) {
-    console.warn('SSE not supported or failed to connect', err);
+    statusEl.textContent = `❌ Pairing error: ${err.message}`;
+    statusEl.style.color = 'var(--accent-primary)';
   }
 }
 
-// Batch Runner
-async function runBatch(count, intervalMs, gatewayMode) {
-  const progressContainer = document.getElementById('batchProgressContainer');
-  const progressFill = document.getElementById('batchProgressFill');
-  const progressText = document.getElementById('batchProgressText');
-  const startBtn = document.getElementById('startBatchBtn');
+el.pairDeviceBtn?.addEventListener('click', () => {
+  handlePairing(el.pairingOtpInput.value.trim(), el.pairingStatusMsg);
+});
 
-  progressContainer.style.display = 'block';
-  startBtn.disabled = true;
+el.confirmQuickPairBtn?.addEventListener('click', () => {
+  handlePairing(el.modalPairingOtpInput.value.trim(), el.modalPairStatusMsg);
+});
 
-  const gwKeys = Object.keys(GATEWAYS);
+// Modals Trigger Handlers
+el.openBatchModalBtn?.addEventListener('click', () => el.batchModalOverlay.classList.add('open'));
+el.closeBatchModalBtn?.addEventListener('click', () => el.batchModalOverlay.classList.remove('open'));
+el.cancelBatchBtn?.addEventListener('click', () => el.batchModalOverlay.classList.remove('open'));
+
+el.quickPairBtn?.addEventListener('click', () => el.quickPairModalOverlay.classList.add('open'));
+el.closeQuickPairModalBtn?.addEventListener('click', () => el.quickPairModalOverlay.classList.remove('open'));
+el.cancelQuickPairBtn?.addEventListener('click', () => el.quickPairModalOverlay.classList.remove('open'));
+
+// Batch Load Test Execution
+el.startBatchBtn?.addEventListener('click', async () => {
+  const count = parseInt(el.batchCountInput.value, 10) || 10;
+  const interval = parseInt(el.batchIntervalInput.value, 10) || 250;
+
+  el.batchProgressWrap.style.display = 'flex';
+  el.startBatchBtn.disabled = true;
 
   for (let i = 1; i <= count; i++) {
-    if (gatewayMode === 'random') {
-      const randomGw = gwKeys[Math.floor(Math.random() * (gwKeys.length - 1))];
-      selectGateway(randomGw);
-    } else if (GATEWAYS[gatewayMode]) {
-      selectGateway(gatewayMode);
-    }
+    const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
+    el.inputTrxId.value = gw.genTrx();
+    el.inputNumber.value = getRandomPhone();
+    el.inputDateTime.value = getFormattedDateTime();
+    updateSmsPreview();
 
-    randomizeAllFields();
-    await sendSms();
+    await sendSmsTransmission();
 
     const percent = Math.round((i / count) * 100);
-    progressFill.style.width = `${percent}%`;
-    progressText.textContent = `Sent ${i} / ${count}`;
+    el.batchProgressBar.style.width = `${percent}%`;
+    el.batchProgressText.textContent = `Sending ${i}/${count}...`;
+    el.batchPercentText.textContent = `${percent}%`;
 
     if (i < count) {
-      await new Promise(r => setTimeout(r, intervalMs));
+      await new Promise(r => setTimeout(r, interval));
     }
   }
 
-  startBtn.disabled = false;
-  setTimeout(() => {
-    document.getElementById('batchModal').classList.remove('active');
-    progressContainer.style.display = 'none';
-  }, 1000);
+  el.startBatchBtn.disabled = false;
+  el.batchProgressText.textContent = `✓ Batch completed (${count} sent)`;
+});
+
+// Battery Slider Simulator
+el.batterySlider?.addEventListener('input', (e) => {
+  const val = e.target.value;
+  if (el.batteryValText) el.batteryValText.textContent = `${val}%`;
+  if (el.phoneBatteryBar) el.phoneBatteryBar.style.width = `${val}%`;
+  if (el.phoneBatteryText) el.phoneBatteryText.textContent = `${val}%`;
+});
+
+// Server Event Bus Connection (SSE)
+if (typeof EventSource !== 'undefined') {
+  try {
+    const evtSource = new EventSource('/api/events');
+    evtSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (el.serverEventLog) {
+          el.serverEventLog.textContent = `[${new Date().toLocaleTimeString()}] ${JSON.stringify(data)}\n` + el.serverEventLog.textContent.slice(0, 1000);
+        }
+      } catch (_) {}
+    };
+  } catch (_) {}
 }
 
-// Event Listeners Initialization
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('inputDateTime').value = getFormattedCurrentDate();
-
-  // Preset chips click
-  document.querySelectorAll('.preset-chips .chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectGateway(btn.dataset.gateway);
-    });
-  });
-
-  // Inputs change listeners
-  const inputsToListen = [
-    'inputSender', 'inputTrxId', 'inputNumber', 'inputAmount',
-    'inputCurrency', 'inputFee', 'inputBalance', 'inputRef',
-    'inputDateTime', 'templateVariant', 'payloadFormatSelect', 'rawSmsText'
-  ];
-
-  inputsToListen.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', updateUI);
-      el.addEventListener('change', updateUI);
-    }
-  });
-
-  // Quick Amount Buttons
-  document.querySelectorAll('.quick-amounts .amt-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.getElementById('inputAmount').value = parseFloat(btn.dataset.amt).toFixed(2);
-      updateUI();
-    });
-  });
-
-  // Randomizer buttons
-  document.getElementById('genTrxBtn').addEventListener('click', () => {
-    const gw = GATEWAYS[state.currentGateway] || GATEWAYS.bkash;
-    document.getElementById('inputTrxId').value = gw.genTrx();
-    updateUI();
-  });
-
-  document.getElementById('genNumBtn').addEventListener('click', () => {
-    document.getElementById('inputNumber').value = getRandomPhone();
-    updateUI();
-  });
-
-  document.getElementById('nowBtn').addEventListener('click', () => {
-    document.getElementById('inputDateTime').value = getFormattedCurrentDate();
-    updateUI();
-  });
-
-  document.getElementById('quickShuffleBtn').addEventListener('click', () => {
-    randomizeAllFields();
-  });
-
-  // Mode Toggle (Template vs Raw)
-  document.querySelectorAll('input[name="smsEditMode"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      state.editMode = e.target.value;
-      const isRaw = state.editMode === 'raw';
-      document.getElementById('templateFieldsContainer').style.display = isRaw ? 'none' : 'block';
-      document.getElementById('rawSmsContainer').style.display = isRaw ? 'block' : 'none';
-      if (isRaw) {
-        document.getElementById('rawSmsText').value = document.getElementById('phoneInputPreview').value;
-      }
-      updateUI();
-    });
-  });
-
-  // Target preset select
-  document.getElementById('targetPresetSelect').addEventListener('change', (e) => {
-    if (e.target.value !== 'custom') {
-      document.getElementById('targetUrlInput').value = e.target.value;
-    }
-  });
-
-  // Auth select toggle
-  document.getElementById('authTypeSelect').addEventListener('change', (e) => {
-    const isNone = e.target.value === 'none';
-    const input = document.getElementById('authTokenInput');
-    input.disabled = isNone;
-    if (isNone) input.value = '';
-  });
-
-  // Send buttons
-  document.getElementById('phoneSendBtn').addEventListener('click', sendSms);
-  document.getElementById('mainSendBtn').addEventListener('click', sendSms);
-  document.getElementById('randomSendBtn').addEventListener('click', () => {
-    randomizeAllFields();
-    sendSms();
-  });
-
-  // Tabs switching
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      const targetPane = document.getElementById(`tab-${btn.dataset.tab}`);
-      if (targetPane) targetPane.classList.add('active');
-    });
-  });
-
-  // Top Nav Toggles
-  document.getElementById('soundToggleBtn').addEventListener('click', () => {
-    state.soundEnabled = !state.soundEnabled;
-    document.getElementById('soundToggleBtn').innerHTML = state.soundEnabled ? '🔔' : '🔕';
-  });
-
-  document.getElementById('themeToggleBtn').addEventListener('click', () => {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', state.theme);
-    document.getElementById('themeToggleBtn').innerHTML = state.theme === 'dark' ? '🌙' : '☀️';
-  });
-
-  // Clear buttons
-  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-    state.history = [];
-    renderHistory();
-  });
-
-  document.getElementById('clearMockBtn').addEventListener('click', async () => {
-    await fetch('/api/mock-messages', { method: 'DELETE' });
-    document.getElementById('mockFeed').innerHTML = '<div class="empty-state">Waiting for incoming SMS payloads...</div>';
-  });
-
-  document.getElementById('refreshMockBtn').addEventListener('click', async () => {
-    try {
-      const res = await fetch('/api/mock-messages');
-      const json = await res.json();
-      const container = document.getElementById('mockFeed');
-      if (json.messages && json.messages.length > 0) {
-        container.innerHTML = '';
-        json.messages.forEach(msg => appendMockFeedItem(msg));
-      } else {
-        container.innerHTML = '<div class="empty-state">No mock messages received yet.</div>';
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  });
-
-  // Batch Modal
-  document.getElementById('batchModalBtn').addEventListener('click', () => {
-    document.getElementById('batchModal').classList.add('active');
-  });
-
-  document.getElementById('closeBatchModalBtn').addEventListener('click', () => {
-    document.getElementById('batchModal').classList.remove('active');
-  });
-
-  document.getElementById('cancelBatchBtn').addEventListener('click', () => {
-    document.getElementById('batchModal').classList.remove('active');
-  });
-
-  document.getElementById('startBatchBtn').addEventListener('click', () => {
-    const count = parseInt(document.getElementById('batchCount').value || '5', 10);
-    const interval = parseInt(document.getElementById('batchInterval').value || '800', 10);
-    const gwMode = document.getElementById('batchGateway').value;
-    runBatch(count, interval, gwMode);
-  });
-
-  // Init
-  selectGateway('bkash');
-  setupSSE();
-});
+// Initialize
+setGateway('bkash');
+updateSmsPreview();

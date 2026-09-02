@@ -59,7 +59,7 @@ try {
     console.error('[FAIL] .dev.vars must not be tracked in git');
     errors++;
   }
-  if (trackedFiles.some(f => f.includes('companion-state.json'))) {
+  if (trackedFiles.some(f => f.includes('companion-state.json') && !f.endsWith('.example'))) {
     console.error('[FAIL] companion-state.json must not be tracked in git');
     errors++;
   }
