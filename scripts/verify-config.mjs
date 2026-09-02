@@ -1,12 +1,17 @@
 /**
- * Configuration and Secret Hygiene Verification Script (V4-004, V4-002, V5-001, V5-003, V6-001, V6-003).
- * Performs direct filesystem tree scanning + git tracking checks.
+ * Configuration and Secret Hygiene Verification Script (V4-004, V4-002, V5-001, V5-003, V6-001, V6-003, V7-001, V7-002).
+ * Performs direct filesystem tree scanning + git tracking checks + JSONC parsed config validation.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
 let errors = 0;
+
+// Helper to strip single-line and multi-line comments from JSONC
+function stripJsonComments(str) {
+  return str.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => (g ? '' : m));
+}
 
 // 1. Direct filesystem tree scan for forbidden state files
 function scanTree(dir, ignoreDirs = ['node_modules', '.git', 'dist', 'coverage', '.system_generated']) {
@@ -64,13 +69,21 @@ try {
   // Not in a git repo (e.g. zip distribution), filesystem scan covers it
 }
 
-// 3. Check wrangler configs for Analytics Engine dataset declaration or activation guidance
+// 3. Check wrangler configs with JSONC parser (V7-002)
 const configFiles = ['wrangler.jsonc', 'wrangler.dev.jsonc', 'wrangler.staging.jsonc'];
 for (const file of configFiles) {
   if (existsSync(file)) {
     const raw = readFileSync(file, 'utf8');
-    if (!raw.includes('analytics_engine_datasets')) {
-      console.error(`[FAIL] analytics_engine_datasets must be referenced in ${file}`);
+    const stripped = stripJsonComments(raw);
+    try {
+      const parsed = JSON.parse(stripped);
+      // Verify parsed JSON structure
+      if (file !== 'wrangler.jsonc' && !parsed.analytics_engine_datasets) {
+        console.error(`[FAIL] Active analytics_engine_datasets must be declared in ${file}`);
+        errors++;
+      }
+    } catch (parseErr) {
+      console.error(`[FAIL] Invalid JSONC in ${file}: ${parseErr.message}`);
       errors++;
     }
   }
@@ -81,4 +94,4 @@ if (errors > 0) {
   process.exit(1);
 }
 
-console.log('✓ Configuration and repository hygiene verified (direct filesystem tree scan + git check).');
+console.log('✓ Configuration and repository hygiene verified (direct filesystem tree scan + git check + JSONC parser).');

@@ -501,9 +501,21 @@ const server = http.createServer(async (req, res) => {
     try {
       const payload = await parseRequestBody(req);
       const targetUrl = payload?.target_url || payload?.url;
-      if (!targetUrl) {
+      if (!targetUrl || typeof targetUrl !== 'string') {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: 'Missing target url' }));
+        return;
+      }
+
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(targetUrl);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          throw new Error('Only http and https protocols are supported');
+        }
+      } catch (urlErr) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: `Invalid target URL: ${urlErr.message}` }));
         return;
       }
 

@@ -4,9 +4,9 @@ This document tracks all security findings, remediations, and verification test 
 
 ## Status Summary
 - **Verified Money-Path P0s**: 100% Fixed & Tested
-- **Test Automation Battery**: 29 test suites, 250 tests, 0 skips, 100% green
+- **Test Automation Battery**: 29 test suites, 252 tests, 0 skips, 100% green
 - **Static Analysis & Typecheck**: ESLint 9 (0 warnings), TypeScript (0 errors), zero `as any` in `src/`
-- **Hygiene & Verification Gate**: Direct filesystem tree scan + non-colliding citation verifier + release packaging gate
+- **Hygiene & Verification Gate**: Direct filesystem tree scan + JSONC config parser + release archive builder & verifier (`npm run package`)
 
 ---
 
@@ -29,7 +29,7 @@ This document tracks all security findings, remediations, and verification test 
 | **EDGE-P1-006** | P1 | State Machine Regression | PARTIAL | `src/services/payment.ts` | `tests/payment-edgecases.test.ts` |
 | **EDGE-P1-007** | P1 | Intent Creation Race | OPEN | `src/services/payment.ts` | (30-day roadmap: UNIQUE constraint) |
 | **EDGE-P1-008** | P1 | Write Scope Enforcement | FIXED | `src/controllers/api.ts` | `tests/api-middleware.test.ts` |
-| **EDGE-P1-009** | P1 | Test Suite Integrity | FIXED | `tests/` | 29 test suites green |
+| **EDGE-P1-009** | P1 | Test Suite Integrity | FIXED | `tests/` | 29 test suites green (252 tests) |
 | **EDGE-P1-010** | P1 | KV Rate Limiter Grouping | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
 | **EDGE-P2-001** | P2 | CSRF Middleware Mounting | OPEN | `src/middleware/csrf.ts` | (30-day roadmap) |
 | **EDGE-P2-005** | P2 | Rate Limiter Fail-Open | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
@@ -68,19 +68,26 @@ This document tracks all security findings, remediations, and verification test 
 | **V4-010** | P4 | Payload Cap Covering DELETE | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
 | **V4-011** | P3 | Automated Audit Gate in CI | FIXED | `.github/workflows/audit-gate.yml` | `scripts/verify-remediations.mjs` |
 | **V5-001** | P1 | Artifact Credential Purge | FIXED | `sms-phone-mockup/.companion-state.json.example` | File replaced with template; production JWT_SECRET rotated |
-| **V5-002** | P2 | Production Telemetry Binding | FIXED | `wrangler.jsonc` | `analytics_engine_datasets` active |
+| **V5-002** | P2 | Production Telemetry Binding | PARTIAL | `wrangler.jsonc`, `src/lib/observability.ts` | Active in dev/staging; dashboard enablement guidance in prod |
 | **V5-003** | P2 | Direct Filesystem Tree Scan Gate | FIXED | `scripts/verify-config.mjs` | Direct scan across git and archive |
 | **V5-004** | P3 | Parser Header Heuristic Fix | FIXED | `scripts/verify-remediations.mjs` | Regex exact-table-header matcher |
 | **V5-005** | P3 | Direct Claim Gate Coverage | FIXED | `tests/audit-poc-r4.test.ts` | Platform admin claim gate covered |
 | **V5-006** | P3 | Discriminating Heartbeat Test | FIXED | `tests/mobile-heartbeat.test.ts` | Sentinel change & cross-tenant negative |
 | **V5-007** | P3 | Gateway Registry Seam Instrumentation | FIXED | `tests/refund-ordering.test.ts` | `gatewayRegistry.resolve` spied |
 | **V5-008** | P4 | Unhedged Asset Assertion | FIXED | `tests/assets-serving.test.ts` | Strict 200 + text/css assertions |
-| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts (248 tests) |
+| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts (252 tests) |
 | **V5-010** | P4 | Test Environment Isolation | FIXED | `vitest.config.ts`, `.dev.vars.example` | Verified in test harness |
 | **V5-011** | P4 | Bodyless DELETE 411 Contract | FIXED | `src/index.ts` | Documented for API consumers |
 | **V6-001** | P1 | Packaging Gate & Release Script | FIXED | `scripts/package-release.mjs`, `package.json` | Automated pre-packaging gate |
 | **V6-002** | P3 | Dev Secret Rotation | FIXED | `.dev.vars` | Rotated with fresh 256-bit CSPRNG keys |
 | **V6-003** | P3 | Package Tree Hygiene Gate | FIXED | `scripts/package-release.mjs`, `scripts/verify-config.mjs` | Release packaging verifies clean tree |
-| **V6-004** | P4 | Documentation Metrics Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | 248 tests synchronized |
+| **V6-004** | P4 | Documentation Metrics Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | 252 tests synchronized |
 | **V6-005** | P4 | PoC Count Normalization | FIXED | `tests/audit-poc-r4.test.ts` | 14 test cases covering 15 scenarios |
 | **V6-006** | P3 | Citation Relevance Verification | FIXED | `scripts/verify-remediations.mjs`, `tests/smoke.test.ts` | All citations strictly verified |
+| **R-3** | P4 | Simulator Localhost Default | FIXED | `sms-phone-mockup/public/index.html` | Default target set to localhost:8787 |
+| **R-4** | P4 | State File Single Match | FIXED | `scripts/verify-config.mjs` | Single boolean matcher eliminates duplicate error |
+| **V7-001** | P1 | Release Archive & Clean Tree Builder | FIXED | `scripts/package-release.mjs` | Builds dist/edgepay-cf-release.zip strictly excluding .dev.vars |
+| **V7-002** | P2 | JSONC Config Parser | FIXED | `scripts/verify-config.mjs` | Strips comments to verify active bindings |
+| **V7-003** | P3 | Discriminating Telemetry Test | FIXED | `tests/smoke.test.ts` | Explicit writeDataPoint argument assertions |
+| **V7-004** | P3 | Ledger Metrics & Provenance Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | Synchronized 252 tests across all documentation |
+| **V7-005** | P4 | Forwarding Relay URL Validation | FIXED | `sms-phone-mockup/server.js` | Protocol validation (http/https only) |

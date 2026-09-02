@@ -1,14 +1,14 @@
-# Test Results — EdgePay-CF v0.4.1 (Audit Report 5 Remediation & Quality Verification)
+# Test Results — EdgePay-CF v0.4.2 (Audit Report 6 Remediation & Quality Verification)
 
 ## Summary
 
 ```text
 Test Files  29 passed (29)
-Tests       250 passed (250) — 100% green across all unit, integration, security, and PoC suites
+Tests       252 passed (252) — 100% green across all unit, integration, security, and PoC suites
 Typecheck   0 errors (tsc --noEmit, strict mode)
 Lint        0 errors, 0 warnings (ESLint 9 flat config)
 Audit Gate  node scripts/verify-remediations.mjs & node scripts/verify-config.mjs (PASS)
-Release Gate npm run package (PASS)
+Release Gate npm run package (PASS — generates dist/edgepay-cf-release.zip with SHA-256 manifest)
 Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
 ```
 
@@ -35,8 +35,8 @@ Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
    - JWT validation, algorithm pinning, and audience checking (`tests/access-jwt.test.ts`, `tests/jwt.test.ts`)
    - Dedicated Observability & Analytics Engine verification (`tests/smoke.test.ts`)
 
-4. **Automated Verification Pipeline**:
-   - `scripts/verify-remediations.mjs` verifies all 70 ledger claims with non-colliding IDs and relevance checks
-   - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning to ensure no live credential state files ship
-   - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification
+4. **Automated Verification & Release Pipeline**:
+   - `scripts/verify-remediations.mjs` verifies all 77 ledger claims with non-colliding IDs and relevance checks
+   - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning and JSONC parsing to ensure hygiene
+   - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification and builds verified release archives (`dist/edgepay-cf-release.zip`)
    - `.github/workflows/audit-gate.yml` enforces continuous compliance in CI
