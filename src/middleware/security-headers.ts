@@ -29,50 +29,48 @@ export const securityHeadersMiddleware: MiddlewareHandler<any> = async (c, next)
 };
 
 function setHeaders(c: any): void {
-  // Generate per-request nonce (16 bytes → 22 base64 chars)
-  const cspNonce = bytesToBase64(randomBytes(16));
-
-  // v0.2.3: a route may ship its own, deliberately-tailored CSP (the only
-  // current case: the Scalar API-reference page at /api/reference, whose
-  // policy permits the pinned Scalar CDN script + a nonce and
-  // 'unsafe-inline' styles — the strict JSON-surface policy would break
-  // it). If a CSP is already on the response, keep it and only fall
-  // through to the strict default below.
-  const presetCsp = (() => {
-    try {
-      return c.res?.headers?.get?.('Content-Security-Policy') ?? null;
-    } catch {
-      return null;
-    }
-  })();
-
-  const csp = presetCsp ?? [
-    `default-src 'self'`,
-    `script-src 'self' 'nonce-${cspNonce}'`,
-    `style-src 'self' 'nonce-${cspNonce}'`,
-    `img-src 'self' data: https:`,
-    `font-src 'self' https:`,
-    `connect-src 'self' https:`,
-    `frame-ancestors 'none'`,
-    `form-action 'self'`,
-    `base-uri 'self'`,
-    `object-src 'none'`,
-    `upgrade-insecure-requests`,
-  ].join('; ');
-
-  c.header('Content-Security-Policy', csp);
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('X-Frame-Options', 'DENY');
-  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
-
-  if (c.req.url.startsWith('https://')) {
-    c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-  }
-
   try {
-    c.set('cspNonce', cspNonce);
+    // Generate per-request nonce (16 bytes → 22 base64 chars)
+    const cspNonce = bytesToBase64(randomBytes(16));
+
+    const presetCsp = (() => {
+      try {
+        return c.res?.headers?.get?.('Content-Security-Policy') ?? null;
+      } catch {
+        return null;
+      }
+    })();
+
+    const csp = presetCsp ?? [
+      `default-src 'self'`,
+      `script-src 'self' 'nonce-${cspNonce}'`,
+      `style-src 'self' 'nonce-${cspNonce}'`,
+      `img-src 'self' data: https:`,
+      `font-src 'self' https:`,
+      `connect-src 'self' https:`,
+      `frame-ancestors 'none'`,
+      `form-action 'self'`,
+      `base-uri 'self'`,
+      `object-src 'none'`,
+      `upgrade-insecure-requests`,
+    ].join('; ');
+
+    c.header('Content-Security-Policy', csp);
+    c.header('X-Content-Type-Options', 'nosniff');
+    c.header('X-Frame-Options', 'DENY');
+    c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+
+    if (c.req.url.startsWith('https://')) {
+      c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    }
+
+    try {
+      c.set('cspNonce', cspNonce);
+    } catch {
+      // Variables type may not include cspNonce — ignore
+    }
   } catch {
-    // Variables type may not include cspNonce — ignore
+    // Response might have immutable headers (e.g. ASSETS fetch response) — safe fallback
   }
 }

@@ -1,6 +1,6 @@
 {
   "edgepay_url": "https://edgepay-cf.bm-jonybepary.workers.dev",
-  "jwt_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2IiwibWVyY2hhbnRfaWQiOjgsImRldmljZV9pZCI6NCwic2NvcGUiOlsicmVhZCIsIndyaXRlIl0sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3ODgzMTM2NTQsImlzcyI6ImVkZ2VwYXktY2YiLCJhdWQiOiJtb2JpbGUiLCJleHAiOjE3ODgzMTcyNTQsImp0aSI6IjAzOWQ0YmUxLWIwMjgtNDU0Ny1iYzEzLWRhN2ViMjQ3YjhiOSJ9.4D5ooIpYXSuoLP3B84CNRi1W1XpzLqjJ8qNi62qFIZ4",
+  "jwt_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2IiwibWVyY2hhbnRfaWQiOjgsImRldmljZV9pZCI6NCwic2NvcGUiOlsicmVhZCIsIndyaXRlIl0sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3ODgzMTcyNTksImlzcyI6ImVkZ2VwYXktY2YiLCJhdWQiOiJtb2JpbGUiLCJleHAiOjE3ODgzMjA4NTksImp0aSI6IjVjMjUxNzI0LTM5NWQtNDRmNy05YTJkLTMzNzVjNmZiOGUxNiJ9.nx0YmVjCSO4muHG7MiTtBZIRdYXA6e-P3xUbEc6mf-Y",
   "refresh_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2IiwibWVyY2hhbnRfaWQiOjgsImRldmljZV9pZCI6NCwic2NvcGUiOlsicmVhZCIsIndyaXRlIl0sInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzg4MjIzNDMxLCJpc3MiOiJlZGdlcGF5LWNmIiwiYXVkIjoibW9iaWxlIiwiZXhwIjoxNzkwODE1NDMxLCJqdGkiOiI0NmVmNjhlMi1mZTkxLTRlZTItYmZjZi0wNzFjODkzNmZhZDEifQ.PFy21RufeyRg20ask_DG0Psb1UUnc2CeExXmPpCqY3k",
   "paired": true,
   "merchant_id": 8,
@@ -9,7 +9,7 @@
   "auto_relay_enabled": true,
   "simulation_active": false,
   "simulation_interval_ms": 10000,
-  "last_heartbeat_at": "2026-09-02T02:45:39.555Z",
+  "last_heartbeat_at": "2026-09-02T02:52:39.604Z",
   "battery_level": 94,
   "is_charging": true,
   "carrier": "Grameenphone 4G"
