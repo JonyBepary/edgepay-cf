@@ -1,5 +1,5 @@
 /**
- * Configuration and Secret Hygiene Verification Script (V4-004, V4-002, V5-001, V5-003).
+ * Configuration and Secret Hygiene Verification Script (V4-004, V4-002, V5-001, V5-003, V6-001, V6-003).
  * Performs direct filesystem tree scanning + git tracking checks.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -19,12 +19,9 @@ function scanTree(dir, ignoreDirs = ['node_modules', '.git', 'dist', 'coverage',
     if (stat.isDirectory()) {
       scanTree(fullPath, ignoreDirs);
     } else {
-      // Forbidden state files (e.g. .companion-state.json)
-      if (entry.includes('companion-state.json') && !entry.endsWith('.example')) {
-        console.error(`[FAIL] Forbidden state file detected in tree: ${fullPath}`);
-        errors++;
-      }
-      if (entry.endsWith('-state.json') && !entry.endsWith('.example')) {
+      // Forbidden state files (e.g. .companion-state.json or any *-state.json)
+      const isStateFile = (entry.includes('companion-state.json') || entry.endsWith('-state.json')) && !entry.endsWith('.example');
+      if (isStateFile) {
         console.error(`[FAIL] Forbidden state file detected in tree: ${fullPath}`);
         errors++;
       }

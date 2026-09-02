@@ -1,13 +1,14 @@
-# Test Results — EdgePay-CF v0.4.0 (Remediation & Quality Verification)
+# Test Results — EdgePay-CF v0.4.1 (Audit Report 5 Remediation & Quality Verification)
 
 ## Summary
 
 ```text
 Test Files  29 passed (29)
-Tests       248 passed (248) — 100% green across all unit, integration, security, and PoC suites
+Tests       250 passed (250) — 100% green across all unit, integration, security, and PoC suites
 Typecheck   0 errors (tsc --noEmit, strict mode)
 Lint        0 errors, 0 warnings (ESLint 9 flat config)
 Audit Gate  node scripts/verify-remediations.mjs & node scripts/verify-config.mjs (PASS)
+Release Gate npm run package (PASS)
 Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
 ```
 
@@ -24,7 +25,7 @@ Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
    - 128 KB bounded payload cap with 411 Length Required on chunked streams (`tests/payload-cap.test.ts`, `tests/audit-poc-r4.test.ts`)
    - Outbound SSRF protection on test & live endpoints (`tests/ssrf-webhook-test.test.ts`, `tests/url-guard.test.ts`)
    - Tenant isolation & domain routing (`tests/tenant-routing.test.ts`)
-   - Strict security headers & nonce CSP on all JSON/HTML surfaces (`tests/api-middleware.test.ts`, `tests/assets-serving.test.ts`, `tests/audit-poc-r4.test.ts`)
+   - Strict security headers & nonce CSP on all JSON/HTML surfaces (`tests/api-middleware.test.ts`, `tests/assets-serving.test.ts`, `tests/audit-poc-r4.test.ts`, `tests/smoke.test.ts`)
    - Static asset prefix rewriting returning 200 and CSS content-type (`tests/assets-serving.test.ts`, `tests/audit-poc-r4.test.ts`)
 
 3. **Mobile Companion & Tenant Isolation**:
@@ -32,8 +33,10 @@ Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
    - Discriminating device scoped heartbeats with sentinel change verification and cross-tenant isolation (`tests/mobile-heartbeat.test.ts`, `tests/audit-poc-r4.test.ts`)
    - Platform administrator gate on one-time merchant claim tokens (`tests/audit-poc-r4.test.ts`)
    - JWT validation, algorithm pinning, and audience checking (`tests/access-jwt.test.ts`, `tests/jwt.test.ts`)
+   - Dedicated Observability & Analytics Engine verification (`tests/smoke.test.ts`)
 
 4. **Automated Verification Pipeline**:
-   - `scripts/verify-remediations.mjs` verifies all 64 ledger claims with non-colliding IDs and relevance checks
+   - `scripts/verify-remediations.mjs` verifies all 70 ledger claims with non-colliding IDs and relevance checks
    - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning to ensure no live credential state files ship
+   - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification
    - `.github/workflows/audit-gate.yml` enforces continuous compliance in CI

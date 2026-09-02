@@ -23,7 +23,8 @@
     "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds.sql",
     "db:backup": "wrangler d1 export DB --remote --output=backup.sql",
     "lint": "eslint src tests",
-    "format": "prettier --write 'src/**/*.ts'"
+    "format": "prettier --write 'src/**/*.ts'",
+    "package": "node scripts/package-release.mjs"
   },
   "cloudflare": {
     "label": "EdgePay — Self-hosted Payment Gateway",

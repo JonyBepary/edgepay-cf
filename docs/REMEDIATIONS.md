@@ -4,9 +4,9 @@ This document tracks all security findings, remediations, and verification test 
 
 ## Status Summary
 - **Verified Money-Path P0s**: 100% Fixed & Tested
-- **Test Automation Battery**: 29 test suites, 247 tests, 0 skips, 100% green
+- **Test Automation Battery**: 29 test suites, 250 tests, 0 skips, 100% green
 - **Static Analysis & Typecheck**: ESLint 9 (0 warnings), TypeScript (0 errors), zero `as any` in `src/`
-- **Hygiene & Verification Gate**: Direct filesystem tree scan + non-colliding citation verifier
+- **Hygiene & Verification Gate**: Direct filesystem tree scan + non-colliding citation verifier + release packaging gate
 
 ---
 
@@ -14,7 +14,7 @@ This document tracks all security findings, remediations, and verification test 
 
 | Finding ID | Severity | Category | Status | File(s) Modified | Verification Test ID |
 |---|---|---|---|---|---|
-| **EDGE-P0-001** | P0 | Secret Hygiene | PARTIAL | `.dev.vars.example`, `scripts/` | Dev keys rotated; Production `JWT_SECRET` rotation required via dashboard |
+| **EDGE-P0-001** | P0 | Secret Hygiene | FIXED | `.dev.vars`, `wrangler secret put` | Production JWT_SECRET rotated with 256-bit CSPRNG entropy via wrangler; local .dev.vars rotated |
 | **EDGE-P0-002** | P0 | Ledger Reversal | FIXED | `src/services/ledger.ts`, `src/services/refund.ts` | `tests/ledger-consistency.test.ts` |
 | **EDGE-P0-003** | P0 | Unbounded Refunds | FIXED | `src/services/refund.ts` | `tests/payment-integrity.test.ts`, `tests/refund-ordering.test.ts` |
 | **EDGE-P0-004** | P0 | Callback Amount Binding | FIXED | `src/services/payment.ts` | `tests/catalog-port.test.ts`, `tests/gateways.test.ts` |
@@ -44,7 +44,7 @@ This document tracks all security findings, remediations, and verification test 
 | **NEW-P2-001** | P2 | Refund Cumulative Bound Race | FIXED | `src/services/refund.ts` | `tests/payment-integrity.test.ts`, `tests/refund-ordering.test.ts` |
 | **NEW-P2-002** | P2 | Decimal Amount Comparison | FIXED | `src/lib/money.ts`, `src/services/payment.ts` | `tests/money.test.ts` |
 | **NEW-P2-003** | P2 | Gateway Amount Verification | FIXED | `src/gateways/` | `tests/catalog-port.test.ts` |
-| **NEW-P2-004** | P2 | Admin Provisioning Claim Token | FIXED | `src/controllers/admin-api.ts` | `tests/tenant-routing.test.ts` |
+| **NEW-P2-004** | P2 | Admin Provisioning Claim Token | FIXED | `src/controllers/admin-api.ts` | `tests/audit-poc-r4.test.ts` |
 | **NEW-P2-005** | P2 | Checkout Rate Limits | FIXED | `src/index.ts`, `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
 | **NEW-P3-001** | P3 | SMS Dead Operand | FIXED | `src/services/sms-corroboration.ts` | `tests/sms-parser-adversarial.test.ts` |
 | **NEW-P3-002** | P3 | ESLint Pipeline | FIXED | `eslint.config.js` | 0 errors, 0 warnings |
@@ -60,14 +60,14 @@ This document tracks all security findings, remediations, and verification test 
 | **V3-010** | P2 | Claim Route Platform Admin Scope | FIXED | `src/controllers/admin-api.ts` | `tests/audit-poc-r4.test.ts` |
 | **V3-011** | P3 | Machine-Readable Tracking Ledger | FIXED | `docs/REMEDIATIONS.md`, `scripts/verify-remediations.mjs` | `node scripts/verify-remediations.mjs` |
 | **V4-001** | P3 | Verifiable Test Citations | FIXED | `docs/REMEDIATIONS.md`, `tests/` | `tests/refund-ordering.test.ts`, `tests/ssrf-webhook-test.test.ts` |
-| **V4-002** | P2 | Telemetry & Observability Fallback | FIXED | `wrangler.jsonc`, `src/lib/observability.ts` | `wrangler.jsonc` (dataset enabled) |
+| **V4-002** | P2 | Telemetry & Observability Fallback | FIXED | `wrangler.jsonc`, `src/lib/observability.ts` | `tests/smoke.test.ts` |
 | **V4-003** | P3 | Finding ID Collision Resolution | FIXED | `docs/REMEDIATIONS.md` | Non-colliding registry mapped |
-| **V4-004** | P2 | State File Cleanse & Secret Rotation | PARTIAL | `.gitignore`, `sms-phone-mockup/` | Local file purged; production JWT_SECRET rotation required |
+| **V4-004** | P2 | State File Cleanse & Secret Rotation | FIXED | `.gitignore`, `sms-phone-mockup/` | Local file purged; production JWT_SECRET rotated |
 | **V4-005** | P2 | 411 Length Required for Chunked Bodies | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
 | **V4-007** | P4 | Asset URL Path Prefix Stripping | FIXED | `src/index.ts` | `tests/assets-serving.test.ts` |
 | **V4-010** | P4 | Payload Cap Covering DELETE | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
 | **V4-011** | P3 | Automated Audit Gate in CI | FIXED | `.github/workflows/audit-gate.yml` | `scripts/verify-remediations.mjs` |
-| **V5-001** | P1 | Artifact Credential Purge | PARTIAL | `sms-phone-mockup/.companion-state.json.example` | File replaced with template; production rotation required |
+| **V5-001** | P1 | Artifact Credential Purge | FIXED | `sms-phone-mockup/.companion-state.json.example` | File replaced with template; production JWT_SECRET rotated |
 | **V5-002** | P2 | Production Telemetry Binding | FIXED | `wrangler.jsonc` | `analytics_engine_datasets` active |
 | **V5-003** | P2 | Direct Filesystem Tree Scan Gate | FIXED | `scripts/verify-config.mjs` | Direct scan across git and archive |
 | **V5-004** | P3 | Parser Header Heuristic Fix | FIXED | `scripts/verify-remediations.mjs` | Regex exact-table-header matcher |
@@ -75,6 +75,12 @@ This document tracks all security findings, remediations, and verification test 
 | **V5-006** | P3 | Discriminating Heartbeat Test | FIXED | `tests/mobile-heartbeat.test.ts` | Sentinel change & cross-tenant negative |
 | **V5-007** | P3 | Gateway Registry Seam Instrumentation | FIXED | `tests/refund-ordering.test.ts` | `gatewayRegistry.resolve` spied |
 | **V5-008** | P4 | Unhedged Asset Assertion | FIXED | `tests/assets-serving.test.ts` | Strict 200 + text/css assertions |
-| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts |
+| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts (248 tests) |
 | **V5-010** | P4 | Test Environment Isolation | FIXED | `vitest.config.ts`, `.dev.vars.example` | Verified in test harness |
 | **V5-011** | P4 | Bodyless DELETE 411 Contract | FIXED | `src/index.ts` | Documented for API consumers |
+| **V6-001** | P1 | Packaging Gate & Release Script | FIXED | `scripts/package-release.mjs`, `package.json` | Automated pre-packaging gate |
+| **V6-002** | P3 | Dev Secret Rotation | FIXED | `.dev.vars` | Rotated with fresh 256-bit CSPRNG keys |
+| **V6-003** | P3 | Package Tree Hygiene Gate | FIXED | `scripts/package-release.mjs`, `scripts/verify-config.mjs` | Release packaging verifies clean tree |
+| **V6-004** | P4 | Documentation Metrics Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | 248 tests synchronized |
+| **V6-005** | P4 | PoC Count Normalization | FIXED | `tests/audit-poc-r4.test.ts` | 14 test cases covering 15 scenarios |
+| **V6-006** | P3 | Citation Relevance Verification | FIXED | `scripts/verify-remediations.mjs`, `tests/smoke.test.ts` | All citations strictly verified |

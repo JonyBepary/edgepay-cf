@@ -1,5 +1,5 @@
 /**
- * ROUND-4 INDEPENDENT PoCs — 15 discriminating test cases covering:
+ * ROUND-4 INDEPENDENT PoCs — 14 discriminating test cases (covering 15 PoC scenarios):
  * PoC-1/2: Payload cap & 411 on chunked stream
  * PoC-3: Static assets prefix rewrite (200 / text/css / nosniff / DENY)
  * PoC-4: Heartbeat tenant/device scoping with sentinel change & cross-tenant negative
