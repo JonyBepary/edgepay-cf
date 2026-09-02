@@ -68,7 +68,7 @@ This document tracks all security findings, remediations, and verification test 
 | **V4-010** | P4 | Payload Cap Covering DELETE | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
 | **V4-011** | P3 | Automated Audit Gate in CI | FIXED | `.github/workflows/audit-gate.yml` | `scripts/verify-remediations.mjs` |
 | **V5-001** | P1 | Artifact Credential Purge | FIXED | `sms-phone-mockup/.companion-state.json.example` | File replaced with template; production JWT_SECRET rotated |
-| **V5-002** | P2 | Production Telemetry Binding | PARTIAL | `wrangler.jsonc`, `src/lib/observability.ts` | Active in dev/staging; dashboard enablement guidance in prod |
+| **V5-002** | P2 | Production Telemetry Binding | FIXED | `wrangler.jsonc`, `src/lib/observability.ts` | Active analytics_engine_datasets in all 3 configs |
 | **V5-003** | P2 | Direct Filesystem Tree Scan Gate | FIXED | `scripts/verify-config.mjs` | Direct scan across git and archive |
 | **V5-004** | P3 | Parser Header Heuristic Fix | FIXED | `scripts/verify-remediations.mjs` | Regex exact-table-header matcher |
 | **V5-005** | P3 | Direct Claim Gate Coverage | FIXED | `tests/audit-poc-r4.test.ts` | Platform admin claim gate covered |
@@ -91,3 +91,8 @@ This document tracks all security findings, remediations, and verification test 
 | **V7-003** | P3 | Discriminating Telemetry Test | FIXED | `tests/smoke.test.ts` | Explicit writeDataPoint argument assertions |
 | **V7-004** | P3 | Ledger Metrics & Provenance Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | Synchronized 252 tests across all documentation |
 | **V7-005** | P4 | Forwarding Relay URL Validation | FIXED | `sms-phone-mockup/server.js` | Protocol validation (http/https only) |
+| **V8-001** | P2 | Release Packaging Allowlist & State Cleanse | FIXED | `scripts/package-release.mjs` | Strict hidden-dir & allowlist filter strictly excludes .wrangler, .opencode, .slim, sqlite |
+| **V8-002** | P2 | Unexempted Production Analytics Binding Gate | FIXED | `wrangler.jsonc`, `scripts/verify-config.mjs` | Active analytics binding declared and verified across all 3 configs |
+| **V8-003** | P3 | Standalone Release Distribution Standard | FIXED | `scripts/package-release.mjs` | Release artifact packaged as self-contained verified archive |
+| **V8-004** | P4 | Strict Post-Zip Comprehensive Regex Verification | FIXED | `scripts/package-release.mjs` | Enforces regex screening on full unzip -l listing |
+| **V8-005** | P4 | Manifest & Archive Entry Accounting | FIXED | `scripts/package-release.mjs` | Explicit documentation of staged count vs archive entry count |

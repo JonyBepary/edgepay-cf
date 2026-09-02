@@ -77,8 +77,8 @@ for (const file of configFiles) {
     const stripped = stripJsonComments(raw);
     try {
       const parsed = JSON.parse(stripped);
-      // Verify parsed JSON structure
-      if (file !== 'wrangler.jsonc' && !parsed.analytics_engine_datasets) {
+      // Verify parsed JSON structure across all configs without exemptions (V8-002)
+      if (!parsed.analytics_engine_datasets || !Array.isArray(parsed.analytics_engine_datasets)) {
         console.error(`[FAIL] Active analytics_engine_datasets must be declared in ${file}`);
         errors++;
       }

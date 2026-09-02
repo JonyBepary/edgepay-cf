@@ -236,9 +236,9 @@
   //   (Enable at https://dash.cloudflare.com/17347346d8cc54bbb820a0a0413d98c0/workers/analytics-engine
   //    then uncomment the binding below to activate live dataset streams)
   // ============================================================
-  // "analytics_engine_datasets": [
-  //   { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
-  // ],
+  "analytics_engine_datasets": [
+    { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
+  ],
 
   // ============================================================
   // Workers Static Assets — serves checkout CSS/JS with zero subrequests

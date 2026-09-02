@@ -1,9 +1,9 @@
 /**
- * Release Packaging & Integrity Gate Script (V6-001, V7-001).
- * 1. Runs full 5-step verification battery.
- * 2. Creates a clean staging build strictly excluding all .dev.vars and state files.
+ * Release Packaging & Integrity Gate Script (V6-001, V7-001, V8-001, V8-002, V8-003, V8-004, V8-005).
+ * 1. Runs full 5-stage pre-flight verification battery.
+ * 2. Creates a clean staging build strictly excluding all dev state, hidden dirs, .dev.vars, and audit documents.
  * 3. Generates SHA-256 release-manifest.json.
- * 4. Compresses into dist/edgepay-cf-release.zip and verifies the artifact independently.
+ * 4. Compresses into dist/edgepay-cf-release.zip and verifies the artifact independently with strict regex matching.
  */
 import { execSync } from 'node:child_process';
 import {
@@ -32,7 +32,7 @@ try {
   console.log('\n3. Verifying Remediation Ledger...');
   execSync('node scripts/verify-remediations.mjs', { stdio: 'inherit' });
 
-  console.log('\n4. Verifying Repository & Configuration Hygiene...');
+  console.log('\n4. Verifying Repository & Configuration Hygiene (All Configs Active)...');
   execSync('node scripts/verify-config.mjs', { stdio: 'inherit' });
 
   console.log('\n5. Running Vitest Test Battery...');
@@ -43,7 +43,7 @@ try {
 }
 
 // 2. Build Clean Distribution Archive in dist/
-console.log('\n6. Building & Validating Clean Release Distribution Archive...');
+console.log('\n6. Building & Validating Clean Release Distribution Archive (Allowlist & Strict Hygiene)...');
 
 const distDir = join(process.cwd(), 'dist');
 const stagingDir = join(distDir, 'edgepay-cf');
@@ -54,43 +54,57 @@ if (existsSync(distDir)) {
 }
 mkdirSync(stagingDir, { recursive: true });
 
-const IGNORE_PATTERNS = [
-  'node_modules',
-  '.git',
-  'dist',
-  'coverage',
-  '.system_generated',
-  '.DS_Store',
-];
+function isForbiddenInRelease(relPath, fileName, isDir) {
+  // 1. Hidden directories (V8-001): exclude all .* directories except .github
+  if (isDir) {
+    if (fileName.startsWith('.') && fileName !== '.github') {
+      return true;
+    }
+    if (['node_modules', 'dist', 'coverage', '.system_generated'].includes(fileName)) {
+      return true;
+    }
+    return false;
+  }
 
-function isForbiddenInRelease(relPath, fileName) {
-  // 1. Forbidden env files (.dev.vars, .env, etc. - except .example)
+  // 2. Hidden files (exclude .DS_Store, .companion-state.json, etc. - except .gitignore, .dev.vars.example, .companion-state.json.example)
   if (fileName === '.dev.vars' || (fileName.startsWith('.dev.vars.') && !fileName.endsWith('.example'))) {
     return true;
   }
-  // 2. Forbidden state files
   if ((fileName.includes('companion-state.json') || fileName.endsWith('-state.json')) && !fileName.endsWith('.example')) {
     return true;
   }
+  if (fileName === '.DS_Store' || fileName.endsWith('.sqlite') || fileName.endsWith('.sqlite3') || fileName.endsWith('.sqlite-wal') || fileName.endsWith('.log')) {
+    return true;
+  }
+
+  // 3. Exclude internal audit correspondence from customer-facing release distribution
+  if (/^EDGEPAY_CF_FULL_AUDIT_REPORT_\d+\.md$/i.test(fileName)) {
+    return true;
+  }
+
   return false;
 }
+
+const excludedLog = [];
 
 function copyCleanTree(srcDir, destDir) {
   const entries = readdirSync(srcDir);
   for (const entry of entries) {
-    if (IGNORE_PATTERNS.includes(entry)) continue;
-
     const srcPath = join(srcDir, entry);
     const destPath = join(destDir, entry);
     const relPath = relative(process.cwd(), srcPath);
     const stat = statSync(srcPath);
 
     if (stat.isDirectory()) {
+      if (isForbiddenInRelease(relPath, entry, true)) {
+        excludedLog.push(`[DIR]  ${relPath}`);
+        continue;
+      }
       mkdirSync(destPath, { recursive: true });
       copyCleanTree(srcPath, destPath);
     } else {
-      if (isForbiddenInRelease(relPath, entry)) {
-        // Excluded from release archive
+      if (isForbiddenInRelease(relPath, entry, false)) {
+        excludedLog.push(`[FILE] ${relPath}`);
         continue;
       }
       copyFileSync(srcPath, destPath);
@@ -100,7 +114,7 @@ function copyCleanTree(srcDir, destDir) {
 
 copyCleanTree(process.cwd(), stagingDir);
 
-// 3. Scan Staging Directory to Guarantee 100% Hygiene
+// 3. Scan Staging Directory to Guarantee 100% Hygiene & Generate Hashes
 let scanErrors = 0;
 const manifestFiles = {};
 
@@ -114,8 +128,7 @@ function scanAndHashStaging(dir) {
     if (stat.isDirectory()) {
       scanAndHashStaging(fullPath);
     } else {
-      // Re-verify no forbidden file slipped through
-      if (isForbiddenInRelease(relPath, entry)) {
+      if (isForbiddenInRelease(relPath, entry, false)) {
         console.error(`[FATAL] Forbidden file found in release staging: ${relPath}`);
         scanErrors++;
       }
@@ -139,9 +152,10 @@ if (scanErrors > 0) {
 // 4. Write release-manifest.json
 const manifest = {
   release: 'edgepay-cf',
-  version: '0.4.1',
+  version: '0.4.3',
   timestamp: new Date().toISOString(),
-  file_count: Object.keys(manifestFiles).length,
+  staged_file_count: Object.keys(manifestFiles).length,
+  manifest_note: 'total archive entries equals staged_file_count + 1 (including release-manifest.json itself)',
   files: manifestFiles,
 };
 
@@ -156,22 +170,38 @@ try {
   process.exit(1);
 }
 
-// 6. Verify the created Zip Archive
+// 6. Strict Comprehensive Post-Build Zip Listing Verification (V8-004)
 const zipStat = statSync(zipFile);
 const zipBuffer = readFileSync(zipFile);
 const zipSha256 = createHash('sha256').update(zipBuffer).digest('hex');
 
-// Double-check zip entries using unzip -l
 const zipListing = execSync(`unzip -l "${zipFile}"`, { encoding: 'utf8' });
-if (zipListing.includes('.dev.vars\n') || zipListing.includes('.companion-state.json\n')) {
-  console.error('[FATAL] Zip verification failed: forbidden files detected in generated archive!');
-  process.exit(1);
+const FORBIDDEN_ZIP_PATTERNS = [
+  /\.dev\.vars(?!\.example)/,
+  /companion-state\.json(?!\.example)/,
+  /-state\.json(?!\.example)/,
+  /\.wrangler\//,
+  /\.opencode\//,
+  /\.slim\//,
+  /\.sqlite/,
+  /\.log\n/,
+  /node_modules\//,
+  /\.git\//,
+];
+
+for (const pattern of FORBIDDEN_ZIP_PATTERNS) {
+  if (pattern.test(zipListing)) {
+    console.error(`[FATAL] Zip verification failed: forbidden pattern '${pattern}' matched in archive listing!`);
+    process.exit(1);
+  }
 }
 
-console.log(`✓ Clean release archive generated successfully:`);
-console.log(`  Archive:   ${zipFile}`);
-console.log(`  Size:      ${zipStat.size} bytes`);
-console.log(`  SHA-256:   ${zipSha256}`);
-console.log(`  Files:     ${Object.keys(manifestFiles).length} files packaged (0 .dev.vars, 0 state files)`);
+console.log(`✓ Clean release archive generated and verified successfully:`);
+console.log(`  Archive:              ${zipFile}`);
+console.log(`  Size:                 ${zipStat.size} bytes`);
+console.log(`  SHA-256:              ${zipSha256}`);
+console.log(`  Staged Files:         ${Object.keys(manifestFiles).length} files`);
+console.log(`  Total Zip Entries:    ${Object.keys(manifestFiles).length + 1} (including release-manifest.json)`);
+console.log(`  Exclusions Applied:   ${excludedLog.length} items filtered`);
 
 console.log('\n=== All Packaging Gates Passed Successfully ===\n');
