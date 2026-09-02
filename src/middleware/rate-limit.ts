@@ -47,11 +47,8 @@ function rateLimitHeaders(c: { header: (k: string, v: string) => void }, limit: 
 }
 
 function getClientIp(headers: Headers): string {
-  // CF-Connecting-IP is set by Cloudflare's edge — always trust it
-  return headers.get('CF-Connecting-IP') ??
-         headers.get('X-Real-IP') ??
-         headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ??
-         '0.0.0.0';
+  // CF-Connecting-IP is set by Cloudflare's edge — always trust it directly
+  return headers.get('CF-Connecting-IP') ?? '0.0.0.0';
 }
 
 /**
@@ -101,14 +98,13 @@ export const rateLimitMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: 
 
 /**
  * Anonymous-route rate limiter — per IP via KV (login attempts, OTP
- * pairing, install). Keep volumes low: KV free tier allows only 1K
- * writes/day, so only mount this on genuinely anonymous, low-QPS paths.
+ * pairing, install, checkout). Keyed by IP and route-class group (V3-006 fix).
  */
 export function perIpRateLimit(group: keyof typeof ANON_ROUTE_LIMITS): MiddlewareHandler<{ Bindings: Env }> {
   const config = ANON_ROUTE_LIMITS[group];
   return async (c, next) => {
     const clientIp = getClientIp(c.req.raw.headers);
-    const key = `${config.keyPrefix}${clientIp}:${c.req.path}`;
+    const key = `${config.keyPrefix}${clientIp}:${group}`;
 
     const counterRaw = await c.env.KV.get(key);
     let count = 0;

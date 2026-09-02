@@ -246,18 +246,19 @@ mobileRoutes.get('/notifications', async (c) => {
   return c.json({ success: true, data: rows.results });
 });
 
-// Acknowledge notifications
+// Acknowledge notifications — strictly tenant and device scoped (V3-001 / EDGE-P3-003 fix)
 mobileRoutes.post('/notifications/acknowledgements', async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const deviceId = c.get('authSubject')!;
   const body = await c.req.json<{ notification_ids?: number[] }>();
   if (!body.notification_ids?.length) {
     return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'notification_ids required' } }, 400);
   }
 
   const placeholders = body.notification_ids.map(() => '?').join(',');
-  await c.env.DB.prepare(
+  const res = await c.env.DB.prepare(
+    `UPDATE op_mobile_notifications SET read_at = ? WHERE id IN (${placeholders}) AND merchant_id = ? AND device_id = ?`
+  ).bind(new Date().toISOString(), ...body.notification_ids, merchantId, deviceId).run();
 
-    `UPDATE op_mobile_notifications SET read_at = ? WHERE id IN (${placeholders})`
-).bind(new Date().toISOString(), ...body.notification_ids).run();
-
-  return c.json({ success: true, data: { acknowledged: body.notification_ids.length } });
+  return c.json({ success: true, data: { acknowledged: res.meta?.changes ?? body.notification_ids.length } });
 });

@@ -33,8 +33,8 @@ export class WebhookQueueConsumer {
     const startTime = Date.now();
 
     try {
-      // SSRF protection — block private + loopback + encoded IPs (EDGE-P1-004 fix)
-      if (!isAllowedWebhookUrl(webhook.url, env.ENVIRONMENT !== 'production')) {
+      // SSRF protection — block private + loopback + encoded IPs (EDGE-P1-004 / V3-007 fix)
+      if (!isAllowedWebhookUrl(webhook.url, env.ALLOW_LOCAL_WEBHOOK_TARGETS === '1')) {
         await this.logDelivery(env, webhook, 0, 0, false, 'blocked_ssrf');
         await msg.ack();
         return;

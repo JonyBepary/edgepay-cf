@@ -100,38 +100,14 @@ export class RefundService {
       );
     }
 
-    // 2. Ask the gateway to issue the refund (best effort — manual
-    //    gateways return unsupported and the refund is processed off-band;
-    //    the workflow polls and eventually pages if it never settles).
-    let gatewayRefundId: string | null = null;
-    try {
-      if (tx.gateway_slug && tx.gateway_trx_id) {
-        const adapter = gatewayRegistry.resolve(tx.gateway_slug);
-        const credentials = await this.loadCredentials(tx.payment_intent_id);
-        const result = await adapter.refund(tx.gateway_trx_id, input.amount, credentials, { kv: this.env.KV });
-        if (result.success && result.refund_id) {
-          gatewayRefundId = result.refund_id;
-        }
-      }
-    } catch (err) {
-      // Refund initiation failed at the gateway — record the refund row
-      // anyway (status pending) so the workflow + sweep track it; page so
-      // an operator sees the failed initiation immediately.
-      page(env, 'REFUND_INITIATION_FAILED', {
-        transaction_id: input.transaction_id,
-        merchant_id: input.merchant_id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-
-    // 3. Atomically persist the refund row with conditional bound check (NEW-P2-001 fix)
+    // 2. Atomically reserve the refund row with conditional bound check FIRST (V3-003 fix)
     const refundPublicId = `rfnd_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
     const inserted = await env.DB
       .prepare(
         `INSERT INTO op_refunds
            (merchant_id, refund_id, transaction_id, gateway_refund_id, amount,
             currency, reason, status, initiated_by, created_at, updated_at)
-         SELECT ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?
+         SELECT ?, ?, ?, NULL, ?, ?, ?, 'pending', ?, ?, ?
          WHERE (
            SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) FROM op_refunds
            WHERE transaction_id = ? AND merchant_id = ?
@@ -142,7 +118,6 @@ export class RefundService {
         input.merchant_id,
         refundPublicId,
         input.transaction_id,
-        gatewayRefundId,
         input.amount,
         tx.currency,
         input.reason ?? null,
@@ -161,6 +136,30 @@ export class RefundService {
     }
 
     const refundRowId = inserted.meta?.last_row_id ?? 0;
+
+    // 3. Ask the gateway to issue the refund after the atomic reservation is locked
+    let gatewayRefundId: string | null = null;
+    try {
+      if (tx.gateway_slug && tx.gateway_trx_id) {
+        const adapter = gatewayRegistry.resolve(tx.gateway_slug);
+        const credentials = await this.loadCredentials(tx.payment_intent_id);
+        const result = await adapter.refund(tx.gateway_trx_id, input.amount, credentials, { kv: this.env.KV });
+        if (result.success && result.refund_id) {
+          gatewayRefundId = result.refund_id;
+          await env.DB
+            .prepare(`UPDATE op_refunds SET gateway_refund_id = ?, updated_at = ? WHERE id = ?`)
+            .bind(gatewayRefundId, new Date().toISOString(), refundRowId)
+            .run();
+        }
+      }
+    } catch (err) {
+      page(env, 'REFUND_INITIATION_FAILED', {
+        transaction_id: input.transaction_id,
+        merchant_id: input.merchant_id,
+        refund_id: refundPublicId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     // 4. THE trigger path — instance-per-refund, idempotent by instance id
     const trigger = await triggerRefundReconciliation(env, refundRowId);

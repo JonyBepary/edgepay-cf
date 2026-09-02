@@ -90,6 +90,7 @@ export interface Env {
   ADMIN_EMAIL?: string;
   DEFAULT_WEBHOOK_URL?: string;
   ADMIN_PASSWORD?: string;
+  ALLOW_LOCAL_WEBHOOK_TARGETS?: string;
 
   // Secrets — set via `wrangler secret put`
   JWT_SECRET: string;

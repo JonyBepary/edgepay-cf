@@ -8,7 +8,7 @@
 
 import { Hono } from 'hono';
 import type { Env } from '../types/env';
-import { requireBearerApiAuth, requireScope } from '../middleware/auth';
+import { requireBearerApiAuth, requireScope, type ApiVariables } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 import { createIdempotencyMiddleware, idempotencyMiddleware } from '../middleware/idempotency';
 import { PaymentService } from '../services/payment';
@@ -18,15 +18,15 @@ import { gatewayRegistry, gatewaySelection, catalogCounts, catalogFind } from '.
 import { zValidator } from '@hono/zod-validator';
 import { randomToken } from '../lib/crypto';
 
-export const apiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
+export const apiRoutes = new Hono<{ Bindings: Env; Variables: ApiVariables }>();
 
 // All routes require bearer auth with read, write, or admin scope
 apiRoutes.use('*', requireBearerApiAuth(['read', 'write', 'admin']));
 
-// Enforce write scope on all mutating HTTP methods (POST, PUT, PATCH, DELETE) — EDGE-P1-008 fix
+// Enforce write scope on all mutating HTTP methods (POST, PUT, PATCH, DELETE) — EDGE-P1-008 / V3-009 fix
 apiRoutes.use('*', async (c, next) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(c.req.method)) {
-    return (requireScope('write') as any)(c, next);
+    return requireScope('write')(c, next);
   }
   return next();
 });
@@ -334,7 +334,7 @@ apiRoutes.post('/webhooks', async (c) => {
   }
 
   const { isAllowedWebhookUrl } = await import('../lib/url-guard');
-  if (!isAllowedWebhookUrl(body.url, c.env.ENVIRONMENT !== 'production')) {
+  if (!isAllowedWebhookUrl(body.url, c.env.ALLOW_LOCAL_WEBHOOK_TARGETS === '1')) {
     return c.json({ success: false, error: { code: 'INVALID_URL', message: 'Webhook URL must be a valid public HTTPS endpoint' } }, 400);
   }
 
@@ -376,6 +376,14 @@ apiRoutes.post('/webhooks/tests', async (c) => {
   const merchantId = c.get('merchantId')!;
   let body: { url?: string } = {};
   try { body = await c.req.json(); } catch { /* optional body */ }
+
+  if (body?.url) {
+    const { isAllowedWebhookUrl } = await import('../lib/url-guard');
+    if (!isAllowedWebhookUrl(body.url, c.env.ALLOW_LOCAL_WEBHOOK_TARGETS === '1')) {
+      return c.json({ success: false, error: { code: 'INVALID_URL', message: 'Webhook URL must be a valid public HTTPS endpoint' } }, 400);
+    }
+  }
+
   const { WebhookDispatcher } = await import('../services/webhook-dispatcher');
   const dispatcher = new WebhookDispatcher(c.env);
   const result = await dispatcher.sendTest(merchantId as number, body?.url);

@@ -181,14 +181,20 @@ app.use('/api/admin/*', accessAuthMiddleware());
 // Security & Rate Limiting Mounts (NEW-P1-002, EDGE-P1-002, NEW-P2-005, P1-003)
 // ---------------------------------------------------------------
 
-// Body size cap: max 128 KB for JSON / Webhook / Checkout payloads
+// Body size cap: max 128 KB for JSON / Webhook / Checkout payloads (P1-003 / V3-005 fix)
 app.use('*', async (c, next) => {
-  const cl = c.req.header('content-length');
-  if (cl && parseInt(cl, 10) > 128 * 1024) {
-    return c.json({
-      success: false,
-      error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 128 KB limit' },
-    }, 413);
+  const method = c.req.method;
+  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    const cl = c.req.header('content-length');
+    if (cl) {
+      const len = parseInt(cl, 10);
+      if (isNaN(len) || len > 128 * 1024) {
+        return c.json({
+          success: false,
+          error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 128 KB limit' },
+        }, 413);
+      }
+    }
   }
   return next();
 });

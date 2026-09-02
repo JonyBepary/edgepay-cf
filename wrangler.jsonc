@@ -232,13 +232,11 @@
   ],
 
   // ============================================================
-  // Analytics Engine — per-merchant metrics without touching D1
-  //   (opt-in after first deploy: enable at https://dash.cloudflare.com/
-  //    under Workers & Pages > Analytics Engine, then uncomment here)
+  // Analytics Engine — per-merchant metrics without touching D1 (EDGE-P2-006)
   // ============================================================
-  // "analytics_engine_datasets": [
-  //   { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
-  // ],
+  "analytics_engine_datasets": [
+    { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }
+  ],
 
   // ============================================================
   // Workers Static Assets — serves checkout CSS/JS with zero subrequests

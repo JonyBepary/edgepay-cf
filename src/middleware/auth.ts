@@ -19,7 +19,7 @@ import type { Env } from '../types/env';
 import { sha256, timingSafeEqual } from '../lib/crypto';
 import { UnauthorizedError, ForbiddenError } from '../lib/error';
 
-interface ApiVariables {
+export interface ApiVariables {
   merchantId: number | null;
   authSubject: number | null;
   authScopes: string[];

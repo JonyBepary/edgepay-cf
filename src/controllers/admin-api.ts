@@ -5,14 +5,14 @@
  * Used by the EdgePay admin dashboard (HTML UI).
  */
 
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import type { Env } from '../types/env';
-import { requireBearerApiAuth, requireScope } from '../middleware/auth';
+import { requireBearerApiAuth, requireScope, type ApiVariables } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 import { RefundService } from '../services/refund';
 import { runReconciliation } from '../services/reconciliation';
 
-export const adminApiRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
+export const adminApiRoutes = new Hono<{ Bindings: Env; Variables: ApiVariables }>();
 
 function normalizeHostname(hostname: string): string {
   return hostname.toLowerCase().trim();
@@ -243,9 +243,9 @@ adminApiRoutes.get('/ledger/trial-balance', requireScope('admin'), async (c) => 
   return c.json({ success: true, data: { trial_balance: trial, consistency } });
 });
 
-// Platform check middleware: only platform merchant (is_platform = 1) can manage other tenants
-async function requirePlatformAdmin(c: any, next: any) {
-  const merchantId = c.get('merchantId') as number | undefined;
+// Platform check middleware: only platform merchant (is_platform = 1) can manage other tenants (V3-009 typed)
+const requirePlatformAdmin: MiddlewareHandler<{ Bindings: Env; Variables: ApiVariables }> = async (c, next) => {
+  const merchantId = c.get('merchantId');
   if (!merchantId) {
     return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Platform authentication required' } }, 403);
   }
@@ -256,7 +256,7 @@ async function requirePlatformAdmin(c: any, next: any) {
     return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Platform administrator privileges required' } }, 403);
   }
   return next();
-}
+};
 
 // List all merchants (Platform Admin only)
 adminApiRoutes.get('/merchants', requireScope('admin'), requirePlatformAdmin, async (c) => {

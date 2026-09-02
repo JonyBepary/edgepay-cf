@@ -1,35 +1,5 @@
-# EdgePay Worker secrets — example file.
-#
-# Copy to `.dev.vars` for local development (`wrangler dev` auto-loads it).
-# In production set these values via `wrangler secret put <NAME>` or via the
-# Deploy to Cloudflare button setup page.
-#
-# Deploy to Cloudflare button: only the 5 real secrets below are prompted as
-# secure masked fields (•). All 8 harmless variables (ENABLED_GATEWAYS,
-# ALLOWED_ORIGINS, CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD_TAG, BREAK_GLASS_CLIENT_ID,
-# CF_ACCOUNT_ID, CF_ZONE_ID, PBKDF2_ITERATIONS) are defined in wrangler.jsonc "vars"
-# as normal text inputs with default values.
-#
-# Generate the 3 required secrets before deploying:
-#   JWT_SECRET:      openssl rand -hex 32
-#   APP_KEY:         openssl rand -base64 32
-#   ENCRYPTION_KEY:  openssl rand -base64 32
-
-# --- REQUIRED secrets (stay masked •) --------------------------------------
-
-# Signs mobile-companion JWTs (HS256). Min 32 chars.
-JWT_SECRET=
-
-# HMAC key for signing operations (base64-encoded 32 bytes).
-APP_KEY=
-
-# AES-256-GCM key for at-rest encryption (base64-encoded 32 bytes).
-ENCRYPTION_KEY=
-
-# --- OPTIONAL secrets (configure after deploy via Dashboard / wrangler secret put)
-#
-# Emergency service token secret paired with non-secret BREAK_GLASS_CLIENT_ID:
-# BREAK_GLASS_CLIENT_SECRET=
-#
-# Cloudflare API token for custom hostnames (Cloudflare for SaaS):
-# CF_API_TOKEN=
+# EdgePay local secrets template
+# Generate fresh random secrets with: openssl rand -hex 32 / openssl rand -base64 32
+JWT_SECRET=YOUR_32_BYTE_HEX_JWT_SECRET_HERE
+APP_KEY=YOUR_32_BYTE_BASE64_APP_KEY_HERE
+ENCRYPTION_KEY=YOUR_32_BYTE_BASE64_ENCRYPTION_KEY_HERE

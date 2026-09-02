@@ -114,6 +114,12 @@ export class WebhookDispatcher {
       if (!urlToUse) {
         return { success: false, error: 'No webhook endpoint registered for merchant' };
       }
+
+      const { isAllowedWebhookUrl } = await import('../lib/url-guard');
+      if (!isAllowedWebhookUrl(urlToUse, this.env.ALLOW_LOCAL_WEBHOOK_TARGETS === '1')) {
+        return { success: false, error: 'Target webhook URL is blocked by SSRF protection' };
+      }
+
       const secret = `whsec_${crypto.randomUUID().replace(/-/g, '')}`;
       const now = new Date().toISOString();
       const ins = await this.env.DB.prepare(
