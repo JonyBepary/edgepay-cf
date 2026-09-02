@@ -22,6 +22,7 @@ import { UnauthorizedError, ForbiddenError } from '../lib/error';
 export interface ApiVariables {
   merchantId: number | null;
   authSubject: number | null;
+  deviceId?: number | null;
   authScopes: string[];
   authType: 'bearer' | 'jwt' | 'session' | null;
 }
@@ -156,6 +157,7 @@ export function requireJwtAuth(): MiddlewareHandler<{ Bindings: Env; Variables: 
 
     c.set('authType', 'jwt');
     c.set('authSubject', parseInt(payload.sub, 10));
+    c.set('deviceId', payload.device_id ?? null);
     c.set('authScopes', payload.scope);
     // Tenant isolation: if domain middleware resolved a merchant, the JWT must belong to the same merchant
     const domainMerchantIdForJwt = c.get('merchantId');

@@ -232,16 +232,15 @@ mobileRoutes.post('/sms/batch', async (c) => {
 // Get notifications
 mobileRoutes.get('/notifications', async (c) => {
   const merchantId = c.get('merchantId')!;
-  const deviceId = c.get('authSubject')!;
+  const deviceId = (c.get('deviceId') as number | undefined) ?? c.get('authSubject')!;
 
   const rows = await c.env.DB.prepare(
-
     `SELECT id, event, payload, read_at, created_at
      FROM op_mobile_notifications
      WHERE merchant_id = ? AND device_id = ?
      ORDER BY created_at DESC
      LIMIT 50`
-).bind(merchantId, deviceId).all();
+  ).bind(merchantId, deviceId).all();
 
   return c.json({ success: true, data: rows.results });
 });
@@ -249,7 +248,7 @@ mobileRoutes.get('/notifications', async (c) => {
 // Acknowledge notifications — strictly tenant and device scoped (V3-001 / EDGE-P3-003 fix)
 mobileRoutes.post('/notifications/acknowledgements', async (c) => {
   const merchantId = c.get('merchantId')!;
-  const deviceId = c.get('authSubject')!;
+  const deviceId = (c.get('deviceId') as number | undefined) ?? c.get('authSubject')!;
   const body = await c.req.json<{ notification_ids?: number[] }>();
   if (!body.notification_ids?.length) {
     return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'notification_ids required' } }, 400);
