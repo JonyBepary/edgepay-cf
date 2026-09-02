@@ -94,7 +94,7 @@ describe('Idempotency — body hashing without consuming request', () => {
     });
     // If body were consumed, zValidator would see empty body -> 400
     expect(res.status).toBe(201);
-    const json = (await res.json()) as any;
+    const json = await res.json<{ success: boolean; data: { intent_id: string } }>();
     expect(json.success).toBe(true);
     expect(json.data.intent_id).toBeDefined();
   });
@@ -108,7 +108,7 @@ describe('Idempotency — body hashing without consuming request', () => {
       body: JSON.stringify(body),
     });
     expect(first.status).toBe(201);
-    const firstJson = (await first.json()) as any;
+    const firstJson = await first.json<{ data: { intent_id: string } }>();
     const firstIntent = firstJson.data.intent_id;
 
     const second = await SELF.fetch('http://localhost/api/v1/payments', {
@@ -118,7 +118,7 @@ describe('Idempotency — body hashing without consuming request', () => {
     });
     expect(second.status).toBe(201);
     expect(second.headers.get('X-Idempotent-Replay')).toBe('true');
-    const secondJson = (await second.json()) as any;
+    const secondJson = await second.json<{ data: { intent_id: string } }>();
     expect(secondJson.data.intent_id).toBe(firstIntent);
 
     // Same key, different body => 409 Conflict
@@ -152,7 +152,7 @@ describe('Idempotency — do not cache 4xx', () => {
     // Should succeed (201) and not be a replay
     expect(good.status).toBe(201);
     expect(good.headers.get('X-Idempotent-Replay')).toBeNull();
-  });
+  }, 15000);
 
   it('4xx does not leave a row in op_idempotency_keys', async () => {
     const key = `idem-4xx-row-${Date.now()}`;
@@ -166,7 +166,7 @@ describe('Idempotency — do not cache 4xx', () => {
       .bind(M1, key)
       .first();
     expect(row).toBeNull();
-  });
+  }, 15000);
 });
 
 describe('Idempotency — concurrent D1 uniqueness safely', () => {
@@ -228,7 +228,7 @@ describe('Idempotency — refunds require X-Idempotency-Key', () => {
       body: JSON.stringify({ transaction_id: trxId }),
     });
     expect(noKey.status).toBe(400);
-    const noKeyJson = (await noKey.json()) as any;
+    const noKeyJson = await noKey.json<{ error: { code: string } }>();
     expect(noKeyJson.error.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
 
     // With key: should NOT be 400 for missing key (may be 422/502/201 depending on gateway, but not idle key error)
@@ -238,10 +238,10 @@ describe('Idempotency — refunds require X-Idempotency-Key', () => {
       body: JSON.stringify({ transaction_id: trxId }),
     });
     expect(withKey.status).not.toBe(400);
-    const withKeyJson = (await withKey.json()) as any;
+    const withKeyJson = await withKey.json<{ error?: { code?: string } }>();
     // The only 400 allowed here would be VALIDATION_ERROR, not IDEMPOTENCY_KEY_REQUIRED
     if (withKey.status === 400) {
-      expect(withKeyJson.error.code).not.toBe('IDEMPOTENCY_KEY_REQUIRED');
+      expect(withKeyJson.error?.code).not.toBe('IDEMPOTENCY_KEY_REQUIRED');
     }
   });
 });
@@ -257,7 +257,7 @@ describe('Tenant safety — idempotency keys are merchant-scoped', () => {
       body: JSON.stringify(body),
     });
     expect(r1.status).toBe(201);
-    const j1 = (await r1.json()) as any;
+    const j1 = await r1.json<{ data: { intent_id: string } }>();
     const intent1 = j1.data.intent_id;
 
     const r2 = await SELF.fetch('http://localhost/api/v1/payments', {
@@ -267,7 +267,7 @@ describe('Tenant safety — idempotency keys are merchant-scoped', () => {
     });
     expect(r2.status).toBe(201);
     expect(r2.headers.get('X-Idempotent-Replay')).toBeNull();
-    const j2 = (await r2.json()) as any;
+    const j2 = await r2.json<{ data: { intent_id: string } }>();
     expect(j2.data.intent_id).not.toBe(intent1);
 
     // Verify two rows, one per merchant

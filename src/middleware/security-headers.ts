@@ -13,11 +13,10 @@
  * and injected into HTML responses by the template engine.
  */
 
-import type { MiddlewareHandler } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import { randomBytes, bytesToBase64 } from '../lib/crypto';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const securityHeadersMiddleware: MiddlewareHandler<any> = async (c, next) => {
+export const securityHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   try {
     await next();
   } catch (err) {
@@ -28,7 +27,7 @@ export const securityHeadersMiddleware: MiddlewareHandler<any> = async (c, next)
   setHeaders(c);
 };
 
-function setHeaders(c: any): void {
+function setHeaders(c: Context): void {
   try {
     // Generate per-request nonce (16 bytes → 22 base64 chars)
     const cspNonce = bytesToBase64(randomBytes(16));

@@ -76,8 +76,7 @@ export class NagadGateway extends BaseGatewayAdapter {
 
     const publicKey = await this.importPublicKey(credentials.public_key);
     const encryptedSensitive = await crypto.subtle.encrypt(
-      // Nagad RSA-OAEP should explicitly use SHA-256 (not default SHA-1)
-      { name: 'RSA-OAEP', hash: 'SHA-256' } as any,
+      { name: 'RSA-OAEP' },
       publicKey,
       new TextEncoder().encode(sensitiveData),
     );

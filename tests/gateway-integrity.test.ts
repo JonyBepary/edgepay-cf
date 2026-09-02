@@ -111,7 +111,7 @@ describe('StripeGateway fixes', () => {
   it('refund uses charge vs payment_intent correctly', async () => {
     const gw = new StripeGateway();
     let lastBody = '';
-    mockGwJson((url) => {
+    mockGwJson((_url) => {
       // capture is inside gwJson mock via global fetch spy; we need to capture body via spy
       return { status: 200, data: { id: 're_123', status: 'succeeded' } };
     });
@@ -197,14 +197,14 @@ describe('PayPalGateway fixes', () => {
 
 describe('Bkash gateway fixes', () => {
   it('cache key is mode-scoped (sandbox vs live do not collide)', async () => {
-    const gw = new BkashApiGateway() as any;
+    const gw = new BkashApiGateway() as unknown as { getToken: (url: string, creds: Record<string, string>, ctx: { kv: unknown }) => Promise<string> };
     // Use TokenCache directly to verify key scope: we test via getToken cache behavior
     // Simulate two modes produce different keys by inspecting private method via spy on TokenCache
     const kvStore = new Map<string, string>();
     const kv = { get: async (k: string) => kvStore.get(k) ?? null, put: async (k: string, v: string) => { kvStore.set(k, v); } };
     // Provide mock fetch for token grant
     let tokenGrantCalls = 0;
-    vi.spyOn(globalThis, 'fetch').mockImplementation((async (input: string | URL | Request) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((async (_input: string | URL | Request) => {
       tokenGrantCalls++;
       return new Response(JSON.stringify({ id_token: `tok-${tokenGrantCalls}` }), { status: 200 });
     }) as never);
@@ -213,13 +213,13 @@ describe('Bkash gateway fixes', () => {
     const credLive = { app_key: 'APP1', app_secret: 's', username: 'u', password: 'p', mode: 'live' };
 
     // First call sandbox -> grants
-    await (gw as any).getToken('https://tokenized.sandbox.bka.sh/v1.2.0-beta', credSandbox, { kv: kv as any });
+    await gw.getToken('https://tokenized.sandbox.bka.sh/v1.2.0-beta', credSandbox, { kv: kv as unknown as KVNamespace });
     expect(tokenGrantCalls).toBe(1);
     // Second call sandbox should be cached (no new grant)
-    await (gw as any).getToken('https://tokenized.sandbox.bka.sh/v1.2.0-beta', credSandbox, { kv: kv as any });
+    await gw.getToken('https://tokenized.sandbox.bka.sh/v1.2.0-beta', credSandbox, { kv: kv as unknown as KVNamespace });
     expect(tokenGrantCalls).toBe(1);
     // Live mode with same app_key should NOT hit sandbox cache -> grant again
-    await (gw as any).getToken('https://tokenized.pay.bka.sh/v1.2.0-beta', credLive, { kv: kv as any });
+    await gw.getToken('https://tokenized.pay.bka.sh/v1.2.0-beta', credLive, { kv: kv as unknown as KVNamespace });
     expect(tokenGrantCalls).toBe(2);
     expect(kvStore.has('bkash:token:sandbox:APP1')).toBe(true);
     expect(kvStore.has('bkash:token:live:APP1')).toBe(true);
@@ -252,7 +252,7 @@ describe('Razorpay gateway fixes', () => {
     const secret = 'sec';
     const msg = `${orderId}|${paymentId}`;
     const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' } as any, false, ['sign']);
+    const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' } as HmacImportParams, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
     const sigHex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -288,7 +288,7 @@ describe('TokenCache avoids expired tokens', () => {
       get: async (k: string) => store.get(k) ?? null,
       put: async (k: string, v: string) => { store.set(k, v); },
     };
-    const cache = new TokenCache(kv as any);
+    const cache = new TokenCache(kv as unknown as KVNamespace);
     await cache.put('k', 'tok1', 1); // 1 sec TTL
     expect(await cache.get('k')).toBe('tok1');
     // Fast-forward time by mocking Date.now
@@ -296,7 +296,7 @@ describe('TokenCache avoids expired tokens', () => {
     vi.spyOn(Date, 'now').mockImplementation(() => now + 2000);
     expect(await cache.get('k')).toBeNull();
     // KV entry also expires
-    const cache2 = new TokenCache(kv as any);
+    const cache2 = new TokenCache(kv as unknown as KVNamespace);
     expect(await cache2.get('k')).toBeNull();
     vi.restoreAllMocks();
     TokenCache._clearForTests();
