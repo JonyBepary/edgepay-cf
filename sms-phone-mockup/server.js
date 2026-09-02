@@ -29,7 +29,7 @@ const sseClients = new Set();
 
 // Companion Configuration & State
 let companionState = {
-  edgepay_url: process.env.EDGEPAY_URL || 'https://edgepay-cf.bm-jonybepary.workers.dev',
+  edgepay_url: process.env.EDGEPAY_URL || 'http://localhost:8787',
   jwt_token: process.env.MOBILE_JWT || '',
   refresh_token: '',
   paired: false,

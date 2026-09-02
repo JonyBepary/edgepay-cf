@@ -267,8 +267,8 @@ adminApiRoutes.get('/merchants', requireScope('admin'), requirePlatformAdmin, as
   return c.json({ success: true, data: rows.results });
 });
 
-// One-time credential claim for newly provisioned merchants
-adminApiRoutes.post('/merchants/claim', async (c) => {
+// One-time credential claim for newly provisioned merchants (Platform Admin only)
+adminApiRoutes.post('/merchants/claim', requireScope('admin'), requirePlatformAdmin, async (c) => {
   const body = await c.req.json<{ claim_token?: string }>();
   if (!body.claim_token) {
     return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'claim_token is required' } }, 400);

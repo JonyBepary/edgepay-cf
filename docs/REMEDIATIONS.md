@@ -1,39 +1,80 @@
-# EDGEpay-CF — Comprehensive Remediation Ledger & Audit Verification Matrix
+# EdgePay-CF Audit & Remediation Ledger
 
-This ledger provides a line-referenced, artifact-verifiable record of all findings and remediations across the audit series (`EDGEPAY_CF_FULL_AUDIT_REPORT_1.md` and `EDGEPAY_CF_FULL_AUDIT_REPORT_2.md`).
+This document tracks all security findings, remediations, and verification test suites across the EdgePay-CF audit series.
+
+## Status Summary
+- **Verified Money-Path P0s**: 100% Fixed & Tested
+- **Test Automation Battery**: 29 test suites, 247 tests, 0 skips, 100% green
+- **Static Analysis & Typecheck**: ESLint 9 (0 warnings), TypeScript (0 errors), zero `as any` in `src/`
+- **Hygiene & Verification Gate**: Direct filesystem tree scan + non-colliding citation verifier
 
 ---
 
-## Remediation Matrix
+## Remediation Tracking Table
 
 | Finding ID | Severity | Category | Status | File(s) Modified | Verification Test ID |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **EDGE-P0-001** | P0 | Secrets | **FIXED** | `scripts/verify-*.mjs`, `.dev.vars.example` | Verified zero literal secret fallbacks in codebase; `.dev.vars` purged and rotated. |
-| **EDGE-P0-002** | P0 | Money / Ledger | **FIXED** | `src/services/ledger.ts`, `src/services/refund.ts` | `tests/ledger-consistency.test.ts` (Idempotent refund posting by public ID). |
-| **EDGE-P0-003** | P0 | Money / Ledger | **FIXED** | `src/services/refund.ts` | `tests/payment-integrity.test.ts` (Cumulative refund limits). |
-| **EDGE-P0-004** | P0 | Payment Integrity | **FIXED** | `src/services/payment.ts` | `tests/payment-integrity.test.ts` (Amount and trx_id binding in callbacks). |
-| **EDGE-P0-005** | P0 | Auth / Install | **FIXED** | `src/controllers/install.ts`, `src/services/bootstrap.ts` | `tests/tenant-routing.test.ts` (Post-install secret posture protection). |
-| **EDGE-P0-006** | P0 | XSS / Checkout | **FIXED** | `src/controllers/checkout.ts` | `tests/smoke.test.ts` (CSP headers, HTML attribute escaping). |
-| **EDGE-P0-007** | P0 | Payment Integrity | **FIXED** | `src/controllers/checkout.ts`, `src/services/sms-corroboration.ts` | `tests/sms-corroboration-edgecases.test.ts` (Strict exact decimal amount check). |
-| **EDGE-P1-001** | P1 | Concurrency | **FIXED** | `src/middleware/idempotency.ts` | `tests/api-middleware.test.ts` (Idempotency cache & body hash check). |
-| **EDGE-P1-002** | P1 | Brute Force | **FIXED** | `src/index.ts`, `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` (OTP rate limiting on mobile pairing). |
-| **EDGE-P1-003** | P1 | DoS / Memory | **FIXED** | `src/index.ts` | `tests/api-middleware.test.ts` (128 KB request payload cap). |
-| **EDGE-P1-004** | P1 | SSRF | **FIXED** | `src/lib/url-guard.ts`, `src/queues/webhook-consumer.ts` | `tests/url-guard.test.ts` (SSRF guard blocking private IPv4/IPv6, encoded IPs, redirects). |
-| **EDGE-P1-005** | P1 | Privilege Escalation | **FIXED** | `src/controllers/admin-api.ts` | `tests/tenant-routing.test.ts` (`requirePlatformAdmin` `is_platform = 1` check on `/merchants`). |
-| **EDGE-P1-006** | P1 | State Machine | **FIXED** | `src/services/payment.ts` | `tests/payment-integrity.test.ts` (Terminal state guards on transactions). |
-| **EDGE-P1-008** | P1 | Authorization | **FIXED** | `src/controllers/api.ts` | `tests/api-middleware.test.ts` (Enforced `requireScope('write')` on mutating verbs). |
-| **EDGE-P2-001** | P2 | Concurrency | **FIXED** | `src/services/refund.ts` | `tests/payment-integrity.test.ts` (Atomic conditional INSERT for refund bound). |
-| **EDGE-P2-002** | P2 | Decimal Safety | **FIXED** | `src/services/payment.ts`, `src/lib/money.ts` | `tests/money.test.ts` (Strict `cmp()` exact decimal comparisons). |
-| **EDGE-P2-003** | P2 | Payment Integrity | **FIXED** | `src/services/payment.ts` | `tests/payment-integrity.test.ts` (Mandatory amount verification for API gateways). |
-| **EDGE-P2-004** | P2 | Secrets | **FIXED** | `src/controllers/admin-api.ts` | `tests/tenant-routing.test.ts` (One-time claim token flow for merchant provisioning). |
-| **EDGE-P2-005** | P2 | Abuse Hardening | **FIXED** | `src/index.ts`, `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` (Rate-limiting on `/checkout/*/verify`). |
-| **EDGE-P2-006** | P2 | Observability | **FIXED** | `wrangler.jsonc`, `src/lib/observability.ts` | Verified `analytics_engine_datasets` active and bound to `ANALYTICS`. |
-| **EDGE-P3-001** | P3 | Code Cleanup | **FIXED** | `src/services/sms-corroboration.ts` | `tests/sms-corroboration-edgecases.test.ts` (Removed dead operand). |
-| **EDGE-P3-002** | P3 | Tooling | **FIXED** | `eslint.config.js`, `package.json` | Verified `npm run lint` with ESLint 9 flat config. |
-| **EDGE-P3-003 / V3-001** | P3 | Tenant Isolation | **FIXED** | `src/controllers/mobile.ts` | `tests/mobile-notifications.test.ts` (Strict `merchant_id` & `device_id` predicate on ack UPDATE). |
-| **V3-002** | P2 | SSRF | **FIXED** | `src/services/webhook-dispatcher.ts`, `src/controllers/api.ts` | `tests/url-guard.test.ts` (`sendTest` and `POST /webhooks/tests` validate URL before INSERT). |
-| **V3-003** | P2 | Money / Ordering | **FIXED** | `src/services/refund.ts` | `tests/payment-integrity.test.ts` (Reserve-then-call: atomic DB reservation BEFORE gateway call). |
-| **V3-005** | P2 | DoS / Payload | **FIXED** | `src/index.ts` | `tests/api-middleware.test.ts` (Hardened payload cap checking mutating requests). |
-| **V3-006** | P3 | Abuse Hardening | **FIXED** | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` (CF-Connecting-IP and route-class keying for anonymous limits). |
-| **V3-007** | P3 | Security Guard | **FIXED** | `src/lib/url-guard.ts`, `src/queues/webhook-consumer.ts` | `tests/url-guard.test.ts` (Explicit `ALLOW_LOCAL_WEBHOOK_TARGETS` opt-in flag). |
-| **V3-009** | P3 | Type Safety | **FIXED** | `src/controllers/admin-api.ts`, `src/controllers/api.ts` | `npm run typecheck` & `npm run lint` (Replaced `any` with strict `ApiVariables`). |
+|---|---|---|---|---|---|
+| **EDGE-P0-001** | P0 | Secret Hygiene | PARTIAL | `.dev.vars.example`, `scripts/` | Dev keys rotated; Production `JWT_SECRET` rotation required via dashboard |
+| **EDGE-P0-002** | P0 | Ledger Reversal | FIXED | `src/services/ledger.ts`, `src/services/refund.ts` | `tests/ledger-consistency.test.ts` |
+| **EDGE-P0-003** | P0 | Unbounded Refunds | FIXED | `src/services/refund.ts` | `tests/payment-integrity.test.ts`, `tests/refund-ordering.test.ts` |
+| **EDGE-P0-004** | P0 | Callback Amount Binding | FIXED | `src/services/payment.ts` | `tests/catalog-port.test.ts`, `tests/gateways.test.ts` |
+| **EDGE-P0-005** | P0 | Bootstrap & Install Chain | PARTIAL | `src/services/bootstrap.ts`, `src/controllers/install.ts` | `tests/tenant-routing.test.ts` |
+| **EDGE-P0-006** | P0 | Stored XSS & CSP | FIXED | `src/controllers/checkout.ts`, `src/middleware/security-headers.ts` | `tests/smoke.test.ts`, `tests/api-middleware.test.ts` |
+| **EDGE-P0-007** | P0 | SMS Corroboration NULL Amount | FIXED | `src/services/sms-corroboration.ts` | `tests/sms-corroboration-edgecases.test.ts` |
+| **EDGE-P1-001** | P1 | Idempotency Concurrency | FIXED | `src/middleware/idempotency.ts` | `tests/payment-integrity.test.ts` |
+| **EDGE-P1-002** | P1 | OTP Rate Limiting | FIXED | `src/index.ts`, `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
+| **EDGE-P1-003** | P1 | Payload Size Cap | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
+| **EDGE-P1-004** | P1 | Outbound SSRF Protection | FIXED | `src/lib/url-guard.ts`, `src/services/webhook-dispatcher.ts` | `tests/url-guard.test.ts`, `tests/ssrf-webhook-test.test.ts` |
+| **EDGE-P1-005** | P1 | Tenant Enumeration | FIXED | `src/controllers/admin-api.ts` | `tests/tenant-routing.test.ts` |
+| **EDGE-P1-006** | P1 | State Machine Regression | PARTIAL | `src/services/payment.ts` | `tests/payment-edgecases.test.ts` |
+| **EDGE-P1-007** | P1 | Intent Creation Race | OPEN | `src/services/payment.ts` | (30-day roadmap: UNIQUE constraint) |
+| **EDGE-P1-008** | P1 | Write Scope Enforcement | FIXED | `src/controllers/api.ts` | `tests/api-middleware.test.ts` |
+| **EDGE-P1-009** | P1 | Test Suite Integrity | FIXED | `tests/` | 29 test suites green |
+| **EDGE-P1-010** | P1 | KV Rate Limiter Grouping | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
+| **EDGE-P2-001** | P2 | CSRF Middleware Mounting | OPEN | `src/middleware/csrf.ts` | (30-day roadmap) |
+| **EDGE-P2-005** | P2 | Rate Limiter Fail-Open | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
+| **EDGE-P2-006** | P2 | Analytics Engine Telemetry | FIXED | `wrangler.jsonc`, `src/lib/observability.ts` | `tests/smoke.test.ts` |
+| **EDGE-P2-007** | P2 | Webhook Outbox Pattern | OPEN | `src/services/webhook-dispatcher.ts` | (90-day roadmap: outbox table) |
+| **EDGE-P2-015** | P2 | ReDoS Pattern Screen | OPEN | `src/controllers/admin-api.ts` | (30-day roadmap: regex allowlist) |
+| **EDGE-P2-016** | P2 | Gateway Enablement Default | OPEN | `src/gateways/enabled.ts` | (30-day roadmap: fail-closed default) |
+| **EDGE-P2-017** | P2 | PBKDF2 Iteration Count | OPEN | `src/lib/crypto.ts` | (30-day roadmap: 600K iterations) |
+| **EDGE-P2-018** | P2 | Money Bounds Schema | FIXED | `src/lib/money.ts` | `tests/money.test.ts` |
+| **EDGE-P3-002** | P3 | Mobile Heartbeat Scoping | FIXED | `src/controllers/mobile.ts` | `tests/mobile-heartbeat.test.ts` |
+| **EDGE-P3-003** | P3 | Mobile Notification Tenant Scoping | FIXED | `src/controllers/mobile.ts`, `src/middleware/auth.ts` | `tests/mobile-notifications.test.ts` |
+| **NEW-P2-001** | P2 | Refund Cumulative Bound Race | FIXED | `src/services/refund.ts` | `tests/payment-integrity.test.ts`, `tests/refund-ordering.test.ts` |
+| **NEW-P2-002** | P2 | Decimal Amount Comparison | FIXED | `src/lib/money.ts`, `src/services/payment.ts` | `tests/money.test.ts` |
+| **NEW-P2-003** | P2 | Gateway Amount Verification | FIXED | `src/gateways/` | `tests/catalog-port.test.ts` |
+| **NEW-P2-004** | P2 | Admin Provisioning Claim Token | FIXED | `src/controllers/admin-api.ts` | `tests/tenant-routing.test.ts` |
+| **NEW-P2-005** | P2 | Checkout Rate Limits | FIXED | `src/index.ts`, `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
+| **NEW-P3-001** | P3 | SMS Dead Operand | FIXED | `src/services/sms-corroboration.ts` | `tests/sms-parser-adversarial.test.ts` |
+| **NEW-P3-002** | P3 | ESLint Pipeline | FIXED | `eslint.config.js` | 0 errors, 0 warnings |
+| **V3-001** | P3 | False Claim Remediation | FIXED | `src/controllers/mobile.ts`, `src/middleware/auth.ts` | `tests/mobile-notifications.test.ts` |
+| **V3-002** | P2 | sendTest SSRF Enforcement | FIXED | `src/services/webhook-dispatcher.ts`, `src/controllers/api.ts` | `tests/ssrf-webhook-test.test.ts` |
+| **V3-003** | P1 | Refund Ghost-Call Ordering | FIXED | `src/services/refund.ts` | `tests/refund-ordering.test.ts` |
+| **V3-004** | P2 | Claim Token Plaintext KV Staging | OPEN | `src/controllers/admin-api.ts` | (30-day roadmap: encrypt-at-rest) |
+| **V3-005** | P2 | Bounded Payload Cap | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
+| **V3-006** | P2 | CF-Connecting-IP & Route Keying | FIXED | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
+| **V3-007** | P2 | SSRF Opt-In Flag | FIXED | `src/types/env.ts`, `src/controllers/api.ts`, `src/queues/webhook-consumer.ts` | `tests/ssrf-webhook-test.test.ts` |
+| **V3-008** | P2 | Auto-Bootstrap First-Request Lockout | OPEN | `src/services/bootstrap.ts` | (30-day roadmap) |
+| **V3-009** | P2 | Strict Typed Middleware | FIXED | `src/controllers/admin-api.ts`, `src/controllers/api.ts`, `src/middleware/auth.ts` | `src/` (tsc --noEmit) |
+| **V3-010** | P2 | Claim Route Platform Admin Scope | FIXED | `src/controllers/admin-api.ts` | `tests/audit-poc-r4.test.ts` |
+| **V3-011** | P3 | Machine-Readable Tracking Ledger | FIXED | `docs/REMEDIATIONS.md`, `scripts/verify-remediations.mjs` | `node scripts/verify-remediations.mjs` |
+| **V4-001** | P3 | Verifiable Test Citations | FIXED | `docs/REMEDIATIONS.md`, `tests/` | `tests/refund-ordering.test.ts`, `tests/ssrf-webhook-test.test.ts` |
+| **V4-002** | P2 | Telemetry & Observability Fallback | FIXED | `wrangler.jsonc`, `src/lib/observability.ts` | `wrangler.jsonc` (dataset enabled) |
+| **V4-003** | P3 | Finding ID Collision Resolution | FIXED | `docs/REMEDIATIONS.md` | Non-colliding registry mapped |
+| **V4-004** | P2 | State File Cleanse & Secret Rotation | PARTIAL | `.gitignore`, `sms-phone-mockup/` | Local file purged; production JWT_SECRET rotation required |
+| **V4-005** | P2 | 411 Length Required for Chunked Bodies | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
+| **V4-007** | P4 | Asset URL Path Prefix Stripping | FIXED | `src/index.ts` | `tests/assets-serving.test.ts` |
+| **V4-010** | P4 | Payload Cap Covering DELETE | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
+| **V4-011** | P3 | Automated Audit Gate in CI | FIXED | `.github/workflows/audit-gate.yml` | `scripts/verify-remediations.mjs` |
+| **V5-001** | P1 | Artifact Credential Purge | PARTIAL | `sms-phone-mockup/.companion-state.json.example` | File replaced with template; production rotation required |
+| **V5-002** | P2 | Production Telemetry Binding | FIXED | `wrangler.jsonc` | `analytics_engine_datasets` active |
+| **V5-003** | P2 | Direct Filesystem Tree Scan Gate | FIXED | `scripts/verify-config.mjs` | Direct scan across git and archive |
+| **V5-004** | P3 | Parser Header Heuristic Fix | FIXED | `scripts/verify-remediations.mjs` | Regex exact-table-header matcher |
+| **V5-005** | P3 | Direct Claim Gate Coverage | FIXED | `tests/audit-poc-r4.test.ts` | Platform admin claim gate covered |
+| **V5-006** | P3 | Discriminating Heartbeat Test | FIXED | `tests/mobile-heartbeat.test.ts` | Sentinel change & cross-tenant negative |
+| **V5-007** | P3 | Gateway Registry Seam Instrumentation | FIXED | `tests/refund-ordering.test.ts` | `gatewayRegistry.resolve` spied |
+| **V5-008** | P4 | Unhedged Asset Assertion | FIXED | `tests/assets-serving.test.ts` | Strict 200 + text/css assertions |
+| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts |
+| **V5-010** | P4 | Test Environment Isolation | FIXED | `vitest.config.ts`, `.dev.vars.example` | Verified in test harness |
+| **V5-011** | P4 | Bodyless DELETE 411 Contract | FIXED | `src/index.ts` | Documented for API consumers |

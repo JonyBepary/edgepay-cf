@@ -1,0 +1,16 @@
+{
+  "edgepay_url": "http://localhost:8787",
+  "jwt_token": "placeholder-access-token",
+  "refresh_token": "placeholder-refresh-token",
+  "paired": false,
+  "merchant_id": null,
+  "device_uuid": null,
+  "device_name": "Companion Mockup Simulator",
+  "auto_relay_enabled": false,
+  "simulation_active": false,
+  "simulation_interval_ms": 15000,
+  "last_heartbeat_at": null,
+  "battery_level": 100,
+  "is_charging": true,
+  "carrier": "Mock Carrier"
+}

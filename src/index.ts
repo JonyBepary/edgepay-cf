@@ -76,6 +76,29 @@ const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 // the request context when access logs are emitted.
 app.use('*', requestId());
 app.use('*', logger());
+
+// Body size cap: max 128 KB for JSON / Webhook / Checkout payloads (P1-003 / V3-005 / V4-005 / V4-010 fix)
+app.use('*', async (c, next) => {
+  const method = c.req.method;
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const cl = c.req.header('content-length');
+    if (!cl) {
+      return c.json({
+        success: false,
+        error: { code: 'LENGTH_REQUIRED', message: 'Content-Length header required' },
+      }, 411);
+    }
+    const len = parseInt(cl, 10);
+    if (isNaN(len) || len > 128 * 1024) {
+      return c.json({
+        success: false,
+        error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 128 KB limit' },
+      }, 413);
+    }
+  }
+  return next();
+});
+
 // Bootstrap: non-blocking — schedule via waitUntil so no request pays the
 // multi-step D1/KV bootstrap cost synchronously. Deduplicated promise ensures
 // concurrent cold-start requests share one bootstrap.
@@ -181,23 +204,6 @@ app.use('/api/admin/*', accessAuthMiddleware());
 // Security & Rate Limiting Mounts (NEW-P1-002, EDGE-P1-002, NEW-P2-005, P1-003)
 // ---------------------------------------------------------------
 
-// Body size cap: max 128 KB for JSON / Webhook / Checkout payloads (P1-003 / V3-005 fix)
-app.use('*', async (c, next) => {
-  const method = c.req.method;
-  if (['POST', 'PUT', 'PATCH'].includes(method)) {
-    const cl = c.req.header('content-length');
-    if (cl) {
-      const len = parseInt(cl, 10);
-      if (isNaN(len) || len > 128 * 1024) {
-        return c.json({
-          success: false,
-          error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 128 KB limit' },
-        }, 413);
-      }
-    }
-  }
-  return next();
-});
 
 // Specific anonymous credential / pairing / checkout rate limiters
 app.use('/install/bootstrap-key', perIpRateLimit('password'));
@@ -242,10 +248,13 @@ app.route('/webhook', webhookRoutes);
 
 // ---------------------------------------------------------------
 // Static assets — with run_worker_first=true the Worker sees EVERY path;
-// pure-asset requests are delegated to the ASSETS binding here.
+// pure-asset requests are delegated to the ASSETS binding with prefix stripped.
 // ---------------------------------------------------------------
 app.get('/assets/*', async (c) => {
-  const res = await c.env.ASSETS.fetch(c.req.raw);
+  const url = new URL(c.req.url);
+  url.pathname = url.pathname.replace(/^\/assets/, '') || '/';
+  const assetReq = new Request(url.toString(), c.req.raw);
+  const res = await c.env.ASSETS.fetch(assetReq);
   return new Response(res.body, res);
 });
 

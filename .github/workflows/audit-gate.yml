@@ -1,0 +1,43 @@
+name: Audit Gate & Verification CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    name: Lint, Typecheck, Test & Ledger Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify repository and config hygiene
+        run: node scripts/verify-config.mjs
+
+      - name: Verify remediation ledger integrity
+        run: node scripts/verify-remediations.mjs
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Verify zero "as any" in src/
+        run: |
+          ! grep -rn "as any" src/ || (echo "Found unexpected 'as any' in src/"; exit 1)
+
+      - name: ESLint 9 validation
+        run: npm run lint
+
+      - name: Run complete test battery
+        run: npm test

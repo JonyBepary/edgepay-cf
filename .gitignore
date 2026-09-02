@@ -15,3 +15,8 @@ coverage/
 # port-pipeline generated intermediates (regenerate via scripts/port-gateways/build-all.sh)
 scripts/port-gateways/analysis.json
 scripts/port-gateways/analysis-report.txt
+
+# Local companion & simulator runtime state
+**/.companion-state.json
+*-state.json
+

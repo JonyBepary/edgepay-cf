@@ -123,10 +123,11 @@ mobileRoutes.use('*', requireJwtAuth());
 
 // Heartbeat
 const handleHeartbeat = async (c: MobileContext) => {
-  const deviceId = c.get('authSubject')!;
+  const deviceId = (c.get('deviceId') as number | undefined) ?? c.get('authSubject')!;
+  const merchantId = c.get('merchantId')!;
   await c.env.DB.prepare(
-    `UPDATE op_paired_devices SET last_heartbeat_at = ? WHERE id = ?`
-  ).bind(new Date().toISOString(), deviceId).run();
+    `UPDATE op_paired_devices SET last_heartbeat_at = ? WHERE id = ? AND merchant_id = ?`
+  ).bind(new Date().toISOString(), deviceId, merchantId).run();
   return c.json({ success: true, data: { status: 'ok' } });
 };
 
