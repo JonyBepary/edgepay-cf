@@ -233,8 +233,7 @@
 
   // ============================================================
   // Analytics Engine — per-merchant metrics without touching D1 (EDGE-P2-006 / V4-002)
-  //   (Enable at https://dash.cloudflare.com/17347346d8cc54bbb820a0a0413d98c0/workers/analytics-engine
-  //    then uncomment the binding below to activate live dataset streams)
+  //   Active dataset binding for edgepay_metrics live telemetry
   // ============================================================
   "analytics_engine_datasets": [
     { "binding": "ANALYTICS", "dataset": "edgepay_metrics" }

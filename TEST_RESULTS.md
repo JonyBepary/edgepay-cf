@@ -1,14 +1,14 @@
-# Test Results — EdgePay-CF v0.4.2 (Audit Report 6 Remediation & Quality Verification)
+# Test Results — EdgePay-CF v0.4.3 (Audit Report 8 Remediation & Quality Verification)
 
 ## Summary
 
 ```text
-Test Files  29 passed (29)
-Tests       252 passed (252) — 100% green across all unit, integration, security, and PoC suites
+Test Files  30 passed (30)
+Tests       260 passed (260) — 100% green across all unit, integration, security, and PoC suites
 Typecheck   0 errors (tsc --noEmit, strict mode)
 Lint        0 errors, 0 warnings (ESLint 9 flat config)
 Audit Gate  node scripts/verify-remediations.mjs & node scripts/verify-config.mjs (PASS)
-Release Gate npm run package (PASS — generates dist/edgepay-cf-release.zip with SHA-256 manifest)
+Release Gate npm run package (PASS — generates clean dist/edgepay-cf-release.zip with SHA-256 manifest)
 Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
 ```
 
@@ -21,22 +21,23 @@ Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
    - Mandatory gateway amount checks & callback bindings (`tests/catalog-port.test.ts`, `tests/gateways.test.ts`)
    - Idempotency key scoping across tenants (`tests/payment-integrity.test.ts`)
 
-2. **Edge Security & Routing**:
+2. **Cryptography & Security Posture**:
+   - PBKDF2 password hashing & verification with OWASP 600,000 iterations standard (`tests/crypto-security.test.ts`, `src/lib/crypto.ts`)
+   - AES-256-GCM authenticated encryption for PII, gateway credentials, and staged claim tokens (`tests/crypto-security.test.ts`, `src/controllers/admin-api.ts`)
+   - Fail-closed platform gateway enablement selector (`tests/crypto-security.test.ts`, `src/gateways/enabled.ts`)
    - 128 KB bounded payload cap with 411 Length Required on chunked streams (`tests/payload-cap.test.ts`, `tests/audit-poc-r4.test.ts`)
    - Outbound SSRF protection on test & live endpoints (`tests/ssrf-webhook-test.test.ts`, `tests/url-guard.test.ts`)
-   - Tenant isolation & domain routing (`tests/tenant-routing.test.ts`)
    - Strict security headers & nonce CSP on all JSON/HTML surfaces (`tests/api-middleware.test.ts`, `tests/assets-serving.test.ts`, `tests/audit-poc-r4.test.ts`, `tests/smoke.test.ts`)
-   - Static asset prefix rewriting returning 200 and CSS content-type (`tests/assets-serving.test.ts`, `tests/audit-poc-r4.test.ts`)
 
 3. **Mobile Companion & Tenant Isolation**:
    - Device & tenant scoped notification acknowledgements (`tests/mobile-notifications.test.ts`)
    - Discriminating device scoped heartbeats with sentinel change verification and cross-tenant isolation (`tests/mobile-heartbeat.test.ts`, `tests/audit-poc-r4.test.ts`)
-   - Platform administrator gate on one-time merchant claim tokens (`tests/audit-poc-r4.test.ts`)
+   - Platform administrator gate on encrypted one-time merchant claim tokens (`tests/audit-poc-r4.test.ts`, `src/controllers/admin-api.ts`)
    - JWT validation, algorithm pinning, and audience checking (`tests/access-jwt.test.ts`, `tests/jwt.test.ts`)
    - Dedicated Observability & Analytics Engine verification (`tests/smoke.test.ts`)
 
 4. **Automated Verification & Release Pipeline**:
-   - `scripts/verify-remediations.mjs` verifies all 77 ledger claims with non-colliding IDs and relevance checks
-   - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning and JSONC parsing to ensure hygiene
-   - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification and builds verified release archives (`dist/edgepay-cf-release.zip`)
+   - `scripts/verify-remediations.mjs` verifies all 86 ledger claims with non-colliding IDs and relevance checks
+   - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning and JSONC parsing to ensure hygiene across all 3 environment configs
+   - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification and builds verified release archives (`dist/edgepay-cf-release.zip`) with itemized exclusion logging
    - `.github/workflows/audit-gate.yml` enforces continuous compliance in CI

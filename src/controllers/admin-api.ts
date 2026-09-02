@@ -279,7 +279,18 @@ adminApiRoutes.post('/merchants/claim', requireScope('admin'), requirePlatformAd
     return c.json({ success: false, error: { code: 'INVALID_CLAIM', message: 'Claim token is invalid or expired' } }, 404);
   }
   await c.env.KV.delete(key);
-  return c.json({ success: true, data: JSON.parse(creds) });
+
+  let payloadStr = creds;
+  if (c.env.ENCRYPTION_KEY && !creds.startsWith('{')) {
+    const { decrypt } = await import('../lib/crypto');
+    try {
+      payloadStr = await decrypt(creds, c.env.ENCRYPTION_KEY);
+    } catch {
+      payloadStr = creds;
+    }
+  }
+
+  return c.json({ success: true, data: JSON.parse(payloadStr) });
 });
 
 // Create / Provision a new merchant tenant (Platform Admin only)
@@ -403,18 +414,30 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
        VALUES (?, ?, ?, ?, ?)`
     ).bind(newMerchantId, adminUserId, pairingOtp, otpExpiresAt, now).run();
 
-    // 6. Generate One-Time Claim Token for credentials
+    // 6. Generate One-Time Claim Token for credentials (V3-004 encrypted at rest)
     const claimToken = randomBase64Key(24).replace(/[^a-zA-Z0-9]/g, '');
+    const rawClaimPayload = JSON.stringify({
+      merchant_id: newMerchantId,
+      admin_email: body.email,
+      initial_password: initialPassword,
+      api_key: apiKey,
+      pairing_otp: pairingOtp,
+      webhook_secret: webhookSecret,
+    });
+
+    let storedClaimPayload = rawClaimPayload;
+    if (c.env.ENCRYPTION_KEY) {
+      const { encrypt } = await import('../lib/crypto');
+      try {
+        storedClaimPayload = await encrypt(rawClaimPayload, c.env.ENCRYPTION_KEY);
+      } catch {
+        storedClaimPayload = rawClaimPayload;
+      }
+    }
+
     await c.env.KV.put(
       `claim:${claimToken}`,
-      JSON.stringify({
-        merchant_id: newMerchantId,
-        admin_email: body.email,
-        initial_password: initialPassword,
-        api_key: apiKey,
-        pairing_otp: pairingOtp,
-        webhook_secret: webhookSecret,
-      }),
+      storedClaimPayload,
       { expirationTtl: 900 }
     );
 
