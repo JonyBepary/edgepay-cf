@@ -244,8 +244,9 @@ app.route('/webhook', webhookRoutes);
 // Static assets — with run_worker_first=true the Worker sees EVERY path;
 // pure-asset requests are delegated to the ASSETS binding here.
 // ---------------------------------------------------------------
-app.get('/assets/*', (c) => {
-  return c.env.ASSETS.fetch(c.req.raw);
+app.get('/assets/*', async (c) => {
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  return new Response(res.body, res);
 });
 
 // ---------------------------------------------------------------
