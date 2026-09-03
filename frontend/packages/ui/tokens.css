@@ -1,65 +1,67 @@
 /**
- * EdgePay Design System — Sanzo Wada Colorblind-Friendly Harmony Palette
- * Inspired by Sanzo Wada's 1930s "Dictionary of Color Combinations" (配色事典)
- * Optimized for high-contrast accessibility (WCAG AAA), financial trust, and cross-platform clarity.
+ * EdgePay Design System — Bespoke Editorial & Financial Harmony
+ * Inspired by Sanzo Wada's natural color dictionary and modern financial typography.
+ * Fonts: Public Sans (Interface), Fraunces (Financial Currency Serif), IBM Plex Mono (Technical Figures)
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
 :root {
-  /* ── 1. Sanzo Wada Core Neutrals (墨・和紙) ────────────────────────── */
-  --ink: #0F172A;              /* Sumi (墨) — Deep carbon ink for primary typography */
-  --ink-2: #1E293B;            /* Usu-sumi (薄墨) — Secondary structural text */
-  --muted: #475569;            /* Hai-iro (灰色) — High-contrast metadata & subtitles (4.5:1+) */
-  --faint: #94A3B8;            /* Gin-nezu (銀鼠) — Subtle captions and disabled states */
-  --paper: #F8FAFC;            /* Washi (和紙) — Warm unbleached tactile canvas */
-  --surface: #FFFFFF;          /* Shiro (白) — Elevated cards and dialog surfaces */
-  --line: #E2E8F0;             /* Hairline structural separators */
-  --line-2: #CBD5E1;           /* Interactive control borders */
+  /* ── 1. Color Palette: Warm Linen & Carbon Ink ────────────────────── */
+  --ink: #12181F;              /* Carbon Slate — Primary text and dark frames */
+  --ink-2: #242D38;            /* Deep graphite for secondary emphasis */
+  --muted: #5B6470;            /* Neutral slate for readable secondary text (WCAG AAA) */
+  --faint: #8E99A5;            /* Soft slate for captions and placeholders */
+  --paper: #EEF1EA;            /* Warm Sage Linen — Tactile non-fatiguing canvas */
+  --paper-subtle: #F7F8F4;     /* Pale linen row hover */
+  --surface: #FFFFFF;          /* Elevated card and dialog surface */
+  --line: #D8DCD2;             /* Structural border divider */
+  --line-light: #ECEEE8;       /* Subtle row divider */
 
-  /* ── 2. Sanzo Wada Brand & Interactive Accents (紺・茜) ──────────── */
-  --brand: #1D4ED8;            /* Kon-i (紺色) — Traditional Japanese indigo for primary actions */
-  --brand-ink: #1E3A8A;        /* Fukai-kon (深紺) — Deep navy for headers and high-contrast text */
-  --brand-soft: #EFF6FF;       /* Awa-ai (淡藍) — Soft tinted highlight background */
-  --accent-akane: #DF6D43;     /* Akane (茜色) — Warm madder red / persimmon for intentional accents */
+  /* ── 2. Accent & Interactive Tones (Sanzo Wada Harmony) ───────────── */
+  --brand: #12181F;            /* Confident primary dark */
+  --accent: #C97F1E;           /* Honey Ochre / Yamabuki — Warm interactive focus */
+  --accent-soft: #FBF3E6;      /* Soft honey wash for selected states */
+  --accent-dark: #8A5A0F;      /* Deep ochre for readable text */
 
-  /* ── 3. Colorblind-Friendly Semantic States (山吹・鶯・弁柄) ───────── */
-  /* Awaiting / Pending State (Yamabuki Ochre) — Distinct in luminance and chroma */
-  --awaiting: #B45309;         /* Yamabuki (山吹色) — High-contrast golden amber */
-  --awaiting-bg: #FFF7ED;      /* Soft parchment tint */
-  --awaiting-line: #F59E0B;    /* Focused amber hairline */
+  /* ── 3. Semantic Status Tones ─────────────────────────────────────── */
+  --teal-bg: #DCEEE8;
+  --teal-text: #0B6E5C;        /* Success / Verified / Matched */
+  --marigold-bg: #F3E3C7;
+  --marigold-text: #8A5A0F;    /* Pending / Awaiting SMS / Onboarding */
+  --rust-bg: #F5E1DC;
+  --rust-text: #A83E2C;        /* Failed / Cancelled / Error */
+  --gray-bg: #E7E9E2;
+  --gray-text: #5B6470;        /* Refunded / Stored / Disabled */
 
-  /* Confirmed / Success State (Uguisu Sage) — Luminance calibrated against red */
-  --success: #065F46;          /* Uguisu (鶯色) — Deep bush warbler green (WCAG AAA on white) */
-  --success-bg: #F0FDF4;       /* Celadon pale wash */
-  --success-line: #10B981;     /* Vivid confirm line */
+  /* ── 4. Rail Functional Brand Colors ──────────────────────────────── */
+  --bkash: #D6296B;
+  --nagad: #EA7A1C;
+  --rocket: #6D3FA0;
+  --upay: #005696;
+  --card: #3A424B;
 
-  /* Error State (Benigara) — High-visibility crimson with accompanying icon */
-  --error: #991B1B;            /* Benigara (弁柄) — Earthy deep crimson */
-  --error-bg: #FEF2F2;         /* Pale crimson wash */
-  --error-line: #EF4444;       /* Alert boundary */
+  /* ── 5. Typography Stacks ─────────────────────────────────────────── */
+  --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-  /* ── 4. Functional Gateway Identity Colors (Rail Specific) ────────── */
-  --bkash: #E2136E;            /* bKash Magenta */
-  --nagad: #F6921E;            /* Nagad Vibrant Orange */
-  --rocket: #8C3494;           /* Rocket Royal Violet */
-  --upay: #005696;             /* Upay Deep Marine */
-
-  /* ── 5. Spatial Rhythm, Radii & Depth ──────────────────────────────── */
-  --radius-sm: 8px;
-  --radius: 14px;
-  --radius-lg: 20px;
+  /* ── 6. Structural Geometry & Shadows ─────────────────────────────── */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
 
-  /* Sophisticated layered drop shadows without heavy dark spreads */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 12px 32px -12px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 18px 48px -16px rgba(15, 23, 42, 0.22);
+  --shadow-sm: 0 1px 2px rgba(18, 24, 31, 0.04);
+  --shadow: 0 1px 3px rgba(18, 24, 31, 0.06), 0 10px 24px -10px rgba(18, 24, 31, 0.1);
+  --shadow-lg: 0 20px 40px -15px rgba(18, 24, 31, 0.18);
 }
 
-/* ── Typography & Global Reset ────────────────────────────────────────── */
+/* ── Global Styles ──────────────────────────────────────────────────── */
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html {
@@ -68,24 +70,26 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--paper);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-/* Financial tabular figures */
-.num, .tabular-nums {
+.epx-mono, .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
 }
 
-/* Accessible focus outlines */
+.epx-serif {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+}
+
 :focus-visible {
-  outline: 2.5px solid var(--brand);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
