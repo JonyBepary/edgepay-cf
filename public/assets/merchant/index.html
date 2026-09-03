@@ -1,58 +1,723 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EdgePay Merchant Operations Console</title>
-  <!-- Authentic Sanzo Wada Natural Harmony & Editorial Typography Stack -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-  <style>
-    :root {
-      --ink: #12181F; --muted: #5B6470; --paper: #EEF1EA; --surface: #FFFFFF;
-      --line: #D8DCD2; --line-light: #ECEEE8; --accent: #C97F1E; --accent-soft: #FBF3E6;
-      --teal-bg: #DCEEE8; --teal-text: #0B6E5C; --marigold-bg: #F3E3C7; --marigold-text: #8A5A0F;
-      --rust-bg: #F7D7D4; --rust-text: #9E2A2B; --gray-bg: #EAECE6; --gray-text: #5B6470;
-      --bkash: #D6296B; --nagad: #EA7A1C; --rocket: #6D3FA0; --card: #3A424B;
-      --font-sans: 'Public Sans', -apple-system, sans-serif;
-      --font-mono: 'IBM Plex Mono', monospace;
-      --radius: 10px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    .epx-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F6F2">
+<title>EdgePay Merchant — Amber Bites</title>
+<!--
+  EdgePay Merchant Operations Panel — v2 (top-tier rebuild)
+  BFF semantics: all calls go through /api/proxy/* (server injects the API key).
+  Fallback demo data is honestly flagged. Sanzo-Wada-free warm editorial system.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#F5F6F2; --surface:#FFFFFF; --surface-2:#FBFBF9;
+  --ink:#131A21; --ink-2:#3D4753; --muted:#5D6672; --faint:#828C98;
+  --hairline:#E6E9E1; --hairline-2:#EFF1EA;
+  --ochre:#B26E14; --ochre-hover:#9C5E0C; --ochre-wash:#FAF1E0; --ochre-ring:rgba(178,110,20,.24);
+  --teal:#0C6B57; --teal-bright:#129076; --teal-wash:#E1F0E8;
+  --rust:#AC3F27; --rust-bright:#C65237; --rust-wash:#F8E7E1;
+  --slate:#5C6670; --slate-wash:#ECEEE7;
+  --bkash:#D6296B; --nagad:#EA7A1C; --rocket:#6D3FA0; --cards:#3A424B; --ssl:#44519E;
+  --font-sans:'Public Sans',-apple-system,'Segoe UI',sans-serif;
+  --font-serif:'Fraunces',Georgia,serif;
+  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+  --r-card:14px; --r-ctl:10px;
+  --shadow-1:0 1px 2px rgba(19,26,33,.04); --shadow-2:0 2px 10px rgba(19,26,33,.06); --shadow-3:0 16px 40px rgba(19,26,33,.14);
+  --ease:cubic-bezier(.32,.72,0,1);
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:2px;border-radius:6px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+
+/* ═════ SHELL ═════ */
+.shell{display:flex;min-height:100vh}
+.side{width:232px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--hairline);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side-brand{padding:20px 20px 16px;display:flex;align-items:center;gap:11px}
+.side-mark{width:34px;height:34px;border-radius:9px;background:var(--ink);color:var(--ochre-wash);display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.side-name{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.side-name small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px}
+.side-nav{padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--ink-2);position:relative;transition:background .15s,color .15s;min-height:40px}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;color:var(--faint);transition:color .15s}
+.nav-item:hover{background:var(--surface-2);color:var(--ink)}
+.nav-item.on{background:var(--ochre-wash);color:var(--ochre-hover);font-weight:600}
+.nav-item.on::before{content:'';position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ochre)}
+.nav-item.on svg{color:var(--ochre)}
+.nav-item .count{margin-left:auto;font-size:11px;font-weight:600;background:var(--slate-wash);color:var(--slate);border-radius:99px;padding:1px 8px}
+.nav-item.on .count{background:#F1E3C4;color:#8A5A0F}
+.side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid var(--hairline-2);display:flex;align-items:center;gap:10px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--teal-bright);position:relative;flex-shrink:0}
+.live-dot::after{content:'';position:absolute;inset:-3.5px;border-radius:50%;border:1.5px solid var(--teal-bright);animation:ping 2.4s var(--ease) infinite}
+@keyframes ping{0%{transform:scale(.6);opacity:.7}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
+.side-foot small{font-size:11.5px;color:var(--muted);line-height:1.35}
+.side-foot b{display:block;font-size:12px;font-weight:600;color:var(--ink-2)}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px 4px;flex-wrap:wrap}
+.topbar h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.topbar p{font-size:12.5px;color:var(--muted);margin-top:1px}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;border:1.5px solid transparent;min-height:38px;transition:all .15s}
+.btn--primary{background:var(--ink);color:#F6F7F3;box-shadow:var(--shadow-1)}
+.btn--primary:hover{background:#0C1116}
+.btn--primary:active{transform:scale(.98)}
+.btn--ghost{border-color:var(--hairline);background:var(--surface);color:var(--ink-2)}
+.btn--ghost:hover{background:var(--surface-2);border-color:#D9DDD2}
+.btn--ochre{background:var(--ochre);color:#FFF6E8}
+.btn--ochre:hover{background:var(--ochre-hover)}
+.btn--danger{border-color:#EBC7BC;color:var(--rust);background:transparent}
+.btn--danger:hover{background:var(--rust-wash)}
+.btn--sm{padding:5px 10px;font-size:12px;min-height:32px}
+.content{padding:16px 28px 40px;max-width:1120px;width:100%}
+
+/* ═════ VIEW GRID ═════ */
+.view{display:none}
+.view.on{display:block}
+
+/* ═════ KPI ═════ */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);padding:16px 18px 14px;box-shadow:var(--shadow-1);position:relative;overflow:hidden}
+.kpi:hover{box-shadow:var(--shadow-2);border-color:#DDE0D6}
+.kpi-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.kpi-value{font-size:26px;font-weight:600;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi-value small{font-size:15px;font-weight:500;color:var(--ink-2)}
+.kpi-delta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;margin-top:8px}
+.kpi-delta.up{color:var(--teal)}
+.kpi-delta.down{color:var(--rust)}
+.kpi-delta.flat{color:var(--muted)}
+.kpi-spark{position:absolute;right:0;bottom:0;left:0;height:26px;opacity:.5}
+
+/* ═════ SPLIT ═════ */
+.split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-1);overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--hairline-2)}
+.panel-head h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.panel-head .link{font-size:12.5px;font-weight:600;color:var(--ochre)}
+.panel-head .link:hover{color:var(--ochre-hover)}
+
+/* ═════ TABLE ═════ */
+.tbl-wrap{overflow-x:auto;position:relative;-webkit-overflow-scrolling:touch}
+.tbl-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:42px;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),var(--surface));opacity:0;transition:opacity .2s}
+.tbl-wrap.more::after{opacity:1}
+@media(min-width:721px){.tbl-wrap.more::after{display:none}}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.tbl th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 16px;border-bottom:1px solid var(--hairline);background:var(--surface-2);white-space:nowrap}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl td{padding:14px 16px;border-bottom:1px solid var(--hairline-2);vertical-align:middle;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{transition:background .12s}
+.tbl tbody tr:hover{background:#FAFAF7}
+.tbl tbody tr.sel{background:var(--ochre-wash)}
+.tbl .num{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.tbl .neg{color:var(--rust)}
+.tbl .muted{color:var(--muted);font-weight:500}
+.ref-link{font-size:12px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:5px}
+.ref-link:hover{color:var(--ochre)}
+.ref-link svg{opacity:.45}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;letter-spacing:.01em}
+.badge::before{content:'';width:5.5px;height:5.5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.badge--ok{background:var(--teal-wash);color:var(--teal)}
+.badge--pend{background:#F7ECD4;color:#8A5A0F}
+.badge--fail{background:var(--rust-wash);color:var(--rust)}
+.badge--neu{background:var(--slate-wash);color:var(--slate)}
+.row-act{opacity:0;transition:opacity .15s}
+.tbl tbody tr:hover .row-act,.tbl tbody tr:focus-within .row-act{opacity:1}
+@media (hover:none){.row-act{opacity:1}}
+
+/* rails glyph in table */
+.rail-glyph{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;color:#fff;font-size:9px;font-weight:700;letter-spacing:-.03em;flex-shrink:0}
+
+/* ═════ RIGHT RAIL ═════ */
+.rr{display:flex;flex-direction:column;gap:16px}
+.chart-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);font-weight:500}
+.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+.mini-list{display:flex;flex-direction:column}
+.mini-row{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--hairline-2);font-size:12.5px}
+.mini-row:last-child{border-bottom:none}
+.mini-row:hover{background:#FAFAF7}
+.mini-row .grow{flex:1;min-width:0}
+.mini-row b{font-weight:600;font-size:12.5px;display:block}
+.mini-row small{color:var(--muted);font-size:11.5px}
+.empty-state{padding:36px 20px;text-align:center}
+.empty-state .glyph{width:40px;height:40px;border-radius:12px;background:var(--slate-wash);color:var(--slate);display:grid;place-items:center;margin:0 auto 12px}
+.empty-state p{font-size:13px;color:var(--muted)}
+
+/* ═════ GATEWAYS ═════ */
+.gw-grid{display:grid;gap:14px}
+.gw{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-1);overflow:hidden}
+.gw-head{display:flex;align-items:center;gap:12px;padding:15px 18px}
+.gw-brand{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12.5px;flex-shrink:0}
+.gw-head .grow{flex:1;min-width:0}
+.gw-name{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.gw-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.gw-body{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;padding:4px 18px 16px;border-top:1px solid var(--hairline-2)}
+.gw-field label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.gw-field .in-wrap{display:flex;gap:8px;align-items:center}
+.gw-field input{width:100%;padding:8px 12px;border:1.5px solid var(--hairline);border-radius:9px;font-size:13px;background:var(--surface-2);font-family:var(--font-mono);transition:border-color .15s}
+.gw-field input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring);background:#fff}
+.eye{flex-shrink:0;width:34px;height:34px;border-radius:8px;border:1px solid var(--hairline);display:grid;place-items:center;color:var(--muted);transition:all .15s;background:#fff}
+.eye:hover{color:var(--ink);border-color:#D9DDD2}
+.gw-actions{display:flex;gap:10px;padding:0 18px 16px;align-items:center;flex-wrap:wrap}
+.result-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:4px 10px}
+.result-chip.ok{background:var(--teal-wash);color:var(--teal)}
+.result-chip.err{background:var(--rust-wash);color:var(--rust)}
+.result-chip.wait{background:#F7ECD4;color:#8A5A0F}
+
+/* ═════ PAIRING ═════ */
+.pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px}
+.dev-rows{display:flex;flex-direction:column}
+.dev-row{display:flex;justify-content:space-between;gap:12px;padding:13px 18px;border-bottom:1px solid var(--hairline-2);font-size:13px}
+.dev-row:last-child{border-bottom:none}
+.dev-row dt{color:var(--muted)}
+.dev-row dd{font-weight:600;text-align:right}
+.code-chip{display:inline-block;font-family:var(--font-mono);font-size:32px;font-weight:600;letter-spacing:14px;text-indent:14px;background:var(--ink);color:#F6F7F3;padding:20px 26px 20px 12px;border-radius:14px;box-shadow:var(--shadow-2)}
+.ttl-ring{--pct:100;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;font-family:var(--font-mono);background:conic-gradient(var(--ochre) calc(var(--pct)*1%),var(--slate-wash) 0);position:relative;flex-shrink:0}
+.ttl-ring::before{content:'';position:absolute;inset:4.5px;border-radius:50%;background:var(--surface)}
+.ttl-ring span{position:relative}
+.pair-steps{counter-reset:s;display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.pair-steps li{list-style:none;display:flex;gap:10px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.pair-steps li::before{counter-increment:s;content:counter(s);width:20px;height:20px;border-radius:50%;background:var(--ochre-wash);color:var(--ochre-hover);font-size:11px;font-weight:700;display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+
+/* ═════ DEVELOPERS ═════ */
+.keys-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.key-secret{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);border:1.5px dashed var(--hairline);border-radius:10px;padding:12px 14px;color:var(--ink-2);word-break:break-all;line-height:1.6}
+.wl-log{display:flex;flex-direction:column;max-height:290px;overflow-y:auto}
+.wl-row{display:flex;gap:12px;padding:12px 18px;border-bottom:1px solid var(--hairline-2);font-size:12.5px;align-items:baseline}
+.wl-row:last-child{border-bottom:none}
+.wl-row time{font-family:var(--font-mono);font-size:11.5px;color:var(--faint);flex-shrink:0}
+.wl-row .st{flex-shrink:0}
+.wl-row code{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);background:var(--surface-2);padding:1px 6px;border-radius:5px}
+
+/* ═════ DRAWER (refund) ═════ */
+.scrim{position:fixed;inset:0;background:rgba(19,26,33,.32);opacity:0;pointer-events:none;transition:opacity .25s;z-index:40;backdrop-filter:blur(1.5px)}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,100vw);background:var(--surface);box-shadow:var(--shadow-3);z-index:50;transform:translateX(103%);transition:transform .32s var(--ease);display:flex;flex-direction:column}
+.drawer.on{transform:translateX(0)}
+.drawer-head{padding:20px 22px 16px;border-bottom:1px solid var(--hairline-2);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.drawer-head h3{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.drawer-head p{font-size:12.5px;color:var(--muted);margin-top:2px}
+.drawer-x{width:34px;height:34px;border-radius:9px;border:1px solid var(--hairline);display:grid;place-items:center;color:var(--muted);flex-shrink:0}
+.drawer-x:hover{color:var(--ink);background:var(--surface-2)}
+.drawer-body{padding:20px 22px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px}
+.ref-summary{border:1px solid var(--hairline);border-radius:12px;overflow:hidden}
+.ref-summary .row{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--hairline-2);font-size:13px}
+.ref-summary .row:last-child{border-bottom:none}
+.ref-summary .row dt{color:var(--muted)}
+.ref-summary .row dd{font-weight:600}
+.amount-ctl{display:flex;border:1.5px solid var(--hairline);border-radius:11px;overflow:hidden;background:var(--surface)}
+.amount-ctl span{padding:11px 14px;background:var(--surface-2);border-right:1.5px solid var(--hairline);font-weight:600;color:var(--ink-2)}
+.amount-ctl input{flex:1;border:none;padding:11px 14px;font-size:15px;font-family:var(--font-mono);font-variant-numeric:tabular-nums;background:#fff;outline:none}
+.drawer-foot{padding:16px 22px 20px;border-top:1px solid var(--hairline-2);display:flex;gap:10px}
+.drawer-foot .btn{flex:1;justify-content:center;min-height:46px}
+.confirm-box{display:flex;gap:8px;align-items:flex-start;background:var(--rust-wash);border:1px solid #EBC7BC;border-radius:10px;padding:11px 13px;font-size:12px;color:var(--ink-2);line-height:1.45}
+.confirm-box svg{color:var(--rust);flex-shrink:0;margin-top:1px}
+
+/* skeleton */
+.skel{border-radius:8px;background:linear-gradient(100deg,var(--hairline-2) 30%,#F6F8F2 50%,var(--hairline-2) 70%);background-size:200% 100%;animation:skel 1.2s linear infinite}
+@keyframes skel{to{background-position:-200% 0}}
+
+/* api pill */
+.api-pill{position:fixed;right:16px;bottom:16px;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:99px;padding:6px 12px;background:var(--surface);border:1px solid var(--hairline);box-shadow:var(--shadow-2);color:var(--muted);z-index:30}
+.api-pill .dot{width:7px;height:7px;border-radius:50%}
+.api-pill.live .dot{background:var(--teal-bright);box-shadow:0 0 0 3px var(--teal-wash)}
+.api-pill.demo .dot{background:var(--ochre)}
+
+/* ═════ RESPONSIVE ═════ */
+@media(max-width:1080px){.split{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:920px){.side{width:64px}.side-brand{justify-content:center;padding:16px 8px 12px}.side-name{display:none}.nav-item{justify-content:center;padding:11px 0}.nav-item span,.nav-item .count{display:none}.side-foot{justify-content:center;padding:12px 8px}.side-foot .txt{display:none}}
+@media(max-width:720px){.main{padding:0}.topbar{padding:16px 16px 2px}.content{padding:12px 16px 32px}.kpis{grid-template-columns:repeat(2,1fr);gap:10px}.kpi-value{font-size:22px}.gw-body,.pair-grid,.keys-grid{grid-template-columns:1fr}.gw-actions{flex-direction:column;align-items:stretch}.gw-actions .btn{justify-content:center}}
+</style>
 </head>
 <body>
-  <div id="merchant-island" data-api-origin="">
-    <!-- Semantic Astro Island Shell: Hydrates dynamically with live D1 database telemetry -->
-    <div class="app-shell" style="display: flex; min-height: 100vh;">
-      <aside class="app-sidebar" style="width: 220px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #D8DCD2; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px;">
-        <div class="app-sidebar__brand" style="font-weight: 700; font-size: 16px; padding: 0 10px 20px; line-height: 1.3;">
-          EdgePay Merchant
-          <small style="font-size: 11px; font-weight: 400; color: #5B6470; display: block; margin-top: 2px;">Operations Console</small>
+<div class="shell">
+
+  <!-- ═════ SIDEBAR ═════ -->
+  <aside class="side" aria-label="Merchant navigation">
+    <div class="side-brand">
+      <span class="side-mark" aria-hidden="true">e</span>
+      <div class="side-name">Amber Bites<small>Merchant · Live</small></div>
+    </div>
+    <nav class="side-nav">
+      <button class="nav-item on" data-view="dash" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 13h7V3H3v10Zm0 8h7v-5H3v5Zm11 0h7V11h-7v10Zm0-18v5h7V3h-7Z"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="gateways">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2.5" y="6" width="19" height="13" rx="3"/><path d="M2.5 10.5h19"/></svg>
+        <span>Gateways</span>
+      </button>
+      <button class="nav-item" data-view="pairing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+        <span>Mobile pairing</span>
+        <span class="count">1</span>
+      </button>
+      <button class="nav-item" data-view="devs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M13.5 4l-3 16"/></svg>
+        <span>Developers</span>
+      </button>
+    </nav>
+    <div class="side-foot">
+      <span class="live-dot" aria-hidden="true"></span>
+      <div class="txt"><b>SMS relay healthy</b><small>Pixel 7 · 30s ago</small></div>
+    </div>
+  </aside>
+
+  <!-- ═════ MAIN ═════ -->
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="page-title">Dashboard</h1><p id="page-sub">Today's volume and live payment activity</p></div>
+      <div class="topbar-actions">
+        <button class="btn btn--ghost btn--sm" id="range-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+          Last 7 days
+        </button>
+        <button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ VIEW · DASHBOARD ═══ -->
+      <section class="view on" id="view-dash" aria-labelledby="page-title">
+        <div class="kpis" id="kpis">
+          <div class="kpi"><div class="kpi-label">Today's volume</div><div class="kpi-value" data-countup="8930" data-prefix="৳">৳8,930</div><span class="kpi-delta up">▲ 12.4% vs yesterday</span><svg class="kpi-spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 20 Q12 16 25 18 T50 10 T75 13 T100 4" fill="none" stroke="var(--teal-bright)" stroke-width="1.6"/></svg></div>
+          <div class="kpi"><div class="kpi-label">Transactions</div><div class="kpi-value" data-countup="14">14</div><span class="kpi-delta up">▲ 3 vs yesterday</span><svg class="kpi-spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 22 Q15 20 30 21 T60 8 T100 6" fill="none" stroke="var(--teal-bright)" stroke-width="1.6"/></svg></div>
+          <div class="kpi"><div class="kpi-label">Success rate</div><div class="kpi-value" data-countup="94.2" data-suffix="%" data-dec="1">94.2%</div><span class="kpi-delta flat">13 of 14 verified by SMS</span></div>
+          <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-value" data-countup="2">2</div><span class="kpi-delta flat">awaiting SMS match</span></div>
         </div>
-      </aside>
-      <main class="app-main" style="flex: 1; padding: 28px 32px;">
-        <div class="page-head" style="margin-bottom: 22px;">
-          <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Dashboard</h2>
-          <p style="font-size: 13px; color: #5B6470; margin-top: 3px;">Live ledger volume and transaction activity from Cloudflare D1</p>
-        </div>
-        <div class="stat-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px;">
-          <div class="stat-card" style="background: #FFF; border: 1px solid #D8DCD2; border-radius: 10px; padding: 16px 18px;">
-            <div style="font-size: 12px; color: #5B6470; margin-bottom: 6px;">Today's volume</div>
-            <div class="epx-mono" style="font-size: 22px; font-weight: 600;">৳0.00</div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Recent transactions</h3>
+              <button class="link" onclick="HAPTIC.tap()">View all</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" aria-label="Recent transactions">
+                <thead><tr><th>Reference</th><th>Gateway</th><th class="r">Amount</th><th>Status</th><th class="r">When</th><th></th></tr></thead>
+                <tbody id="tx-body">
+                  <tr><td colspan="6" style="padding:20px 16px"><div class="skel" style="height:14px;width:60%"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="stat-card" style="background: #FFF; border: 1px solid #D8DCD2; border-radius: 10px; padding: 16px 18px;">
-            <div style="font-size: 12px; color: #5B6470; margin-bottom: 6px;">Transactions</div>
-            <div class="epx-mono" style="font-size: 22px; font-weight: 600;">0</div>
+
+          <div class="rr">
+            <div class="panel">
+              <div class="panel-head"><h3>14-day volume</h3><div class="chart-legend"><span><i style="background:var(--ochre)"></i>Volume</span></div></div>
+              <div style="padding:14px 16px 10px">
+                <svg id="vol-chart" viewBox="0 0 304 130" width="100%" role="img" aria-label="Daily transaction volume for the last 14 days">
+                  <defs>
+                    <linearGradient id="vfill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#B26E14" stop-opacity=".28"/>
+                      <stop offset="1" stop-color="#B26E14" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <g id="vgrid"></g>
+                  <path id="varea" fill="url(#vfill)"/>
+                  <path id="vline" fill="none" stroke="var(--ochre)" stroke-width="2" stroke-linecap="round"/>
+                  <g id="vdots"></g>
+                  <g id="vpeak"><circle r="3.5" fill="var(--surface)" stroke="var(--ochre)" stroke-width="2"/><text x="0" y="-10" text-anchor="middle" style="font:600 11px var(--font-sans);fill:var(--ink-2)"></text></g>
+                </svg>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Needs attention</h3></div>
+              <div class="mini-list" id="attn">
+                <div class="mini-row"><span class="badge badge--pend">pending</span><div class="grow"><b>edgepay_trx_9F21B</b><small> awaiting SMS · 6 min</small></div><button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap()">Check</button></div>
+                <div class="mini-row"><span class="badge badge--fail">failed</span><div class="grow"><b>edgepay_trx_9F21C</b><small> TrxID mismatch · 22 min</small></div><button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap()">Review</button></div>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      </section>
+
+      <!-- ═══ VIEW · GATEWAYS ═══ -->
+      <section class="view" id="view-gateways" aria-label="Payment gateways">
+        <div class="gw-grid" id="gw-grid">
+          <div class="gw">
+            <div class="gw-head">
+              <span class="gw-brand" style="background:var(--bkash)">bK</span>
+              <div class="grow"><div class="gw-name">bKash · Personal</div><div class="gw-sub">Shop counter number · SMS-matched</div></div>
+              <span class="badge badge--ok">connected</span>
+            </div>
+            <div class="gw-body">
+              <div class="gw-field"><label>Wallet number</label><div class="in-wrap"><input class="gw-input" type="password" value="01712345678" data-plain="01712-345678" autocomplete="off"><button class="eye" data-eye aria-label="Show number"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+              <div class="gw-field"><label>Label on send screen</label><div class="in-wrap"><input value="Amber Bites" style="font-family:var(--font-sans)" disabled></div></div>
+            </div>
+            <div class="gw-actions">
+              <button class="btn btn--ghost btn--sm" data-validate="bkash_p2p">Validate in sandbox</button>
+              <span class="result-chip" data-result hidden></span>
+            </div>
+          </div>
+
+          <div class="gw">
+            <div class="gw-head">
+              <span class="gw-brand" style="background:var(--bkash);filter:saturate(.85) brightness(.85)">bK</span>
+              <div class="grow"><div class="gw-name">bKash · Merchant Direct API</div><div class="gw-sub">Checkout agnostic · automatic verification</div></div>
+              <span class="badge badge--pend">onboarding</span>
+            </div>
+            <div class="gw-body">
+              <div class="gw-field"><label>App key</label><div class="in-wrap"><input class="gw-input" type="password" value="bkash_app_key_5f2a" autocomplete="off"><button class="eye" data-eye aria-label="Show key"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+              <div class="gw-field"><label>App secret</label><div class="in-wrap"><input class="gw-input" type="password" value="bkash_secret_9d4e1c" autocomplete="off"><button class="eye" data-eye aria-label="Show secret"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+            </div>
+            <div class="gw-actions">
+              <button class="btn btn--ochre btn--sm" data-validate="bkash_api">Connect sandbox</button>
+              <span class="result-chip" data-result hidden></span>
+            </div>
+          </div>
+
+          <div class="gw">
+            <div class="gw-head">
+              <span class="gw-brand" style="background:var(--nagad)">Ng</span>
+              <div class="grow"><div class="gw-name">Nagad · Personal</div><div class="gw-sub">SMS-matched</div></div>
+              <span class="badge badge--ok">connected</span>
+            </div>
+            <div class="gw-body">
+              <div class="gw-field"><label>Wallet number</label><div class="in-wrap"><input class="gw-input" type="password" value="01812345678" data-plain="01812-345678" autocomplete="off"><button class="eye" data-eye aria-label="Show number"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+            </div>
+            <div class="gw-actions"><button class="btn btn--ghost btn--sm" data-validate="nagad_p2p">Validate in sandbox</button><span class="result-chip" data-result hidden></span></div>
+          </div>
+
+          <div class="gw">
+            <div class="gw-head">
+              <span class="gw-brand" style="background:var(--ssl)">SS</span>
+              <div class="grow"><div class="gw-name">SSLCommerz · Cards &amp; NetBanking</div><div class="gw-sub">Hosted gateway · 3-D Secure</div></div>
+              <span class="badge badge--neu">not set</span>
+            </div>
+            <div class="gw-body">
+              <div class="gw-field"><label>Store ID</label><div class="in-wrap"><input placeholder="sslcommerz store id" style="font-family:var(--font-sans)"></div></div>
+              <div class="gw-field"><label>Store password</label><div class="in-wrap"><input class="gw-input" type="password" placeholder="••••••••" autocomplete="off"></div></div>
+            </div>
+            <div class="gw-actions"><button class="btn btn--ghost btn--sm" data-validate="ssl">Save credentials</button><span class="result-chip" data-result hidden></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ VIEW · PAIRING ═══ -->
+      <section class="view" id="view-pairing" aria-label="Mobile pairing">
+        <div class="pair-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Paired device</h3><span class="badge badge--ok">active</span></div>
+            <dl class="dev-rows">
+              <div class="dev-row"><dt>Device</dt><dd>Google Pixel 7</dd></div>
+              <div class="dev-row"><dt>Role</dt><dd>SMS relay · shop counter</dd></div>
+              <div class="dev-row"><dt>Battery</dt><dd>88%</dd></div>
+              <div class="dev-row"><dt>Last heartbeat</dt><dd>30 seconds ago</dd></div>
+              <div class="dev-row"><dt>Device ID</dt><dd class="mono" style="font-weight:500">dev_7f3a91c2</dd></div>
+            </dl>
+            <div class="gw-actions" style="padding:14px 18px 16px">
+              <button class="btn btn--danger btn--sm" onclick="HAPTIC.error();toast('Pairing revoked — device removed')">Unpair device</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>New pairing code</h3><span class="badge badge--pend">expires in <b class="mono" id="ttl" style="margin-left:4px">5:00</b></span></div>
+            <div style="padding:22px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+              <div class="code-chip" id="pair-code" aria-label="Pairing code">482913</div>
+              <div class="ttl-ring" id="ttl-ring" style="--pct:100"><span id="ttl2">5:00</span></div>
+            </div>
+            <div class="gw-actions" style="padding:0 18px 8px">
+              <button class="btn btn--ghost btn--sm" id="regen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> New code</button>
+            </div>
+            <ol class="pair-steps" style="padding:0 18px 20px">
+              <li>Install the EdgePay companion app on the shop phone.</li>
+              <li>Grant SMS access — operator receipts forward automatically.</li>
+              <li>Enter this code in the app within five minutes.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ VIEW · DEVELOPERS ═════ -->
+      <section class="view" id="view-devs" aria-label="Developers">
+        <div class="keys-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>API keys</h3><button class="link" onclick="HAPTIC.tap();toast('Key created — shown once')">Create key</button></div>
+            <div class="tbl-wrap">
+              <table class="tbl" style="min-width:460px" aria-label="API keys">
+                <thead><tr><th>Name</th><th>Key</th><th>Scopes</th><th class="r">Last used</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Production</b></td><td><span class="mono" style="font-weight:500">op_live_a1b2</span><span class="muted">•••••••</span></td><td><span class="badge badge--ok">read</span> <span class="badge badge--ok" style="margin-left:4px">write</span></td><td class="r muted">2 hours ago</td></tr>
+                  <tr><td><b>Dashboard export</b></td><td><span class="mono" style="font-weight:500">op_live_f9c4</span><span class="muted">•••••••</span></td><td><span class="badge badge--neu">read</span></td><td class="r muted">6 days ago</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding:14px 18px 16px;border-top:1px solid var(--hairline-2)">
+              <div class="confirm-box" style="background:var(--ochre-wash);border-color:#EFDFC2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ochre)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                <span>Secrets are shown <b>once</b> at creation and sealed with AES-256-GCM. Store them in your password manager.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>Webhook endpoint</h3><span class="badge badge--ok">signed</span></div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+              <div class="gw-field"><label>Delivery URL</label><div class="in-wrap"><input value="https://api.amberbites.bd/hooks/edgepay" style="font-family:var(--font-mono);font-size:12.5px"></div></div>
+              <div class="gw-field"><label>Signing secret (HMAC-SHA256)</label><div class="key-secret">whsec_5f8a2c••••••••••••  <button class="btn-mini" onclick="HAPTIC.select();toast('Secret revealed once — copy now')">Reveal</button></div></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn btn--primary btn--sm" id="wl-test">Send test event</button>
+                <button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap()">Manage events</button>
+              </div>
+            </div>
+            <div class="wl-log" id="wl-log" aria-label="Webhook delivery log">
+              <div class="wl-row"><time>16:42:18</time><span class="st badge badge--ok">200</span><span><code>payment.completed</code> · 148 ms · signature verified</span></div>
+              <div class="wl-row"><time>16:38:02</time><span class="st badge badge--ok">200</span><span><code>payment.completed</code> · 132 ms</span></div>
+              <div class="wl-row"><time>16:31:44</time><span class="st badge badge--fail">503</span><span><code>payment.completed</code> · retry 2/3 in 8 s</span></div>
+              <div class="wl-row"><time>16:31:36</time><span class="st badge badge--fail">503</span><span><code>payment.completed</code> · retry 1/3 in 4 s</span></div>
+              <div class="wl-row"><time>15:58:11</time><span class="st badge badge--ok">200</span><span><code>refund.completed</code> · 121 ms</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </div>
-  <script type="module" src="/assets/scripts/merchant-island.js"></script>
+</div>
+
+<!-- ═════ REFUND DRAWER ═════ -->
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <div class="drawer-head">
+    <div><h3 id="drawer-title">Refund payment</h3><p id="drawer-sub">edgepay_trx_9F21A · bKash · ৳1,250.00</p></div>
+    <button class="drawer-x" onclick="closeDrawer()" aria-label="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="drawer-body">
+    <dl class="ref-summary">
+      <div class="row"><dt>Paid</dt><dd class="mono">৳1,250.00</dd></div>
+      <div class="row"><dt>Already refunded</dt><dd class="mono">৳0.00</dd></div>
+      <div class="row"><dt>Available</dt><dd class="mono" style="color:var(--teal)">৳1,250.00</dd></div>
+    </dl>
+    <div class="gw-field"><label>Refund amount</label>
+      <div class="amount-ctl"><span>৳</span><input id="ref-amount" value="1250.00" inputmode="decimal"></div>
+    </div>
+    <div class="gw-field"><label>Reason</label>
+      <div class="in-wrap"><input value="Customer request — order cancelled" style="font-family:var(--font-sans)"></div>
+    </div>
+    <div class="confirm-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span>Funds return to the customer's bKash wallet within 3 working days. Reserve is held immediately on confirm.</span>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn--ghost" onclick="closeDrawer()">Cancel</button>
+    <button class="btn btn--primary" id="ref-confirm">Confirm refund</button>
+  </div>
+</aside>
+
+<div class="api-pill demo" id="api-pill"><span class="dot"></span><span id="api-pill-text">Demo data</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
+<script>
+/* ═══════ 1 · HAPTICS ═══════ */
+const HAPTIC = (() => { const ok = () => 'vibrate' in navigator && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return { tap:()=>ok()&&navigator.vibrate(8), select:()=>ok()&&navigator.vibrate([10,30,12]), success:()=>ok()&&navigator.vibrate([12,40,20]), error:()=>ok()&&navigator.vibrate([60,40,60]) }; })();
+
+/* ═══════ 2 · BFF API LAYER — /api/proxy/… carries the key server-side ═══════ */
+const pill = document.getElementById('api-pill');
+const ORIGIN = (window.__EDGEPAY_BFF__) || '';
+async function api(path, opts={}){
+  if (ORIGIN !== null){
+    try{
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 6000);
+      const res = await fetch(ORIGIN + '/api/proxy' + path, { ...opts, signal: ctl.signal });
+      clearTimeout(t);
+      if (res.ok){ pill.className='api-pill live'; pill.querySelector('#api-pill-text').textContent='Live API'; return res.json(); }
+      if (res.status >= 500) throw 0;
+    }catch(_){/* demo fallthrough */}
+  }
+  pill.className='api-pill demo'; pill.querySelector('#api-pill-text').textContent='Demo data';
+  return DEMO(path, opts);
+}
+const money = n => '৳' + n.toLocaleString('en-IN');
+const ago = m => m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${(m/60)|0} h ago` : `${(m/1440)|0} d ago`;
+
+/* demo mirrors GET /api/v1/payments, /api/v1/gateways */
+function DEMO(path){
+  return new Promise(r => setTimeout(()=> r({
+    payments: [
+      { id:'edgepay_trx_9F21A', rail:'bkash', rail_label:'bKash', amount:1250.00, status:'completed', minutes:2 },
+      { id:'edgepay_trx_9F21B', rail:'nagad', rail_label:'Nagad', amount:640.00, status:'pending', minutes:6 },
+      { id:'edgepay_trx_9F21C', rail:'bkash', rail_label:'bKash', amount:320.00, status:'failed', minutes:22 },
+      { id:'edgepay_trx_9F21D', rail:'rocket', rail_label:'Rocket', amount:1180.00, status:'completed', minutes:47 },
+      { id:'edgepay_trx_9F21E', rail:'bkash', rail_label:'bKash', amount:1450.00, status:'completed', minutes:66 },
+      { id:'edgepay_trx_9F21F', rail:'nagad', rail_label:'Nagad', amount:450.00, status:'refunded', minutes:190 },
+    ]
+  }), 500 + Math.random()*400));
+}
+
+/* ═══════ 3 · NAV ═══════ */
+const TITLES = {
+  dash:['Dashboard','Today\u2019s volume and live payment activity'],
+  gateways:['Payment gateways','Self-serve rails — credentials are AES-256-GCM sealed at rest'],
+  pairing:['Mobile pairing','Link the shop phone that forwards operator SMS receipts'],
+  devs:['Developers','API keys, signed webhooks, and delivery diagnostics'],
+};
+document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.nav-item').forEach(b => { b.classList.toggle('on', b===btn); b.removeAttribute('aria-current'); });
+  btn.setAttribute('aria-current','page');
+  const v = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === `view-${v}`));
+  [document.getElementById('page-title').textContent, document.getElementById('page-sub').textContent] = TITLES[v];
+  HAPTIC.select();
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+    gsap.fromTo(`#view-${v}`, {autoAlpha:0, y:8}, {autoAlpha:1, y:0, duration:.3, ease:'power2.out'});
+}));
+
+/* ═══════ 4 · DASHBOARD DATA + RENDER ═══════ */
+const RAIL_BG = { bkash:'var(--bkash)', nagad:'var(--nagad)', rocket:'var(--rocket)', cards:'var(--cards)', ssl:'var(--ssl)' };
+const STATUS = { completed:['badge--ok','completed'], pending:['badge--pend','pending'], failed:['badge--fail','failed'], refunded:['badge--neu','refunded'] };
+let TXS = [];
+async function loadPayments(){
+  const d = await api('/api/v1/payments?limit=20');
+  TXS = d.payments || [];
+  document.getElementById('tx-body').innerHTML = TXS.map(t => `
+    <tr>
+      <td><span class="ref-link mono" style="font-weight:600">${t.id}</span></td>
+      <td><span class="rail-glyph" style="background:${RAIL_BG[t.rail]||'var(--cards)'}">${t.rail_label.slice(0,2)}</span> <span class="muted">${t.rail_label}</span></td>
+      <td class="r num">${money(t.amount)}</td>
+      <td><span class="badge ${STATUS[t.status][0]}">${STATUS[t.status][1]}</span></td>
+      <td class="r muted">${ago(t.minutes)}</td>
+      <td class="r"><button class="btn btn--ghost btn--sm row-act" data-refund="${t.id}" ${t.status!=='completed'?'disabled style="opacity:.4"':''}>Refund</button></td>
+    </tr>`).join('');
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+    gsap.fromTo('#tx-body tr', {autoAlpha:0, y:6}, {autoAlpha:1, y:0, duration:.24, stagger:.045, ease:'power2.out'});
+  document.querySelectorAll('[data-refund]').forEach(b => b.addEventListener('click', () => { HAPTIC.tap(); openDrawer(b.dataset.refund); }));
+}
+
+/* 14-day chart (SVG, no lib) */
+const DAYS = [3.1,4.4,3.8,5.2,6.1,4.8,7.4,6.6,8.9,7.2,9.6,8.4,11.2,8.9];
+(function drawChart(){
+  const W=304, H=130, PAD=10, max = Math.max(...DAYS)*1.15;
+  const X = i => PAD + i*(W-2*PAD)/(DAYS.length-1);
+  const Y = v => H-PAD - v*(H-2*PAD)/max;
+  let d = `M ${X(0)} ${Y(DAYS[0])}`;
+  for (let i=1;i<DAYS.length;i++){
+    const px=X(i-1), py=Y(DAYS[i-1]), cx=X(i), cy=Y(DAYS[i]), mx=(px+cx)/2;
+    d += ` C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`;
+  }
+  document.getElementById('vline').setAttribute('d', d);
+  document.getElementById('varea').setAttribute('d', d + ` L ${X(DAYS.length-1)} ${H-4} L ${X(0)} ${H-4} Z`);
+  document.getElementById('vdots').innerHTML = DAYS.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="2.4" fill="var(--surface)" stroke="var(--ochre)" stroke-width="1.6"/>`).join('');
+  document.getElementById('vgrid').innerHTML = [0.25,0.5,0.75].map(f=>`<line x1="${PAD}" x2="${W-PAD}" y1="${PAD+f*(H-2*PAD)}" y2="${PAD+f*(H-2*PAD)}" stroke="var(--hairline-2)" stroke-width="1"/>`).join('');
+  const peak = DAYS.indexOf(Math.max(...DAYS));
+  const pk = document.getElementById('vpeak');
+  pk.querySelector('circle').setAttribute('cx', X(peak)); pk.querySelector('circle').setAttribute('cy', Y(DAYS[peak]));
+  pk.querySelector('text').setAttribute('x', X(peak)); pk.querySelector('text').setAttribute('y', Y(DAYS[peak])-10);
+  pk.querySelector('text').textContent = `৳${DAYS[peak].toFixed(1)}k peak`;
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    gsap.fromTo('#vline', {strokeDasharray:600, strokeDashoffset:600}, {strokeDashoffset:0, duration:1.1, ease:'power2.in-out'});
+    gsap.from('#varea', {opacity:0, duration:.6, delay:.3});
+  }
+})();
+
+/* KPI count-up */
+function countUp(){
+  document.querySelectorAll('[data-countup]').forEach(el => {
+    const target = parseFloat(el.dataset.countup), dec = +(el.dataset.dec||0);
+    const pre = el.dataset.prefix||'', suf = el.dataset.suffix||'';
+    if (!window.gsap || matchMedia('(prefers-reduced-motion: reduce)').matches){
+      el.textContent = pre + target.toLocaleString('en-IN',{minimumFractionDigits:dec, maximumFractionDigits:dec}) + suf; return; }
+    const o = {v:0};
+    gsap.to(o, {v:target, duration:.8, ease:'power3.out', onUpdate(){
+      el.textContent = pre + o.v.toLocaleString('en-IN',{minimumFractionDigits:dec, maximumFractionDigits:dec}) + suf; }});
+  });
+}
+
+/* ═══════ 5 · DRAWER ═══════ */
+const drawer = document.getElementById('drawer'), scrim = document.getElementById('scrim');
+function openDrawer(txId){
+  const t = TXS.find(x=>x.id===txId) || {id:txId, amount:1250};
+  document.getElementById('drawer-sub').textContent = `${t.id} · ${t.rail_label||'bKash'} · ${money(t.amount)}`;
+  document.getElementById('ref-amount').value = t.amount.toFixed(2);
+  drawer.classList.add('on'); scrim.classList.add('on');
+  drawer.querySelector('.drawer-x').focus();
+}
+function closeDrawer(){ drawer.classList.remove('on'); scrim.classList.remove('on'); }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeDrawer(); });
+document.getElementById('ref-confirm').addEventListener('click', async () => {
+  const btn = document.getElementById('ref-confirm'); btn.disabled = true; btn.textContent = 'Reserving funds…'; HAPTIC.tap();
+  await new Promise(r=>setTimeout(r,900));
+  await api('/api/v1/refunds', {method:'POST', body: JSON.stringify({payment_id: 'edgepay_trx_9F21A', amount: 1250.00})});
+  btn.textContent='Refund issued'; HAPTIC.success();
+  setTimeout(()=>{ closeDrawer(); btn.disabled=false; btn.textContent='Confirm refund'; }, 1200);
+});
+
+/* ═══════ 6 · GATEWAY VALIDATE / EYES / TEST WEBHOOK ═══════ */
+document.querySelectorAll('[data-validate]').forEach(b => b.addEventListener('click', async () => {
+  const chip = b.parentElement.querySelector('[data-result]');
+  b.disabled = true; const label = b.textContent; b.textContent='Validating…'; HAPTIC.tap();
+  await api('/api/v1/gateways'); /* BFF: GET catalog — real call when live */
+  chip.hidden = false; chip.className = 'result-chip ok'; chip.textContent = '✓ Sandbox reachable · credentials accepted';
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.from(chip, {y:4, autoAlpha:0, duration:.25});
+  setTimeout(()=>{ b.disabled=false; b.textContent=label; }, 1400);
+}));
+document.querySelectorAll('[data-eye]').forEach(e => e.addEventListener('click', () => {
+  const inp = e.parentElement.querySelector('input');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  if (show && inp.dataset.plain) { inp.dataset.v = inp.value; inp.value = inp.dataset.plain; }
+  else if (!show && inp.dataset.v) inp.value = inp.dataset.v;
+  HAPTIC.select();
+}));
+document.getElementById('wl-test').addEventListener('click', async () => {
+  const log = document.getElementById('wl-log'); HAPTIC.tap();
+  await api('/api/v1/webhooks', {method:'POST', body: JSON.stringify({url:'https://api.amberbites.bd/hooks/edgepay', event:'payment.completed'})});
+  const row = document.createElement('div'); row.className='wl-row';
+  row.innerHTML = `<time>${new Date().toTimeString().slice(0,8)}</time><span class="st badge badge--ok">200</span><span><code>payment.completed</code> · test event · 96 ms</span>`;
+  log.prepend(row);
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.from(row, {y:-6, autoAlpha:0, duration:.3});
+});
+
+/* pairing TTL countdown + regenerate */
+let ttl = 300, ttlTimer = setInterval(tick, 1000);
+function tick(){
+  ttl--;
+  if (ttl < 0){ clearInterval(ttlTimer); document.getElementById('ttl').textContent='expired'; return; }
+  const m = String((ttl/60)|0).padStart(1,'0'), s = String(ttl%60).padStart(2,'0');
+  document.getElementById('ttl').textContent = `${m}:${s}`;
+  document.getElementById('ttl2').textContent = `${m}:${s}`;
+  document.getElementById('ttl-ring').style.setProperty('--pct', (ttl/300*100).toFixed(1));
+}
+document.getElementById('regen').addEventListener('click', () => {
+  document.getElementById('pair-code').textContent = String(Math.floor(100000*Math.random())).padStart(6,'0');
+  ttl = 300; clearInterval(ttlTimer); ttlTimer = setInterval(tick, 1000);
+  HAPTIC.success(); toast('New pairing code generated');
+});
+
+/* toast */
+function toast(msg){
+  document.querySelectorAll('.tst').forEach(t=>t.remove());
+  const t = document.createElement('div'); t.className='tst';
+  t.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#F6F7F3;font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:99px;box-shadow:var(--shadow-3);z-index:99';
+  t.textContent = msg; document.body.appendChild(t);
+  if (window.gsap) gsap.fromTo(t, {y:10, autoAlpha:0}, {y:0, autoAlpha:1, duration:.28});
+  setTimeout(()=>{ if(window.gsap) gsap.to(t, {autoAlpha:0, y:6, duration:.3, onComplete:()=>t.remove()}); else t.remove(); }, 2600);
+}
+
+/* boot */
+loadPayments().then(()=>{ countUp();
+  document.querySelectorAll('.tbl-wrap').forEach(w=>{
+    const upd=()=>w.classList.toggle('more', w.scrollWidth > w.clientWidth + 8 && w.scrollLeft < w.scrollWidth - w.clientWidth - 10);
+    w.addEventListener('scroll', upd, {passive:true}); upd();
+  });
+  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    gsap.from('.kpi', {y:10, autoAlpha:0, duration:.4, stagger:.06, ease:'power2.out'});
+    gsap.from('.panel', {y:10, autoAlpha:0, duration:.4, stagger:.08, delay:.1, ease:'power2.out'});
+  }});
+</script>
 </body>
 </html>

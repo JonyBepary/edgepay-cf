@@ -58,6 +58,41 @@ describe('Frontend Architecture: Sanzo Wada Tokens & Asset Serving', () => {
     const contentType = res.headers.get('content-type') || '';
     expect(contentType).toContain('image/png');
   });
+
+  it('serves direct /checkout, /merchant, and /admin routes seamlessly', async () => {
+    const checkoutRes = await SELF.fetch('http://localhost/checkout');
+    expect(checkoutRes.status).toBe(200);
+    expect(await checkoutRes.text()).toContain('Secure Checkout');
+
+    const merchantRes = await SELF.fetch('http://localhost/merchant');
+    expect(merchantRes.status).toBe(200);
+    expect(await merchantRes.text()).toContain('EdgePay Merchant');
+
+    const adminRes = await SELF.fetch('http://localhost/admin');
+    expect(adminRes.status).toBe(200);
+    expect(await adminRes.text()).toContain('EdgePay Admin');
+  });
+
+  it('processes payment callback functions for webhook and browser returns', async () => {
+    // 1. Webhook JSON POST callback
+    const apiRes = await SELF.fetch('http://localhost/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ trx_id: 'TRX_CALLBACK_99', status: 'completed' }),
+    });
+    expect(apiRes.status).toBe(200);
+    const apiData = await apiRes.json() as { success: boolean; trx_id: string; status: string };
+    expect(apiData.success).toBe(true);
+    expect(apiData.trx_id).toBe('TRX_CALLBACK_99');
+    expect(apiData.status).toBe('completed');
+
+    // 2. Browser GET return callback
+    const browserRes = await SELF.fetch('http://localhost/callback?trx_id=TRX_WEB_01&status=completed');
+    expect(browserRes.status).toBe(200);
+    const browserHtml = await browserRes.text();
+    expect(browserHtml).toContain('Payment Callback Handled');
+    expect(browserHtml).toContain('TRX_WEB_01');
+  });
 });
 
 describe('Gateway Brand Package Invariants', () => {

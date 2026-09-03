@@ -79,6 +79,45 @@ apiRoutes.post(
 );
 
 // ---------------------------------------------------------------
+// GET /api/v1/payments — list payments for merchant console
+// ---------------------------------------------------------------
+apiRoutes.get('/payments', async (c) => {
+  const merchantId = c.get('merchantId') ?? 1;
+  const limit = Math.min(parseInt(c.req.query('limit') ?? '20', 10), 100);
+  const offset = parseInt(c.req.query('offset') ?? '0', 10);
+  const status = c.req.query('status');
+
+  let sql = `SELECT id, uuid, amount, currency, order_id, status, created_at, updated_at
+             FROM op_payments WHERE merchant_id = ?`;
+  const params: unknown[] = [merchantId];
+
+  if (status) {
+    sql += ` AND status = ?`;
+    params.push(status);
+  }
+  sql += ` ORDER BY id DESC LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+
+  const rows = await c.env.DB.prepare(sql).bind(...params).all();
+  const paymentList = ((rows.results || []) as Record<string, unknown>[]).map((p) => {
+    const rawAmount = typeof p.amount === 'string' ? parseFloat(p.amount) : typeof p.amount === 'number' ? p.amount : 0;
+    const createdAt = typeof p.created_at === 'string' ? p.created_at : new Date().toISOString();
+    const minAgo = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000));
+    return {
+      id: p.uuid ? 'edgepay_trx_' + String(p.uuid).slice(0, 5).toUpperCase() : 'edgepay_trx_' + String(p.id),
+      rail: 'bkash',
+      rail_label: 'bKash',
+      amount: rawAmount,
+      status: (p.status as string) || 'completed',
+      minutes: minAgo,
+      created_at: createdAt,
+    };
+  });
+
+  return c.json({ success: true, payments: paymentList, data: paymentList });
+});
+
+// ---------------------------------------------------------------
 // GET /api/v1/payments/{payment_id} — fetch a payment intent
 // ---------------------------------------------------------------
 apiRoutes.get('/payments/:payment_id', async (c) => {

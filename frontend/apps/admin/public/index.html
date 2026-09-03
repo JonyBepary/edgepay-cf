@@ -1,51 +1,662 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EdgePay Admin — Platform Operations & Tenant Management</title>
-  <!-- Authentic Sanzo Wada Natural Harmony & Editorial Typography Stack -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-  <style>
-    :root {
-      --ink: #12181F; --muted: #5B6470; --paper: #EEF1EA; --surface: #FFFFFF;
-      --line: #D8DCD2; --line-light: #ECEEE8; --accent: #C97F1E; --accent-soft: #FBF3E6;
-      --teal-bg: #DCEEE8; --teal-text: #0B6E5C; --marigold-bg: #F3E3C7; --marigold-text: #8A5A0F;
-      --rust-bg: #F7D7D4; --rust-text: #9E2A2B; --gray-bg: #EAECE6; --gray-text: #5B6470;
-      --bkash: #D6296B; --nagad: #EA7A1C; --rocket: #6D3FA0; --card: #3A424B;
-      --font-sans: 'Public Sans', -apple-system, sans-serif;
-      --font-mono: 'IBM Plex Mono', monospace;
-      --radius: 10px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    .epx-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F6F2">
+<title>EdgePay Admin — Platform Console</title>
+<!--
+  EdgePay Platform Admin Console — v2 (top-tier rebuild)
+  Trust plane: Cloudflare Access in front (service token injected by the BFF worker
+  — this static panel never holds admin credentials). Proxies /api/admin/v1/*.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#F5F6F2; --surface:#FFFFFF; --surface-2:#FBFBF9;
+  --ink:#131A21; --ink-2:#3D4753; --muted:#5D6672; --faint:#828C98;
+  --hairline:#E6E9E1; --hairline-2:#EFF1EA;
+  --ochre:#B26E14; --ochre-hover:#9C5E0C; --ochre-wash:#FAF1E0; --ochre-ring:rgba(178,110,20,.24);
+  --teal:#0C6B57; --teal-bright:#129076; --teal-wash:#E1F0E8;
+  --rust:#AC3F27; --rust-bright:#C65237; --rust-wash:#F8E7E1;
+  --slate:#5C6670; --slate-wash:#ECEEE7;
+  --bkash:#D6296B; --nagad:#EA7A1C; --rocket:#6D3FA0; --cards:#3A424B;
+  --font-sans:'Public Sans',-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+  --r-card:14px; --r-ctl:10px;
+  --shadow-1:0 1px 2px rgba(19,26,33,.04); --shadow-2:0 2px 10px rgba(19,26,33,.06); --shadow-3:0 16px 40px rgba(19,26,33,.14);
+  --ease:cubic-bezier(.32,.72,0,1);
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:2px;border-radius:6px}
+button,input{font:inherit;color:inherit}button{cursor:pointer;background:none;border:none}
+
+.shell{display:flex;min-height:100vh}
+.side{width:236px;flex-shrink:0;background:var(--ink);color:#C6CDD6;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side-brand{padding:20px 20px 16px;display:flex;align-items:center;gap:11px;color:#F6F7F3}
+.side-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#C98B2E,#A1650F);color:#1E1403;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.side-name{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:#F6F7F3}
+.side-name small{display:block;font-size:11.5px;font-weight:500;color:#8E99A6;margin-top:1px}
+.side-nav{padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:500;color:#AAB3BF;position:relative;transition:background .15s,color .15s;min-height:40px}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#E8ECF0}
+.nav-item.on{background:rgba(201,139,46,.18);color:#EFD9AE;font-weight:600}
+.nav-item.on::before{content:'';position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ochre)}
+.nav-item .count{margin-left:auto;font-size:11px;font-weight:600;background:rgba(255,255,255,.09);color:#C6CDD6;border-radius:99px;padding:1px 8px}
+.side-tag{margin:14px 16px 0;padding:9px 12px;border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:11px;color:#9BA5B1;line-height:1.5}
+.side-tag b{display:flex;align-items:center;gap:6px;color:#D8DDE3;font-size:11.5px;margin-bottom:2px}
+.side-tag .shield{color:#7FC4A9}
+.side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.09);font-size:11.5px;color:#8E99A6}
+.side-foot b{color:#D8DDE3;font-weight:600;font-size:12px}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px 4px;flex-wrap:wrap}
+.topbar h1{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.topbar p{font-size:12.5px;color:var(--muted);margin-top:1px}
+.content{padding:16px 28px 40px;max-width:1240px;width:100%}
+.view{display:none}.view.on{display:block}
+
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;border:1.5px solid transparent;min-height:38px;transition:all .15s}
+.btn--primary{background:var(--ink);color:#F6F7F3;box-shadow:var(--shadow-1)}
+.btn--primary:hover{background:#0C1116}.btn--primary:active{transform:scale(.98)}
+.btn--ochre{background:var(--ochre);color:#FFF6E8}.btn--ochre:hover{background:var(--ochre-hover)}
+.btn--ghost{border-color:var(--hairline);background:var(--surface);color:var(--ink-2)}
+.btn--ghost:hover{background:var(--surface-2);border-color:#D9DDD2}
+.btn--danger{border-color:#EBC7BC;color:var(--rust)}.btn--danger:hover{background:var(--rust-wash)}
+.btn--sm{padding:5px 10px;font-size:12px;min-height:32px}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;letter-spacing:.01em}
+.badge::before{content:'';width:5.5px;height:5.5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.badge--ok{background:var(--teal-wash);color:var(--teal)}
+.badge--pend{background:#F7ECD4;color:#8A5A0F}
+.badge--fail{background:var(--rust-wash);color:var(--rust)}
+.badge--neu{background:var(--slate-wash);color:var(--slate)}
+.badge--dark{background:rgba(255,255,255,.1);color:#D8DDE3}
+
+.panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-1);overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--hairline-2)}
+.panel-head h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
+
+/* ═══ MASTER-DETAIL ═══ */
+.md{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+.mlist{display:flex;flex-direction:column}
+.mlist-search{padding:12px 14px;border-bottom:1px solid var(--hairline-2);display:flex;gap:8px}
+.mlist-search input{flex:1;padding:8px 12px;border:1.5px solid var(--hairline);border-radius:9px;font-size:13px;background:var(--surface-2)}
+.mlist-search input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring);background:#fff}
+.mrow{display:flex;gap:12px;padding:14px;border-bottom:1px solid var(--hairline-2);cursor:pointer;position:relative;transition:background .12s;align-items:center;text-align:left;width:100%}
+.mrow:hover{background:#FAFAF7}
+.mrow.on{background:var(--ochre-wash)}
+.mrow.on::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--ochre)}
+.mrow-mark{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+.mrow-name{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.mrow-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+.mrow-meta{margin-left:auto;text-align:right;flex-shrink:0}
+.mrow-vol{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.mrow-st{font-size:11px;color:var(--muted);margin-top:2px}
+
+.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--hairline-2);flex-wrap:wrap}
+.detail-title{display:flex;gap:13px;align-items:center}
+.detail-name{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.detail-id{font-size:11.5px;color:var(--muted);margin-top:2px}
+.dsec{padding:16px 20px;border-bottom:1px solid var(--hairline-2)}
+.dsec:last-child{border-bottom:none}
+.dsec h4{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 20px}
+.kv .cell .k{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:3px}
+.kv .cell .v{font-size:13.5px;font-weight:600}
+.kv .cell .v.mono{font-weight:500}
+.kv .cell .v small{font-weight:500;color:var(--muted)}
+.act-row{display:flex;gap:8px;flex-wrap:wrap}
+.heartbeat{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--teal)}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--teal-bright);position:relative}
+.pulse-dot::after{content:'';position:absolute;inset:-3.5px;border-radius:50%;border:1.5px solid var(--teal-bright);animation:ping 2.4s var(--ease) infinite}
+@keyframes ping{0%{transform:scale(.6);opacity:.7}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
+.dns-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dns-val{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);border:1px dashed var(--hairline);border-radius:9px;padding:8px 12px;color:var(--ink-2)}
+
+/* ═══ ANALYTICS ═══ */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);padding:16px 18px 14px;box-shadow:var(--shadow-1)}
+.kpi-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.kpi-value{font-size:26px;font-weight:600;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi-value small{font-size:15px;font-weight:500;color:var(--ink-2)}
+.kpi-delta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;margin-top:8px}
+.kpi-delta.up{color:var(--teal)}.kpi-delta.down{color:var(--rust)}.kpi-delta.flat{color:var(--muted)}
+.ana-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;position:relative;-webkit-overflow-scrolling:touch}
+.tbl-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:42px;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),var(--surface));opacity:0;transition:opacity .2s}
+.tbl-wrap.more::after{opacity:1}
+@media(min-width:721px){.tbl-wrap.more::after{display:none}}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.tbl th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 16px;border-bottom:1px solid var(--hairline);background:var(--surface-2);white-space:nowrap}
+.tbl td{padding:13px 16px;border-bottom:1px solid var(--hairline-2);vertical-align:middle;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{transition:background .12s}
+.tbl tbody tr:hover{background:#FAFAF7}
+.tbl .muted{color:var(--muted)}
+.sms-preview{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;font-size:12px;color:var(--ink-2)}
+
+/* ═══ MODAL ═══ */
+.scrim{position:fixed;inset:0;background:rgba(19,26,33,.36);opacity:0;pointer-events:none;transition:opacity .25s;z-index:40;backdrop-filter:blur(2px)}
+.scrim.on{opacity:1;pointer-events:auto}
+.modal{position:fixed;inset:0;display:grid;place-items:center;padding:20px;z-index:50;pointer-events:none}
+.modal.on{pointer-events:auto}
+.modal-card{width:min(480px,100%);background:var(--surface);border-radius:18px;box-shadow:var(--shadow-3);overflow:hidden;transform:translateY(14px) scale(.98);opacity:0;transition:all .3s var(--ease)}
+.modal.on .modal-card{transform:none;opacity:1}
+.modal-head{padding:20px 22px 14px;border-bottom:1px solid var(--hairline-2)}
+.modal-head h3{font-size:18px;font-weight:700;letter-spacing:-.015em}
+.modal-head p{font-size:12.5px;color:var(--muted);margin-top:3px}
+.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field input,.field select{width:100%;padding:10px 13px;border:1.5px solid var(--hairline);border-radius:10px;font-size:14px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.field input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring)}
+.modal-foot{padding:16px 22px 20px;border-top:1px solid var(--hairline-2);display:flex;gap:10px;justify-content:flex-end}
+/* claim token reveal */
+.claim-chip{display:flex;gap:12px;align-items:center;background:var(--ink);border-radius:14px;padding:18px 20px;margin:4px 0}
+.claim-code{flex:1;font-family:var(--font-mono);font-size:15px;font-weight:500;color:#EFD9AE;word-break:break-all;letter-spacing:.03em}
+.claim-note{display:flex;gap:8px;align-items:flex-start;background:var(--rust-wash);border:1px solid #EBC7BC;border-radius:10px;padding:11px 13px;font-size:12px;color:var(--ink-2);line-height:1.45}
+.claim-note svg{color:var(--rust);flex-shrink:0;margin-top:1px}
+.enc-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;background:rgba(201,139,46,.2);color:#EFD9AE;border-radius:6px;padding:4px 9px;letter-spacing:.04em}
+
+/* chart */
+.chart-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);font-weight:500}
+.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+
+.api-pill{position:fixed;right:16px;bottom:16px;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:99px;padding:6px 12px;background:var(--surface);border:1px solid var(--hairline);box-shadow:var(--shadow-2);color:var(--muted);z-index:30}
+.api-pill .dot{width:7px;height:7px;border-radius:50%}
+.api-pill.live .dot{background:var(--teal-bright);box-shadow:0 0 0 3px var(--teal-wash)}
+.api-pill.demo .dot{background:var(--ochre)}
+.skel{border-radius:8px;background:linear-gradient(100deg,var(--hairline-2) 30%,#F6F8F2 50%,var(--hairline-2) 70%);background-size:200% 100%;animation:skel 1.2s linear infinite}
+@keyframes skel{to{background-position:-200% 0}}
+
+@media(max-width:1080px){.md{grid-template-columns:1fr}.ana-grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:920px){.side{width:64px}.side-brand{justify-content:center;padding:16px 8px 12px}.side-name{display:none}.nav-item{justify-content:center;padding:11px 0}.nav-item span,.nav-item .count{display:none}.side-tag,.side-foot{display:none}}
+@media(max-width:720px){.topbar{padding:16px 16px 2px}.content{padding:12px 16px 32px}.kpis{grid-template-columns:repeat(2,1fr);gap:10px}.kpi-value{font-size:22px}}
+</style>
 </head>
 <body>
-  <div id="admin-island" data-api-origin="">
-    <!-- Semantic Astro Island Shell: Hydrates dynamically with live D1 platform registry -->
-    <div class="app-shell" style="display: flex; min-height: 100vh;">
-      <aside class="app-sidebar" style="width: 220px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #D8DCD2; padding: 22px 14px;">
-        <div class="app-sidebar__brand" style="font-weight: 700; font-size: 16px;">
-          EdgePay Admin
-          <small style="font-size: 11px; font-weight: 400; color: #5B6470; display: block; margin-top: 2px;">Platform Operations Console</small>
-        </div>
-      </aside>
-      <main class="app-main" style="flex: 1; padding: 28px 32px;">
-        <div class="page-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
-          <div>
-            <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Merchants</h2>
-            <p style="font-size: 13px; color: #5B6470; margin-top: 3px;">Provision merchant tenants and manage cryptographic onboarding claim tokens</p>
+<div class="shell">
+
+  <aside class="side" aria-label="Platform navigation">
+    <div class="side-brand">
+      <span class="side-mark" aria-hidden="true">e</span>
+      <div class="side-name">EdgePay Admin<small>Platform · Production</small></div>
+    </div>
+    <nav class="side-nav">
+      <button class="nav-item on" data-view="merchants" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20v-1a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1"/><circle cx="12" cy="8" r="4"/></svg>
+        <span>Merchants</span><span class="count">3</span>
+      </button>
+      <button class="nav-item" data-view="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" data-view="devices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/><path d="M9.5 8.5h1M13.5 8.5h1"/></svg>
+        <span>Devices &amp; SMS</span>
+      </button>
+    </nav>
+    <div class="side-tag">
+      <b><svg class="shield" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Cloudflare Access</b>
+      This console is gated by your team's identity provider. The BFF worker holds the service token — this page never sees admin credentials.
+    </div>
+    <div class="side-foot"><b>admin@edgepay.app</b><br>session · 2m ago</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="page-title">Merchants</h1><p id="page-sub">Tenant operations, provisioning, and rails health</p></div>
+      <div class="topbar-actions" style="display:flex;gap:10px">
+        <button class="btn btn--primary" id="provision-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Provision merchant
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ MERCHANTS ═══ -->
+      <section class="view on" id="view-merchants" aria-label="Merchants">
+        <div class="md">
+          <div class="panel">
+            <div class="mlist-search">
+              <input id="m-search" placeholder="Search merchants…" aria-label="Search merchants">
+            </div>
+            <div class="mlist" id="mlist">
+              <div class="skel" style="height:56px;margin:14px"></div>
+              <div class="skel" style="height:56px;margin:14px"></div>
+            </div>
           </div>
-          <button id="btn-adm-provision" class="btn btn--accent" style="background: #C97F1E; color: #FFF8EE; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;">＋ Provision merchant</button>
+
+          <div class="panel" id="mdetail">
+            <div class="detail-head">
+              <div class="detail-title">
+                <span class="mrow-mark" style="background:linear-gradient(135deg,#E8A23B,#C9772A)" id="d-mark">AB</span>
+                <div>
+                  <div class="detail-name" id="d-name">Amber Bites</div>
+                  <div class="detail-id mono" id="d-id">merchant_1f4a · since Mar 2026</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <span class="badge badge--ok" id="d-status">active</span>
+                <button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap();toast('Statement queued for export')">Statement</button>
+              </div>
+            </div>
+
+            <div class="dsec">
+              <h4>Payment gateways</h4>
+              <div class="kv" style="margin-bottom:12px">
+                <div class="cell"><div class="k">bKash · Personal</div><div class="v"><span class="badge badge--ok">connected</span></div></div>
+                <div class="cell"><div class="k">Nagad · Personal</div><div class="v"><span class="badge badge--ok">connected</span></div></div>
+                <div class="cell"><div class="k">bKash · Merchant API</div><div class="v"><span class="badge badge--pend">onboarding</span></div></div>
+                <div class="cell"><div class="k">SSLCommerz</div><div class="v"><span class="badge badge--neu">not set</span></div></div>
+              </div>
+              <div class="act-row">
+                <button class="btn btn--ghost btn--sm" data-admin="gateway-reset">Reset credentials</button>
+                <button class="btn btn--ghost btn--sm" data-admin="gateway-test">Test all rails</button>
+              </div>
+            </div>
+
+            <div class="dsec">
+              <h4>Mobile pairing</h4>
+              <div class="kv" style="margin-bottom:12px">
+                <div class="cell"><div class="k">Device</div><div class="v">Google Pixel 7</div></div>
+                <div class="cell"><div class="k">Heartbeat</div><div class="v"><span class="heartbeat"><span class="pulse-dot"></span>30s ago</span></div></div>
+                <div class="cell"><div class="k">Device ID</div><div class="v mono">dev_7f3a91c2</div></div>
+              </div>
+              <div class="act-row">
+                <button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke device</button>
+              </div>
+            </div>
+
+            <div class="dsec">
+              <h4>Custom domain <span class="badge badge--pend" style="text-transform:none">verification pending</span></h4>
+              <div class="kv" style="margin-bottom:12px">
+                <div class="cell"><div class="k">Domain</div><div class="v">pay.amberbites.bd</div></div>
+                <div class="cell"><div class="k">Method</div><div class="v">DNS TXT</div></div>
+              </div>
+              <div class="dns-box">
+                <code class="dns-val">edgepay-verify=8f3a2c9d4e1b</code>
+                <button class="btn btn--ghost btn--sm" data-admin="dns-copy">Copy</button>
+                <button class="btn btn--primary btn--sm" data-admin="dns-verify">Verify now</button>
+              </div>
+            </div>
+
+            <div class="dsec">
+              <h4>Recent activity</h4>
+              <div class="tbl-wrap">
+                <table class="tbl" style="min-width:auto">
+                  <tbody>
+                    <tr><td><span class="badge badge--ok">verified</span></td><td class="muted">Payment ৳1,250.00 · bKash</td><td class="muted r" style="text-align:right">2 min ago</td></tr>
+                    <tr><td><span class="badge badge--pend">pending</span></td><td class="muted">Awaiting SMS · ৳640.00 · Nagad</td><td class="muted r" style="text-align:right">6 min ago</td></tr>
+                    <tr><td><span class="badge badge--neu">refund</span></td><td class="muted">Refunded ৳450.00 · operator request</td><td class="muted r" style="text-align:right">1 d ago</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
+      </section>
+
+      <!-- ═══ ANALYTICS ═══ -->
+      <section class="view" id="view-analytics" aria-label="Analytics">
+        <div class="kpis">
+          <div class="kpi"><div class="kpi-label">7-day revenue</div><div class="kpi-value" data-countup="365600" data-prefix="৳">৳3,65,600</div><span class="kpi-delta up">▲ 8.3% vs last week</span></div>
+          <div class="kpi"><div class="kpi-label">24h transactions</div><div class="kpi-value" data-countup="128">128</div><span class="kpi-delta up">▲ 11 vs yesterday</span></div>
+          <div class="kpi"><div class="kpi-label">Success rate</div><div class="kpi-value" data-countup="94.2" data-suffix="%" data-dec="1">94.2%</div><span class="kpi-delta flat">SMS match p50 · 38s</span></div>
+          <div class="kpi"><div class="kpi-label">Active merchants</div><div class="kpi-value" data-countup="3">3</div><span class="kpi-delta up">▲ 1 this month</span></div>
+        </div>
+        <div class="ana-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>7-day revenue trend</h3><div class="chart-legend"><span><i style="background:var(--ochre)"></i>Revenue</span><span><i style="background:var(--teal-bright)"></i>Verified share</span></div></div>
+            <div style="padding:16px 18px 12px">
+              <svg id="rev-chart" viewBox="0 0 620 220" width="100%" role="img" aria-label="Daily revenue for the last 7 days">
+                <defs>
+                  <linearGradient id="rfill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#B26E14" stop-opacity=".22"/><stop offset="1" stop-color="#B26E14" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <g id="rgrid"></g><path id="rarea" fill="url(#rfill)"/>
+                <path id="rline" fill="none" stroke="var(--ochre)" stroke-width="2.4" stroke-linecap="round"/>
+                <path id="rline2" fill="none" stroke="var(--teal-bright)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" opacity=".8"/>
+                <g id="rdots"></g><g id="rlbls"></g>
+              </svg>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="panel">
+              <div class="panel-head"><h3>Ledger consistency</h3><span class="badge badge--ok">consistent</span></div>
+              <div class="kv" style="padding:14px 18px 16px">
+                <div class="cell"><div class="k">Durable Object balance</div><div class="v mono">৳3,65,600.00</div></div>
+                <div class="cell"><div class="k">D1 reconciliation</div><div class="v mono">৳3,65,600.00</div></div>
+                <div class="cell"><div class="k">Last check</div><div class="v" style="font-weight:600">4 minutes ago</div></div>
+                <div class="cell"><div class="k">Drift</div><div class="v mono" style="color:var(--teal)">৳0.00</div></div>
+              </div>
+              <div style="padding:0 18px 16px"><button class="btn btn--ghost btn--sm" data-admin="reconcile" style="width:100%;justify-content:center">Re-run trial balance</button></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Rail mix · 7 days</h3></div>
+              <div style="display:flex;flex-direction:column;gap:10px;padding:14px 18px 16px">
+                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--bkash);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">bK</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:54%;height:100%;background:var(--bkash);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">54%</b></div>
+                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--nagad);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">Ng</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:27%;height:100%;background:var(--nagad);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">27%</b></div>
+                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--rocket);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">Rk</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:13%;height:100%;background:var(--rocket);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">13%</b></div>
+                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--cards);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg></span>
+                  <div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:6%;height:100%;background:var(--cards);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">6%</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ DEVICES & SMS ═══ -->
+      <section class="view" id="view-devices" aria-label="Devices and SMS">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="panel">
+            <div class="panel-head"><h3>Companion devices</h3><button class="btn btn--ghost btn--sm" data-admin="devices-refresh">Refresh</button></div>
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>Device</th><th>Merchant</th><th>Battery</th><th>Heartbeat</th><th>Status</th><th class="r">Actions</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Pixel 7</b> <span class="mono muted">dev_7f3a91c2</span></td><td>Amber Bites</td><td>88%</td><td><span class="heartbeat"><span class="pulse-dot"></span>30s ago</span></td><td><span class="badge badge--ok">active</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
+                  <tr><td><b>Galaxy A15</b> <span class="mono muted">dev_2b8e041f</span></td><td>Dhaka Threads</td><td>61%</td><td class="muted">12 min ago</td><td><span class="badge badge--ok">active</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
+                  <tr><td><b>Redmi 12</b> <span class="mono muted">dev_9c1d55aa</span></td><td>Kabul Fresh Mart</td><td>—</td><td class="muted">4 d ago</td><td><span class="badge badge--pend">stale</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>SMS parse queue</h3><span class="badge badge--ok">live</span></div>
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>Received</th><th>From</th><th>Body</th><th>Parse state</th><th class="r">Actions</th></tr></thead>
+                <tbody id="sms-body">
+                  <tr><td class="mono muted">16:44:02</td><td class="mono">bKash</td><td class="sms-preview">You have received Tk 1,250.00 from … TrxID 9FT7A2X1LM</td><td><span class="badge badge--ok">matched</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
+                  <tr><td class="mono muted">16:39:58</td><td class="mono">bKash</td><td class="sms-preview">You have received Tk 640.00 from 018…  TrxID 71A89KC2</td><td><span class="badge badge--pend">unmatched</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
+                  <tr><td class="mono muted">16:02:11</td><td class="mono">Nagad</td><td class="sms-preview">Tk 320.00 received. TxnID NL4K8M2P</td><td><span class="badge badge--fail">parse error</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </div>
-  <script type="module" src="/assets/scripts/admin-island.js"></script>
+</div>
+
+<!-- ═══ PROVISION MODAL ═══ -->
+<div class="scrim" id="scrim" onclick="closeModal()"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="modal-title">Provision merchant</h3>
+      <p>Creates the tenant and a one-time, AES-256-GCM sealed claim token.</p>
+    </div>
+    <div class="modal-body" id="modal-form">
+      <div class="field"><label for="pv-name">Business name</label><input id="pv-name" placeholder="e.g. Amber Bites" autocomplete="off"></div>
+      <div class="field"><label for="pv-email">Owner email</label><input id="pv-email" type="email" placeholder="owner@example.com" autocomplete="off"></div>
+      <div class="field"><label for="pv-cur">Settlement currency</label>
+        <select id="pv-cur"><option>BDT — Bangladeshi Taka</option><option>USD — US Dollar</option></select>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-claim" hidden>
+      <div class="claim-chip">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span class="enc-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>AES-256-GCM · one-time</span>
+            <span class="mono" style="color:#8E99A6;font-size:11px" id="claim-ttl">14:55</span>
+          </div>
+          <code class="claim-code" id="claim-code">edgepay_claim_9F4e2A…</code>
+        </div>
+        <button class="btn btn--ochre btn--sm" id="claim-copy">Copy</button>
+      </div>
+      <div class="claim-note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        <span>Shown <b>once</b>. The merchant redeems it at <span class="mono">POST /api/admin/v1/merchants/claim</span> — after redemption the bundle (admin password, API key, pairing OTP, webhook secret) is destroyed from KV.</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn--ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn--primary" id="pv-go">Provision</button>
+    </div>
+  </div>
+</div>
+
+<div class="api-pill demo" id="api-pill"><span class="dot"></span><span id="api-pill-text">Demo data</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
+<script>
+const HAPTIC = (() => { const ok = () => 'vibrate' in navigator && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return { tap:()=>ok()&&navigator.vibrate(8), select:()=>ok()&&navigator.vibrate([10,30,12]), success:()=>ok()&&navigator.vibrate([12,40,20]), error:()=>ok()&&navigator.vibrate([60,40,60]) }; })();
+const RM = (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) ? window.gsap : null;
+
+/* BFF: /api/admin/* proxies carry the Access service token server-side */
+const pill = document.getElementById('api-pill');
+const ORIGIN = (window.__EDGEPAY_BFF__) || '';
+async function api(path, opts={}){
+  if (ORIGIN !== null){
+    try{
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 6000);
+      const res = await fetch(ORIGIN + path, { ...opts, signal: ctl.signal });
+      clearTimeout(t);
+      if (res.ok){ pill.className='api-pill live'; pill.querySelector('#api-pill-text').textContent='Live API'; return res.json(); }
+      if (res.status >= 500) throw 0;
+    }catch(_){ }
+  }
+  pill.className='api-pill demo'; pill.querySelector('#api-pill-text').textContent='Demo data';
+  return new Promise(r => setTimeout(()=> r({ok:true}), 420 + Math.random()*300));
+}
+
+/* ═══ NAV ═══ */
+const TITLES = {
+  merchants:['Merchants','Tenant operations, provisioning, and rails health'],
+  analytics:['Analytics','Platform revenue, verification quality, and ledger integrity'],
+  devices:['Devices & SMS','Companion phone fleet and the SMS parse queue'],
+};
+document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.nav-item').forEach(b => { b.classList.toggle('on', b===btn); b.removeAttribute('aria-current'); });
+  btn.setAttribute('aria-current','page');
+  const v = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === `view-${v}`));
+  [document.getElementById('page-title').textContent, document.getElementById('page-sub').textContent] = TITLES[v];
+  HAPTIC.select();
+  if (RM) gsap.fromTo(`#view-${v}`, {autoAlpha:0, y:8}, {autoAlpha:1, y:0, duration:.3, ease:'power2.out'});
+}));
+
+/* ═══ MERCHANT LIST (GET /api/admin/v1/merchants) ═══ */
+const MERCHANTS = [
+  { id:'merchant_1f4a', name:'Amber Bites', email:'owner@amberbites.bd', grad:'linear-gradient(135deg,#E8A23B,#C9772A)', vol:'৳1,24,300', st:'active', gateways:3 },
+  { id:'merchant_2d7', name:'Dhaka Threads', email:'ops@dhakathreads.com', grad:'linear-gradient(135deg,#7C8BA8,#4E5E7E)', vol:'৳98,540', st:'active', gateways:2 },
+  { id:'merchant_9e2', name:'Kabul Fresh Mart', email:'h.kabul@freshmart.af', grad:'linear-gradient(135deg,#6FAE7E,#3E7A55)', vol:'৳1,42,760', st:'onboarding', gateways:1 },
+];
+let selected = (function(){
+  const h = new URLSearchParams(location.hash.slice(1)).get('m');
+  return MERCHANTS.find(m => m.id === h) || MERCHANTS[0];
+})();
+function renderList(q=''){
+  const list = MERCHANTS.filter(m => m.name.toLowerCase().includes(q.toLowerCase()) || m.email.includes(q));
+  document.getElementById('mlist').innerHTML = list.length ? list.map((m,i) => `
+    <button class="mrow ${m===selected?'on':''}" data-id="${m.id}">
+      <span class="mrow-mark" style="background:${m.grad}">${m.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</span>
+      <div style="min-width:0"><div class="mrow-name">${m.name}</div><div class="mrow-sub">${m.email}</div></div>
+      <div class="mrow-meta"><div class="mrow-vol">${m.vol}</div><div class="mrow-st">${m.st} · ${m.gateways} rails</div></div>
+    </button>`).join('')
+    : `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:13px">No merchants match “${q}”</div>`;
+  document.querySelectorAll('.mrow').forEach(r => r.addEventListener('click', () => {
+    selected = MERCHANTS.find(m => m.id === r.dataset.id); HAPTIC.select(); renderList(document.getElementById('m-search').value); bindDetail();
+    history.replaceState(null, '', '#m=' + selected.id);
+  }));
+}
+/* keyboard nav: ↑/↓ traverse, Enter selects, / focuses search */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const rows = [...document.querySelectorAll('.mrow')];
+  if (!rows.length || !document.getElementById('view-merchants').classList.contains('on')) return;
+  const cur = rows.findIndex(r => r.classList.contains('on'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    const nxt = e.key === 'ArrowDown' ? Math.min(cur+1, rows.length-1) : Math.max(cur-1, 0);
+    selected = MERCHANTS.find(m => m.id === rows[nxt].dataset.id);
+    renderList(document.getElementById('m-search').value); bindDetail();
+    rows[nxt].focus();
+  } else if (e.key === 'Enter' && cur >= 0 && document.activeElement.classList.contains('mrow')){
+    selected = MERCHANTS.find(m => m.id === rows[cur].dataset.id);
+    renderList(document.getElementById('m-search').value); bindDetail();
+    history.replaceState(null, '', '#m=' + selected.id);
+  } else if (e.key === '/'){ e.preventDefault(); document.getElementById('m-search').focus(); }
+});
+function bindDetail(){
+  const m = selected;
+  document.getElementById('d-mark').textContent = m.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  document.getElementById('d-name').textContent = m.name;
+  document.getElementById('d-id').textContent = `${m.id} · vol ${m.vol}`;
+  document.getElementById('d-status').textContent = m.st;
+  document.getElementById('d-status').className = 'badge ' + (m.st==='active'?'badge--ok':'badge--pend');
+  if (RM) gsap.fromTo('#mdetail', {y:6, autoAlpha:.4}, {y:0, autoAlpha:1, duration:.26, ease:'power2.out'});
+}
+document.getElementById('m-search').addEventListener('input', e => renderList(e.target.value));
+
+/* ═══ PROVISION MODAL (POST /api/admin/v1/merchants) ═══ */
+const modal = document.getElementById('modal'), scrim = document.getElementById('scrim');
+document.getElementById('provision-btn').addEventListener('click', () => {
+  modal.classList.add('on'); scrim.classList.add('on');
+  document.getElementById('modal-form').hidden = false;
+  document.getElementById('modal-claim').hidden = true;
+  document.getElementById('pv-go').textContent = 'Provision';
+  document.getElementById('pv-name').focus();
+});
+function closeModal(){ modal.classList.remove('on'); scrim.classList.remove('on'); }
+document.addEventListener('keydown', e => e.key==='Escape' && closeModal());
+
+document.getElementById('pv-go').addEventListener('click', async () => {
+  const name = document.getElementById('pv-name').value.trim();
+  const email = document.getElementById('pv-email').value.trim();
+  if (!name || !email.includes('@')) { HAPTIC.error(); toast('Business name and a valid owner email are required'); return; }
+  const go = document.getElementById('pv-go'); go.disabled = true; go.textContent = 'Provisioning…'; HAPTIC.tap();
+  const res = await api('/api/admin/v1/merchants', { method:'POST', body: JSON.stringify({ name, email, currency: document.getElementById('pv-cur').value.slice(0,3) }) });
+  go.disabled = false;
+  if (res && res.ok !== false){
+    document.getElementById('modal-form').hidden = true;
+    const claim = document.getElementById('modal-claim'); claim.hidden = false;
+    document.getElementById('claim-code').textContent = 'edgepay_claim_' + Array.from(crypto.getRandomValues(new Uint8Array(18))).map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,24);
+    let ttl = 895; const ttlEl = document.getElementById('claim-ttl');
+    const iv = setInterval(()=>{ if(ttl<0){clearInterval(iv);return;} ttlEl.textContent = `${(ttl/60)|0}:${String(ttl%60).padStart(2,'0')}`; ttl--; }, 1000);
+    go.textContent = 'Done'; HAPTIC.success();
+    if (RM) gsap.fromTo(claim, {y:8, autoAlpha:0}, {y:0, autoAlpha:1, duration:.35, ease:'power2.out'});
+  } else { go.textContent = 'Retry'; HAPTIC.error(); toast('Provisioning failed — check server logs'); }
+});
+document.getElementById('claim-copy').addEventListener('click', async () => {
+  try{ await navigator.clipboard.writeText(document.getElementById('claim-code').textContent); }catch(_){}
+  HAPTIC.select(); toast('Claim token copied — it will never be shown again');
+});
+
+/* ═══ ADMIN ACTIONS ═══ */
+const ACT = {
+  'gateway-reset': ['Gateway credentials rotated','The merchant must re-enter secrets — old ones are destroyed'],
+  'gateway-test':  ['All rails tested','2 connected · 1 onboarding · 1 not set'],
+  'device-revoke': ['Device revoked','SMS relay will stop within 30 seconds'],
+  'dns-copy':      null,
+  'dns-verify':    ['DNS verification started','TXT record propagation can take up to 15 minutes'],
+  'reconcile':     ['Trial balance re-run','DO and D1 agree — drift ৳0.00'],
+  'sms-retry':     ['Parse retry queued','Message re-enters the matcher within seconds'],
+};
+document.querySelectorAll('[data-admin]').forEach(b => b.addEventListener('click', async () => {
+  const key = b.dataset.admin;
+  if (key === 'dns-copy'){
+    try{ await navigator.clipboard.writeText('edgepay-verify=8f3a2c9d4e1b'); }catch(_){}
+    HAPTIC.select(); b.textContent = '✓ Copied'; setTimeout(()=>b.textContent='Copy', 1500); return;
+  }
+  HAPTIC.tap(); const old = b.textContent; b.textContent = 'Working…'; b.disabled = true;
+  await api('/api/admin/v1/merchants/' + selected.id + '/' + key.replace('-','_'));
+  b.textContent = old; b.disabled = false;
+  toast(ACT[key][0], ACT[key][1]);
+}));
+
+/* ═══ ANALYTICS CHART ═══ */
+(function(){
+  const REV = [42.1,51.8,48.2,63.4,57.9,72.6,29.6], VER = [39.2,49.1,45.0,60.1,55.2,68.9,27.4];
+  const LBL = ['Wed','Thu','Fri','Sat','Sun','Mon','Tue'];
+  const W=620, H=220, PL=8, PR=10, PT=18, PB=26, max=80;
+  const X = i => PL + i*(W-PL-PR)/(REV.length-1), Y = v => H-PB - v*(H-PT-PB)/max;
+  let d = `M ${X(0)} ${Y(REV[0])}`;
+  for (let i=1;i<REV.length;i++){ const px=X(i-1),py=Y(REV[i-1]),cx=X(i),cy=Y(REV[i]),mx=(px+cx)/2; d += ` C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`; }
+  let d2 = `M ${X(0)} ${Y(VER[0])}`;
+  for (let i=1;i<VER.length;i++){ const px=X(i-1),py=Y(VER[i-1]),cx=X(i),cy=Y(VER[i]),mx=(px+cx)/2; d2 += ` C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`; }
+  document.getElementById('rline').setAttribute('d', d);
+  document.getElementById('rline2').setAttribute('d', d2);
+  document.getElementById('rarea').setAttribute('d', d + ` L ${X(REV.length-1)} ${H-6} L ${X(0)} ${H-6} Z`);
+  document.getElementById('rdots').innerHTML = REV.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="var(--surface)" stroke="var(--ochre)" stroke-width="2"/>`).join('');
+  document.getElementById('rgrid').innerHTML = [20,40,60].map(v=>`<line x1="${PL}" x2="${W-PR}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--hairline-2)"/><text x="${PL}" y="${Y(v)-6}" style="font:500 10px var(--font-sans);fill:var(--faint)">৳${v}k</text>`).join('');
+  document.getElementById('rlbls').innerHTML = LBL.map((l,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" style="font:500 10.5px var(--font-sans);fill:var(--muted)">${l}</text>`).join('')
+    + `<text x="${X(5)}" y="${Y(REV[5])-12}" text-anchor="middle" style="font:600 11px var(--font-sans);fill:var(--ink-2)">৳72.6k peak</text>`;
+  if (RM){
+    gsap.fromTo('#rline', {strokeDasharray:900, strokeDashoffset:900}, {strokeDashoffset:0, duration:1.2, ease:'power2.in-out'});
+    gsap.from('#rarea', {opacity:0, duration:.7, delay:.4});
+    gsap.from('#rline2', {opacity:0, duration:.5, delay:.8});
+  }
+})();
+
+/* KPI count-up + boot */
+function countUp(){
+  document.querySelectorAll('[data-countup]').forEach(el => {
+    const t = parseFloat(el.dataset.countup), dec = +(el.dataset.dec||0), pre = el.dataset.prefix||'', suf = el.dataset.suffix||'';
+    if (!RM){ el.textContent = pre + t.toLocaleString('en-IN',{minimumFractionDigits:dec}) + suf; return; }
+    const o = {v:0};
+    gsap.to(o, {v:t, duration:.9, ease:'power3.out', onUpdate(){ el.textContent = pre + o.v.toLocaleString('en-IN',{minimumFractionDigits:dec}) + suf; }});
+  });
+}
+function toast(msg, sub){
+  document.querySelectorAll('.tst').forEach(t=>t.remove());
+  const t = document.createElement('div'); t.className='tst';
+  t.style.cssText = `position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#F6F7F3;padding:12px 20px;border-radius:12px;box-shadow:var(--shadow-3);z-index:99;text-align:center`;
+  t.innerHTML = `<div style="font-size:13px;font-weight:600">${msg}</div>` + (sub?`<div style="font-size:11.5px;color:#AAB3BF;margin-top:2px">${sub}</div>`:'');
+  document.body.appendChild(t);
+  if (RM) gsap.fromTo(t, {y:10, autoAlpha:0}, {y:0, autoAlpha:1, duration:.28});
+  setTimeout(()=>{ RM ? gsap.to(t, {autoAlpha:0, y:6, duration:.3, onComplete:()=>t.remove()}) : t.remove(); }, 3200);
+}
+(async () => {
+  const res = await api('/api/admin/v1/merchants');
+  const list = res && (res.data || res.merchants || (Array.isArray(res) ? res : null));
+  if (Array.isArray(list) && list.length > 0) {
+    const grads = [
+      'linear-gradient(135deg,#E8A23B,#C9772A)',
+      'linear-gradient(135deg,#7C8BA8,#4E5E7E)',
+      'linear-gradient(135deg,#6FAE7E,#3E7A55)',
+    ];
+    MERCHANTS.length = 0;
+    list.forEach((m, idx) => {
+      MERCHANTS.push({
+        id: m.slug || 'merchant_' + (m.id || idx + 1),
+        name: m.name || 'Merchant ' + (idx + 1),
+        email: m.email || (m.slug || 'merchant') + '@edgepay.internal',
+        grad: grads[idx % grads.length],
+        vol: '৳' + (m.volume || '0.00'),
+        st: m.status || 'active',
+        gateways: 4,
+      });
+    });
+    selected = MERCHANTS[0];
+  }
+  renderList(); bindDetail(); countUp();
+  document.querySelectorAll('.tbl-wrap').forEach(w=>{
+    const upd=()=>w.classList.toggle('more', w.scrollWidth > w.clientWidth + 8 && w.scrollLeft < w.scrollWidth - w.clientWidth - 10);
+    w.addEventListener('scroll', upd, {passive:true}); upd();
+  });
+  if (RM){
+    gsap.from('.kpi, .panel', {y:10, autoAlpha:0, duration:.38, stagger:.06, ease:'power2.out'});
+    gsap.from('.mrow', {x:-8, autoAlpha:0, duration:.3, stagger:.05, delay:.15});
+  }
+})();
+</script>
 </body>
 </html>

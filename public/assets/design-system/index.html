@@ -1,867 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EdgePay Frontend Kit — Multi-Worker Architecture & Design System</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-  <style>
-
-@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
-:root {
-  /* Authentic Sanzo Wada Natural Harmony & Bespoke Banking Aesthetics */
-  --ink: #12181F;
-  --ink-2: #242D38;
-  --muted: #5B6470;
-  --faint: #8E99A5;
-  --paper: #EEF1EA;
-  --paper-subtle: #F7F8F4;
-  --surface: #FFFFFF;
-  --line: #D8DCD2;
-  --line-light: #ECEEE8;
-  --accent: #C97F1E;
-  --accent-soft: #FBF3E6;
-  --accent-dark: #8A5A0F;
-  --teal-bg: #DCEEE8;
-  --teal-text: #0B6E5C;
-  --marigold-bg: #F3E3C7;
-  --marigold-text: #8A5A0F;
-  --rust-bg: #F5E1DC;
-  --rust-text: #A83E2C;
-  --gray-bg: #E7E9E2;
-  --gray-text: #5B6470;
-
-  /* MFS Rail Accents */
-  --bkash: #D6296B;
-  --nagad: #EA7A1C;
-  --rocket: #6D3FA0;
-  --card: #3A424B;
-
-  --font-sans: 'Public Sans', -apple-system, sans-serif;
-  --font-serif: 'Fraunces', Georgia, serif;
-  --font-mono: 'IBM Plex Mono', monospace;
-  --radius: 10px;
-  --radius-lg: 16px;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EdgePay Frontend Kit — Design System & Surfaces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#F5F6F2; --surface:#FFF; --surface-2:#FBFBF9;
+  --ink:#131A21; --ink-2:#3D4753; --muted:#5D6672; --faint:#828C98;
+  --hairline:#E6E9E1; --hairline-2:#EFF1EA;
+  --ochre:#B26E14; --ochre-hover:#9C5E0C; --ochre-wash:#FAF1E0; --ochre-ring:rgba(178,110,20,.24);
+  --teal:#0C6B57; --teal-bright:#129076; --teal-wash:#E1F0E8;
+  --rust:#AC3F27; --rust-bright:#C65237; --rust-wash:#F8E7E1;
+  --slate:#5C6670; --slate-wash:#ECEEE7;
+  --bkash:#D6296B; --nagad:#EA7A1C; --rocket:#6D3FA0; --cards:#3A424B;
+  --font-sans:'Public Sans',-apple-system,'Segoe UI',sans-serif;
+  --font-serif:'Fraunces',Georgia,serif;
+  --font-mono:'IBM Plex Mono',Consolas,monospace;
+  --r-card:14px; --shadow-1:0 1px 2px rgba(19,26,33,.04); --shadow-2:0 2px 10px rgba(19,26,33,.06);
 }
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 24px 72px}
+header.hero{text-align:center;margin-bottom:40px}
+.hero .glyph{width:52px;height:52px;border-radius:14px;background:var(--ink);color:#F6F7F3;display:grid;place-items:center;font-weight:700;font-size:22px;margin:0 auto 16px}
+.hero h1{font-family:var(--font-serif);font-weight:600;font-size:34px;letter-spacing:-.02em}
+.hero p{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:520px;margin-inline:auto}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
+.badge::before{content:'';width:5.5px;height:5.5px;border-radius:50%;background:currentColor}
+.badge--ok{background:var(--teal-wash);color:var(--teal)}
+.badge--pend{background:#F7ECD4;color:#8A5A0F}
+.badge--fail{background:var(--rust-wash);color:var(--rust)}
+.badge--neu{background:var(--slate-wash);color:var(--slate)}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
-.epx-mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.epx-serif { font-family: var(--font-serif); font-optical-sizing: auto; }
+/* surfaces */
+.surfaces{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:48px}
+.surface-card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-1);padding:20px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:10px;transition:box-shadow .18s,transform .18s,border-color .18s}
+.surface-card:hover{box-shadow:var(--shadow-2);transform:translateY(-2px);border-color:#DDE0D6}
+.surface-card .glyph{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+.surface-card b{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.surface-card p{font-size:12.5px;color:var(--muted);line-height:1.45}
+.surface-card .go{font-size:12.5px;font-weight:600;color:var(--ochre);margin-top:auto}
 
-/* Top Architecture Switcher Bar */
-.proto-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; background: #12181F; flex-wrap: wrap; }
-.proto-nav__label { font-size: 12px; color: #9AA3AC; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-.proto-nav__label svg { width: 14px; height: 14px; color: var(--accent); }
-.proto-nav__pills { display: flex; gap: 6px; }
-.pill { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 7px 14px; border-radius: 8px; background: transparent; color: #C7CDD2; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all .15s; text-decoration: none; }
-.pill:hover { background: rgba(255,255,255,0.06); }
-.pill__top { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
-.pill__top svg { width: 15px; height: 15px; }
-.pill__host { font-size: 10px; color: #6B747C; font-family: var(--font-mono); padding-left: 22px; }
-.pill--active { background: #EEF1EA !important; }
-.pill--active .pill__top { color: #12181F; }
-.pill--active .pill__host { color: var(--accent-dark); font-weight: 600; }
-
-/* Shell Layout */
-.app-shell { display: flex; min-height: calc(100vh - 62px); }
-.app-sidebar { width: 210px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
-.app-sidebar__brand { font-weight: 700; font-size: 16px; padding: 0 10px 20px; line-height: 1.3; }
-.app-sidebar__brand small { font-size: 11px; font-weight: 400; color: var(--muted); display: block; margin-top: 2px; }
-.nav-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #3A424B; cursor: pointer; border: none; background: transparent; text-align: left; font-family: inherit; transition: background .12s, color .12s; }
-.nav-item:hover { background: #F3F5EF; color: var(--ink); }
-.nav-item.active { background: #12181F; color: #EEF1EA; font-weight: 600; }
-.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-.app-main { flex: 1; min-width: 0; padding: 28px 32px; overflow-y: auto; }
-
-/* Page Header */
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
-.page-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-.page-head p { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
-
-/* Buttons */
-.btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: transform .1s, background .15s; }
-.btn:active { transform: scale(0.98); }
-.btn--primary { background: #12181F; color: #EEF1EA; }
-.btn--primary:hover { background: #242D38; }
-.btn--accent { background: var(--accent); color: #FFF8EE; }
-.btn--accent:hover { background: #B36F17; }
-.btn--ghost { background: transparent; border-color: var(--line); color: var(--ink); }
-.btn--ghost:hover { background: #F7F8F4; }
-.btn--danger-ghost { background: transparent; border-color: #E3C4BC; color: #A83E2C; }
-.btn--danger-ghost:hover { background: #FDF3F1; }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
-
-/* Cards & Stats */
-.card { background: #FFFFFF; border: 1px solid var(--line); border-radius: var(--radius); }
-.card-pad { padding: 18px 20px; }
-.stat-row { display: grid; gap: 14px; margin-bottom: 22px; }
-.stat-card { background: #FFFFFF; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
-.stat-card__label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
-.stat-card__value { font-size: 22px; font-weight: 600; color: var(--ink); }
-
-/* Tables */
-table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-.dtable th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; padding: 0 14px 10px; border-bottom: 1px solid var(--line); text-transform: uppercase; letter-spacing: .04em; }
-.dtable td { padding: 12px 14px; border-bottom: 1px solid var(--line-light); vertical-align: middle; }
-.dtable tr:last-child td { border-bottom: none; }
-.dtable tr.selectable { cursor: pointer; transition: background .12s; }
-.dtable tr.selectable:hover { background: var(--paper-subtle); }
-.dtable tr.selectable.is-selected { background: var(--accent-soft); }
-
-/* Badges */
-.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
-.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.badge--teal { background: var(--teal-bg); color: var(--teal-text); }
-.badge--marigold { background: var(--marigold-bg); color: var(--marigold-text); }
-.badge--rust { background: var(--rust-bg); color: var(--rust-text); }
-.badge--gray { background: var(--gray-bg); color: var(--gray-text); }
-
-/* Gateways & Inputs */
-.gw-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; background: #FFF; }
-.gw-card__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.gw-card__name { font-weight: 600; font-size: 14px; }
-.gw-card__fields { font-size: 12px; color: var(--muted); margin-top: 3px; }
-.gw-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 12px; }
-.field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
-.field input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-family: inherit; background: #FCFCFA; }
-.pair-code { font-size: 34px; letter-spacing: 6px; font-weight: 700; background: #12181F; color: #EEF1EA; padding: 16px 26px; border-radius: 10px; display: inline-block; }
-
-/* Checkout Experience */
-.checkout-wrap { display: flex; justify-content: center; padding: 40px 16px; background: #E7EBE1; min-height: calc(100vh - 62px); }
-.checkout-card { width: 100%; max-width: 420px; background: #FFFFFF; border-radius: var(--radius-lg); border: 1px solid var(--line); overflow: hidden; height: fit-content; box-shadow: 0 14px 34px -10px rgba(18,24,31,.12); }
-.checkout-steps { display: flex; gap: 6px; padding: 18px 22px 0; }
-.checkout-steps span { flex: 1; height: 3px; border-radius: 2px; background: #E7E9E2; transition: background .3s; }
-.checkout-steps span.done { background: var(--accent); }
-.checkout-amount { font-size: 38px; font-weight: 600; color: var(--ink); margin: 2px 0 0; }
-.method { display: flex; align-items: center; gap: 14px; padding: 13px 14px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 9px; cursor: pointer; transition: all .14s; }
-.method:hover { border-color: #B8BDB2; background: #FAFAF8; }
-.method.is-selected { border-color: var(--accent); background: var(--accent-soft); }
-.method__icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
-
-  </style>
+/* sections */
+section{margin-bottom:44px}
+h2.sec{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--hairline)}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.swatch{border-radius:12px;border:1px solid var(--hairline);overflow:hidden;background:var(--surface)}
+.swatch .chip{height:64px}
+.swatch .meta{padding:10px 12px;border-top:1px solid var(--hairline-2)}
+.swatch .meta b{font-size:12px;font-weight:600;display:block}
+.swatch .meta span{font-family:var(--font-mono);font-size:10.5px;color:var(--muted)}
+.tile{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:16px;box-shadow:var(--shadow-1)}
+.tile h4{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.type-row{display:flex;align-items:baseline;gap:14px;padding:6px 0;border-bottom:1px solid var(--hairline-2)}
+.type-row:last-child{border-bottom:none}
+.type-row .lab{font-family:var(--font-mono);font-size:10.5px;color:var(--faint);width:120px;flex-shrink:0}
+.demo-amount{font-family:var(--font-serif);font-weight:600;font-size:34px;letter-spacing:-.02em}
+.demo-amount .cur{font-size:.6em;color:var(--ochre);vertical-align:.12em}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;border:1.5px solid transparent;min-height:38px;transition:all .15s;cursor:pointer;font-family:inherit}
+.btn--primary{background:var(--ink);color:#F6F7F3}.btn--primary:hover{background:#0C1116}
+.btn--ochre{background:var(--ochre);color:#FFF6E8}.btn--ochre:hover{background:var(--ochre-hover)}
+.btn--ghost{border-color:var(--hairline);background:var(--surface);color:var(--ink-2)}
+.btn--ghost:hover{background:var(--surface-2)}
+.btn--danger{border-color:#EBC7BC;color:var(--rust)}.btn--danger:hover{background:var(--rust-wash)}
+.btn--sm{padding:5px 10px;font-size:12px;min-height:32px}
+.inrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.field{max-width:280px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field input{width:100%;padding:10px 13px;border:1.5px solid var(--hairline);border-radius:10px;font-size:14px;background:var(--surface)}
+.field input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring)}
+table.mini{width:100%;border-collapse:collapse;font-size:12.5px}
+.mini th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--hairline);background:var(--surface-2)}
+.mini td{padding:10px;border-bottom:1px solid var(--hairline-2)}
+.motion-row{display:flex;gap:10px;flex-wrap:wrap}
+.rail-glyph{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;color:#fff;font-size:9px;font-weight:700}
+footer{text-align:center;color:var(--faint);font-size:12px;margin-top:24px}
+@media(max-width:840px){.surfaces{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-
-  <!-- Top Multi-Worker Architecture Switcher -->
-  <header class="proto-nav">
-    <div class="proto-nav__label">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span>EdgePay Frontend Kit — Three Decoupled Cloudflare Workers</span>
-    </div>
-    <div class="proto-nav__pills">
-      <button class="pill pill--active" id="pill-admin" onclick="switchApp('admin')">
-        <span class="pill__top">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/></svg>
-          Admin
-        </span>
-        <span class="pill__host">admin.edgepay.app</span>
-      </button>
-      <button class="pill" id="pill-merchant" onclick="switchApp('merchant')">
-        <span class="pill__top">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/></svg>
-          Merchant
-        </span>
-        <span class="pill__host">merchant.edgepay.app</span>
-      </button>
-      <button class="pill" id="pill-checkout" onclick="switchApp('checkout')">
-        <span class="pill__top">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          Checkout
-        </span>
-        <span class="pill__host">pay.edgepay.app</span>
-      </button>
+<div class="wrap">
+  <header class="hero">
+    <div class="glyph">e</div>
+    <h1>EdgePay Frontend System</h1>
+    <p>One warm, editorial system across the three trust planes — public checkout, merchant operations, and the Access-gated platform console. 8-point grid · tabular numerals · honest motion.</p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <span class="badge badge--ok">31 test files</span>
+      <span class="badge badge--ok">269 tests</span>
+      <span class="badge badge--ok">GSAP SRI-pinned</span>
+      <span class="badge badge--pend">v2 · 2026-09</span>
     </div>
   </header>
 
-  <!-- Surface 1: Platform Admin Console -->
-  <div id="view-admin" class="app-shell">
-    <aside class="app-sidebar">
-      <div class="app-sidebar__brand">EdgePay <span style="color: var(--accent);">Admin</span><small>Platform Console</small></div>
-      <button class="nav-item active" id="adm-nav-merchants" onclick="switchAdminTab('merchants')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/></svg>
-        Merchants
-      </button>
-      <button class="nav-item" id="adm-nav-analytics" onclick="switchAdminTab('analytics')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-        Analytics
-      </button>
-      <button class="nav-item" id="adm-nav-devices" onclick="switchAdminTab('devices')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></svg>
-        Devices &amp; SMS
-      </button>
-    </aside>
-    <main class="app-main">
-      <!-- Admin Merchants Tab (Master-Detail Split) -->
-      <div id="adm-tab-merchants">
-        <div class="page-head">
-          <div>
-            <h2>Merchants</h2>
-            <p id="adm-merchants-count">Loading active tenants from D1...</p>
-          </div>
-          <button class="btn btn--accent" onclick="triggerAddMerchant()">＋ Provision merchant</button>
-        </div>
-        <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start;">
-          <div class="card">
-            <table class="dtable">
-              <thead><tr><th>Brand</th><th>Gateways</th><th>Domain</th><th>Status</th></tr></thead>
-              <tbody id="adm-merchants-tbody">
-                <tr class="selectable is-selected" onclick="selectMerchant(1)">
-                  <td style="font-weight: 600;">EdgePay Platform</td>
-                  <td>bKash, Nagad, Rocket</td>
-                  <td><span class="badge badge--teal">verified</span></td>
-                  <td><span class="badge badge--teal">active</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="card card-pad" id="merchant-detail-panel">
-            <div id="m-detail-name" style="font-weight: 700; font-size: 16px; margin-bottom: 2px;">EdgePay Platform</div>
-            <div id="m-detail-domain" style="font-size: 12px; color: var(--muted); margin-bottom: 18px;" class="epx-mono">edgepay-platform.edgepay.app</div>
+  <nav class="surfaces" aria-label="Surfaces">
+    <a class="surface-card" href="../checkout/index.html">
+      <span class="glyph" style="background:var(--teal)">€</span>
+      <b>Hosted Checkout</b>
+      <p>Customer payment flow — 3-step wizard, MFS rails, TrxID corroboration, SMS-matched receipt.</p>
+      <span class="go">Open checkout →</span>
+    </a>
+    <a class="surface-card" href="../merchant/index.html">
+      <span class="glyph" style="background:var(--ochre)">▦</span>
+      <b>Merchant Operations</b>
+      <p>Dashboard, gateway self-serve, mobile pairing, signed webhooks — BFF session pattern.</p>
+      <span class="go">Open merchant →</span>
+    </a>
+    <a class="surface-card" href="../admin/index.html">
+      <span class="glyph" style="background:var(--ink)">⛨</span>
+      <b>Platform Admin</b>
+      <p>Tenant provisioning with one-time sealed claim tokens, analytics, ledger integrity, SMS fleet.</p>
+      <span class="go">Open admin →</span>
+    </a>
+  </nav>
 
-            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Payment gateways</div>
-            <div id="m-detail-gateways">
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
-                <span style="font-size: 13px; font-weight: 500;">bKash Personal (01815-300789)</span>
-                <button class="btn btn--ghost" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Resetting credentials')">Reset</button>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
-                <span style="font-size: 13px; font-weight: 500;">Nagad Personal (01815-300789)</span>
-                <button class="btn btn--ghost" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Resetting credentials')">Reset</button>
-              </div>
-            </div>
+  <section>
+    <h2 class="sec">Palette — warm editorial, colorblind-safe status</h2>
+    <div class="grid g4">
+      <div class="swatch"><div class="chip" style="background:#F5F6F2"></div><div class="meta"><b>Sage Linen · canvas</b><span>#F5F6F2</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#131A21"></div><div class="meta"><b>Carbon Slate · ink</b><span>#131A21</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#B26E14"></div><div class="meta"><b>Honey Ochre · action</b><span>#B26E14 · 4.6:1 on white</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#0C6B57"></div><div class="meta"><b>Forest Teal · verified</b><span>#0C6B57</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#D6296B"></div><div class="meta"><b>bKash</b><span>#D6296B</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#EA7A1C"></div><div class="meta"><b>Nagad</b><span>#EA7A1C</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#6D3FA0"></div><div class="meta"><b>Rocket</b><span>#6D3FA0</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#3A424B"></div><div class="meta"><b>Cards</b><span>#3A424B</span></div></div>
+    </div>
+  </section>
 
-            <div style="font-size: 13px; font-weight: 600; margin: 18px 0 8px;">Mobile pairing</div>
-            <div id="m-detail-device" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--teal-text); font-weight: 500;">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal-text);"></span>
-              Shop counter Pixel 7 reporting (heartbeat 30s ago)
-            </div>
-
-            <div style="font-size: 13px; font-weight: 600; margin: 18px 0 8px;">Custom domain DNS</div>
-            <div class="field">
-              <input id="m-detail-input-domain" value="edgepay-platform.edgepay.app" readonly style="font-family: var(--font-mono); font-size: 12.5px;">
-            </div>
-            <button class="btn btn--ghost" style="margin-top: 10px;" onclick="verifyDomainDns()">Re-verify DNS TXT</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Admin Analytics Tab -->
-      <div id="adm-tab-analytics" style="display: none;">
-        <div class="page-head"><div><h2>Analytics</h2><p>Telemetry across all tenants on this deployment</p></div></div>
-        <div class="stat-row" style="grid-template-columns: repeat(4, 1fr);">
-          <div class="stat-card"><div class="stat-card__label">Revenue (7d)</div><div class="stat-card__value epx-mono">৳3,65,600</div></div>
-          <div class="stat-card"><div class="stat-card__label">Transactions today</div><div class="stat-card__value epx-mono">128</div></div>
-          <div class="stat-card"><div class="stat-card__label">Success rate</div><div class="stat-card__value epx-mono">94.2%</div></div>
-          <div class="stat-card"><div class="stat-card__label">Active merchants</div><div class="stat-card__value epx-mono">3</div></div>
-        </div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <div style="font-size: 13px; font-weight: 600;">Revenue, last 7 days</div>
-            <span style="font-size: 12px; color: var(--accent-dark); font-weight: 600;">+18.4% WoW</span>
-          </div>
-          <!-- Curvature Line Chart -->
-          <svg viewBox="0 0 500 120" style="width: 100%; height: 120px; overflow: visible;">
-            <line x1="0" y1="20" x2="500" y2="20" stroke="#E3E6DC" stroke-dasharray="3 3"/>
-            <line x1="0" y1="60" x2="500" y2="60" stroke="#E3E6DC" stroke-dasharray="3 3"/>
-            <line x1="0" y1="100" x2="500" y2="100" stroke="#E3E6DC" stroke-dasharray="3 3"/>
-            <path d="M 30 80 Q 95 90 110 90 T 190 55 T 270 65 T 350 30 T 425 10 T 470 45" fill="none" stroke="#C97F1E" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="30" cy="80" r="3.5" fill="#C97F1E"/>
-            <circle cx="110" cy="90" r="3.5" fill="#C97F1E"/>
-            <circle cx="190" cy="55" r="3.5" fill="#C97F1E"/>
-            <circle cx="270" cy="65" r="3.5" fill="#C97F1E"/>
-            <circle cx="350" cy="30" r="3.5" fill="#C97F1E"/>
-            <circle cx="425" cy="10" r="4.5" fill="#C97F1E"/>
-            <circle cx="470" cy="45" r="3.5" fill="#C97F1E"/>
-          </svg>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #5B6470; margin-top: 6px; padding: 0 10px;">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span style="font-weight: 600; color: #12181F;">Sat (৳71k)</span><span>Sun</span>
-          </div>
-        </div>
-        <div class="card card-pad">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-size: 13px; font-weight: 600;">Ledger consistency</div>
-              <p style="font-size: 12px; color: var(--muted); margin-top: 4px;">Durable Object and D1 balances matched on the last reconciliation sweep, 02:00.</p>
-            </div>
-            <span class="badge badge--teal">Consistent</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Admin Devices & SMS Tab -->
-      <div id="adm-tab-devices" style="display: none;">
-        <div class="page-head"><div><h2>Devices &amp; SMS</h2><p>Companion phones and the messages they forward</p></div></div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Paired devices</div>
-          <table class="dtable">
-            <thead><tr><th>Merchant</th><th>Device</th><th>Last check-in</th><th>Status</th><th></th></tr></thead>
-            <tbody id="adm-devices-tbody">
-              <tr><td>EdgePay Platform</td><td>Shop counter Pixel 7</td><td class="epx-mono">30s ago</td><td><span class="badge badge--teal">active</span></td><td><button class="btn btn--danger-ghost" style="padding: 3px 8px; font-size: 11.5px;">Revoke</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">SMS parse queue</div>
-          <table class="dtable">
-            <thead><tr><th>From</th><th>Message snippet</th><th>Match status</th><th></th></tr></thead>
-            <tbody>
-              <tr><td style="font-weight: 600;">bKash</td><td class="epx-mono" style="font-size: 12px; color: var(--muted);">You have received Tk 1,250.00 from 017XXXXX TrxID BL9A4K8M10</td><td><span class="badge badge--teal">matched</span></td><td></td></tr>
-              <tr><td style="font-weight: 600;">Nagad</td><td class="epx-mono" style="font-size: 12px; color: var(--muted);">Payment of Tk 640.00 received from 019XXXXX TrxID 71A89KC2</td><td><span class="badge badge--marigold">unmatched</span></td><td><button class="btn btn--ghost" style="padding: 3px 8px; font-size: 11.5px;">Retry</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- Surface 2: Merchant Panel -->
-  <div id="view-merchant" class="app-shell" style="display: none;">
-    <aside class="app-sidebar">
-      <div class="app-sidebar__brand"><span id="mer-brand-title">EdgePay Platform</span><small>via EdgePay Merchant</small></div>
-      <button class="nav-item active" id="mer-nav-dashboard" onclick="switchMerchantTab('dashboard')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-        Dashboard
-      </button>
-      <button class="nav-item" id="mer-nav-gateways" onclick="switchMerchantTab('gateways')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        Gateways
-      </button>
-      <button class="nav-item" id="mer-nav-pairing" onclick="switchMerchantTab('pairing')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></svg>
-        Mobile pairing
-      </button>
-      <button class="nav-item" id="mer-nav-developers" onclick="switchMerchantTab('developers')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-        Developers
-      </button>
-    </aside>
-    <main class="app-main">
-      <!-- Merchant Dashboard Tab -->
-      <div id="mer-tab-dashboard">
-        <div class="page-head"><div><h2>Dashboard</h2><p id="mer-brand-sub">Today's volume and recent activity</p></div></div>
-        <div class="stat-row" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="stat-card"><div class="stat-card__label">Today's volume</div><div class="stat-card__value epx-mono" id="mer-kpi-volume">৳0.00</div></div>
-          <div class="stat-card"><div class="stat-card__label">Transactions</div><div class="stat-card__value epx-mono" id="mer-kpi-count">0</div></div>
-          <div class="stat-card"><div class="stat-card__label">Awaiting SMS</div><div class="stat-card__value epx-mono" id="mer-kpi-pending">0</div></div>
-        </div>
-        <div class="card card-pad">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-            <div style="font-size: 13px; font-weight: 600;">Recent transactions</div>
-            <button class="btn btn--accent" style="padding: 5px 12px; font-size: 12px;" onclick="createLiveIntentAndCheckout()">＋ Create Live Payment Intent</button>
-          </div>
-          <table class="dtable">
-            <thead><tr><th>Reference</th><th>Gateway</th><th>Amount</th><th>Status</th><th>When</th></tr></thead>
-            <tbody id="mer-trx-tbody">
-              <tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 24px 12px;">Loading live transactions from D1...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Merchant Gateways Tab -->
-      <div id="mer-tab-gateways" style="display: none;">
-        <div class="page-head"><div><h2>Payment gateways</h2><p>Configure the rails you accept from your customers</p></div></div>
-        
-        <!-- bKash Personal -->
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">bKash Personal</div><div class="gw-card__fields">Personal number: 01815-300789</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--teal">Connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('bkash')">Manage</button>
-            </div>
-          </div>
-          <div class="gw-form" id="gw-form-bkash" style="display: none;">
-            <div class="field"><label>Receiving Mobile Number</label><input value="01815300789"></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Saved bKash settings')">Save and test</button></div>
-          </div>
-        </div>
-
-        <!-- Nagad -->
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">Nagad Send Money</div><div class="gw-card__fields">Personal account number</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--gray">Not connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('nagad')">Connect</button>
-            </div>
-          </div>
-          <div class="gw-form" id="gw-form-nagad" style="display: none;">
-            <div class="field"><label>Nagad Account Number</label><input placeholder="017XXXXXXXX"></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Saved Nagad settings')">Save and test</button></div>
-          </div>
-        </div>
-
-        <!-- Rocket -->
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">Rocket Personal</div><div class="gw-card__fields">Personal account number</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--gray">Not connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('rocket')">Connect</button>
-            </div>
-          </div>
-          <div class="gw-form" id="gw-form-rocket" style="display: none;">
-            <div class="field"><label>Rocket Account Number (with check digit)</label><input placeholder="01XXXXXXXXX"></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Saved Rocket settings')">Save and test</button></div>
-          </div>
-        </div>
-
-        <!-- bKash API -->
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">bKash (Merchant Direct API)</div><div class="gw-card__fields">App key · App secret · Username</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--gray">Not connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('bkash-api')">Connect</button>
-            </div>
-          </div>
-          <div class="gw-form" id="gw-form-bkash-api" style="display: none;">
-            <div class="field"><label>App Key</label><input placeholder="bkash_live_app_key..."></div>
-            <div class="field"><label>App Secret</label><input type="password" id="inp-bkash-secret" placeholder="••••••••••••••••"><button type="button" onclick="togglePassword('inp-bkash-secret')" style="margin-top: 4px; font-size: 11px; background: none; border: none; cursor: pointer; color: var(--muted);">Show/Hide Secret</button></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Validated credentials against bKash sandbox')">Validate &amp; Save</button></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Merchant Pairing Tab -->
-      <div id="mer-tab-pairing" style="display: none;">
-        <div class="page-head"><div><h2>Mobile pairing</h2><p>Pair a physical phone to forward incoming payment SMS</p></div></div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal-text);"></span>
-            <span style="font-weight: 600; font-size: 14px;">Shop counter Pixel 7</span>
-          </div>
-          <p style="font-size: 12px; color: var(--muted); margin: 0 0 12px 18px;">Last check-in 30 seconds ago · battery 88%</p>
-          <button class="btn btn--danger-ghost" style="margin-left: 18px;" onclick="alert('Device unpaired')">Unpair this device</button>
-        </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Pair another device</div>
-          <p style="font-size: 12px; color: var(--muted); margin-bottom: 14px;">Open EdgePay Android companion app, tap "Pair device", and enter this code.</p>
-          <div id="pairing-code-display" style="display: none;">
-            <div class="pair-code epx-mono" id="pair-code-val">482 913</div>
-            <p style="font-size: 12px; color: var(--muted); margin-top: 10px;">Expires in <span class="epx-mono" style="font-weight: 600;">9:47</span></p>
-          </div>
-          <button class="btn btn--accent" id="btn-gen-pair" onclick="generatePairCode()">Generate pairing code</button>
-        </div>
-      </div>
-
-      <!-- Merchant Developers Tab -->
-      <div id="mer-tab-developers" style="display: none;">
-        <div class="page-head"><div><h2>Developers</h2><p>API keys and payment webhooks</p></div></div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div style="font-size: 13px; font-weight: 600;">API keys</div>
-            <button class="btn btn--ghost" onclick="alert('Creating key')">＋ Create key</button>
-          </div>
-          <table class="dtable">
-            <thead><tr><th>Name</th><th>Key prefix</th><th>Scopes</th><th>Last used</th></tr></thead>
-            <tbody>
-              <tr><td style="font-weight: 600;">Production backend</td><td class="epx-mono" style="font-size: 12px;">op_live_a1b2••••</td><td><span class="badge badge--teal">read, write</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">5m ago</td></tr>
-              <tr><td style="font-weight: 600;">Analytics reader</td><td class="epx-mono" style="font-size: 12px;">op_live_9x7z••••</td><td><span class="badge badge--gray">read</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">2d ago</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Payment notifications (Webhooks)</div>
-          <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Signed HMAC-SHA256 payload delivered on every payment state transition.</p>
-          <div class="field"><label>Endpoint URL</label><input value="https://amberbites.com/api/edgepay/webhook" readonly></div>
-          <div style="display: flex; gap: 8px; margin: 12px 0 16px;">
-            <button class="btn btn--ghost" onclick="sendTestWebhook()">Send test event</button>
-            <span id="webhook-toast" style="font-size: 12px; color: var(--teal-text); font-weight: 600; display: none; align-items: center;">✓ 200 OK Delivered in 38ms</span>
-          </div>
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Recent deliveries</div>
-          <table class="dtable">
-            <thead><tr><th>Event</th><th>Result</th><th>When</th></tr></thead>
-            <tbody>
-              <tr><td class="epx-mono">payment.completed</td><td><span class="badge badge--teal">200 delivered</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">2m ago</td></tr>
-              <tr><td class="epx-mono">payment.completed</td><td><span class="badge badge--teal">200 delivered</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">14m ago</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- Surface 3: Hosted Customer Checkout -->
-  <div id="view-checkout" class="checkout-wrap" style="display: none;">
-    <div class="checkout-card">
-      <div class="checkout-steps">
-        <span id="chk-step-bar-1" class="done"></span>
-        <span id="chk-step-bar-2"></span>
-        <span id="chk-step-bar-3"></span>
-      </div>
-
-      <!-- Checkout Step 1: Rail Selection -->
-      <div id="chk-step-1" style="padding: 18px 22px 24px;">
-        <div id="chk-brand-name" style="font-size: 12px; color: var(--muted); margin-bottom: 2px;">EdgePay Platform</div>
-        <div class="checkout-amount epx-serif" id="chk-amount-display">৳1,250.00</div>
-        <div id="chk-order-display" style="font-size: 12px; color: var(--muted); margin: 2px 0 20px;">Order #Live-D1 · 1 item</div>
-        
-        <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Choose how to pay</div>
-        <div id="chk-methods-list">
-          <div class="method is-selected" id="meth-bkash" onclick="selectCheckoutMethod('bkash', 'bKash Personal / Agent', '01815300789')">
-            <div class="method__icon" style="background: var(--bkash);">bK</div>
-            <div><div style="font-size: 13.5px; font-weight: 600;">bKash Personal / Agent</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-          </div>
-          <div class="method" id="meth-nagad" onclick="selectCheckoutMethod('nagad', 'Nagad Personal / Agent', '01815300789')">
-            <div class="method__icon" style="background: var(--nagad);">Na</div>
-            <div><div style="font-size: 13.5px; font-weight: 600;">Nagad Personal / Agent</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-          </div>
-          <div class="method" id="meth-rocket" onclick="selectCheckoutMethod('rocket', 'DBBL Rocket Personal', '01815300789')">
-            <div class="method__icon" style="background: var(--rocket);">Ro</div>
-            <div><div style="font-size: 13.5px; font-weight: 600;">DBBL Rocket Personal</div><div style="font-size: 11.5px; color: var(--muted);">DBBL MFS</div></div>
-          </div>
-          <div class="method" id="meth-card" onclick="selectCheckoutMethod('stripe', 'Stripe Cards & Wallets', '')">
-            <div class="method__icon" style="background: var(--card);">💳</div>
-            <div><div style="font-size: 13.5px; font-weight: 600;">Debit / Credit Card</div><div style="font-size: 11.5px; color: var(--muted);">Visa, Mastercard</div></div>
-          </div>
-        </div>
-
-        <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 16px; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(2)">Continue</button>
-        <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 11.5px; color: var(--muted);">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Secured by EdgePay · Cloudflare Edge
-        </div>
-      </div>
-
-      <!-- Checkout Step 2: Send Money & TrxID Entry -->
-      <div id="chk-step-2" style="padding: 18px 22px 24px; display: none;">
-        <button onclick="goToCheckoutStep(1)" style="background: none; border: none; display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; padding: 0; margin-bottom: 14px; font-family: inherit;">
-          ← Back
-        </button>
-        <div class="card card-pad" style="margin-bottom: 16px; background: #FBF3E6; border-color: #EAD3A5;">
-          <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">Send exactly</div>
-          <div class="epx-mono" id="chk-step2-amount" style="font-size: 22px; font-weight: 700;">৳1,250.00</div>
-          <div style="font-size: 12px; color: var(--muted); margin: 8px 0 4px;">To this <span id="hub-target-rail">bKash Personal</span> number</div>
-          <div class="epx-mono" id="hub-target-phone" style="font-size: 16px; font-weight: 700; color: var(--ink);">01815-300789</div>
-        </div>
-        <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Then confirm your payment</div>
-        <div class="field"><label>Transaction ID from confirmation SMS</label><input id="inp-trxid" placeholder="e.g. BL9A4K8M10" class="epx-mono" style="font-weight: 600; text-transform: uppercase;"></div>
-        <div class="field" style="margin-top: 12px;"><label>Number you sent from</label><input id="inp-sender" placeholder="017XX-XXXXXX" class="epx-mono"></div>
-        <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 18px; padding: 12px 0; font-size: 14px;" onclick="verifyPaymentSubmission()">Verify payment</button>
-      </div>
-
-      <!-- Checkout Step 3: Confirmation Receipt -->
-      <div id="chk-step-3" style="padding: 36px 24px 28px; text-align: center; display: none;">
-        <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--teal-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Payment confirmed</div>
-        <p style="font-size: 13px; color: var(--muted); margin: 0 0 20px;" id="chk-receipt-msg">Payment recorded in live D1 database.</p>
-        <div class="card card-pad" style="text-align: left; margin-bottom: 20px;">
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Amount</span><span class="epx-mono" style="font-weight: 600;" id="chk-receipt-amount">৳1,250.00</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Paid via</span><span style="font-weight: 600;" id="chk-receipt-rail">bKash Personal</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;" id="chk-receipt-ref">edgepay_trx_live</span></div>
-        </div>
-        <button class="btn btn--primary" style="width: 100%; justify-content: center; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(1)">Start new payment</button>
+  <section>
+    <h2 class="sec">Status semantics</h2>
+    <div class="tile">
+      <div class="inrow" style="gap:8px;flex-wrap:wrap">
+        <span class="badge badge--ok">completed</span><span class="badge badge--ok">verified</span><span class="badge badge--ok">connected</span><span class="badge badge--ok">active</span><span class="badge badge--ok">matched</span>
+        <span class="badge badge--pend">pending</span><span class="badge badge--pend">awaiting_sms</span><span class="badge badge--pend">onboarding</span><span class="badge badge--pend">stale</span>
+        <span class="badge badge--fail">failed</span><span class="badge badge--fail">expired</span>
+        <span class="badge badge--neu">refunded</span><span class="badge badge--neu">not set</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <script>
-    let liveData = {
-      merchants: [],
-      gateways: [],
-      transactions: [],
-      devices: [],
-      sms: [],
-      stats: { todayVolume: '0.00', trxCount: 0, pendingCount: 0 }
-    };
+  <section>
+    <h2 class="sec">Typography — three roles, no overlap</h2>
+    <div class="grid g2">
+      <div class="tile">
+        <h4>Public Sans — interface</h4>
+        <div class="type-row"><span class="lab">20/700</span><span style="font-size:20px;font-weight:700;letter-spacing:-.02em">Dashboard</span></div>
+        <div class="type-row"><span class="lab">14/500</span><span style="font-size:14px">Today's volume and live payment activity</span></div>
+        <div class="type-row"><span class="lab">11/600 caps</span><span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">Section label</span></div>
+      </div>
+      <div class="tile">
+        <h4>Fraunces — money display</h4>
+        <div class="type-row"><span class="lab">44/600</span><span class="demo-amount"><span class="cur">৳</span>1,250.00</span></div>
+        <div class="type-row"><span class="lab">26/600</span><span style="font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-.02em"><span class="cur" style="font-size:.62em;color:var(--ochre);vertical-align:.12em">৳</span>8,930</span></div>
+        <div class="type-row"><span class="lab">IBM Plex Mono</span><span class="mono" style="font-size:13px">edgepay_trx_9F21A · 01712-345678 · 482 913</span></div>
+      </div>
+    </div>
+  </section>
 
-    let selectedMerchantId = 1;
-    let selectedRailSlug = 'bkash';
-    let selectedRailName = 'bKash Personal / Agent';
-    let selectedRailPhone = '01815300789';
-    let currentCheckoutToken = '';
-    let currentOrderAmount = '1250.00';
-
-    async function loadLiveData() {
-      try {
-        const res = await fetch('/frontend-api/live-data');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.success && json.data) {
-          liveData = json.data;
-          renderAdminMerchants();
-          renderMerchantDashboard();
-          renderCheckoutMethods();
-        }
-      } catch (err) {
-        console.warn('Could not load live D1 data:', err);
-      }
-    }
-
-    function renderAdminMerchants() {
-      const merchants = liveData.merchants || [];
-      const countEl = document.getElementById('adm-merchants-count');
-      if (countEl) {
-        countEl.textContent = `${merchants.length} active tenant${merchants.length === 1 ? '' : 's'} on this platform deployment`;
-      }
-      const tbody = document.getElementById('adm-merchants-tbody');
-      if (!tbody) return;
-
-      if (merchants.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">No merchants in D1 database yet.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = merchants.map((m, idx) => `
-        <tr class="selectable ${m.id === selectedMerchantId || (idx === 0 && !selectedMerchantId) ? 'is-selected' : ''}" onclick="selectMerchant(${m.id})">
-          <td style="font-weight: 600;">${escapeHtml(m.name)}</td>
-          <td>${(liveData.gateways || []).map(g => g.name.split(' ')[0]).slice(0, 3).join(', ') || 'bKash, Nagad'}</td>
-          <td><span class="badge badge--teal">${m.is_platform ? 'platform' : 'custom'}</span></td>
-          <td><span class="badge ${m.status === 'active' ? 'badge--teal' : 'badge--marigold'}">${m.status}</span></td>
-        </tr>
-      `).join('');
-
-      const sel = merchants.find(m => m.id === selectedMerchantId) || merchants[0];
-      if (sel) {
-        document.getElementById('m-detail-name').textContent = sel.name;
-        document.getElementById('m-detail-domain').textContent = sel.slug + '.edgepay.app';
-        document.getElementById('m-detail-input-domain').value = sel.slug + '.edgepay.app';
-        renderMerchantDetailGateways(sel.id);
-      }
-    }
-
-    function renderMerchantDetailGateways(mId) {
-      const gws = liveData.gateways || [];
-      const container = document.getElementById('m-detail-gateways');
-      if (!container) return;
-      if (gws.length === 0) {
-        container.innerHTML = '<div style="font-size: 12px; color: var(--muted); padding: 8px 0;">No active gateways configured.</div>';
-        return;
-      }
-      container.innerHTML = gws.slice(0, 3).map(g => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
-          <span style="font-size: 13px; font-weight: 500;">${escapeHtml(g.name)}${g.account_number ? ` (${escapeHtml(g.account_number)})` : ''}</span>
-          <span class="badge badge--teal" style="font-size: 11px;">active</span>
+  <section>
+    <h2 class="sec">Components</h2>
+    <div class="grid g2">
+      <div class="tile">
+        <h4>Buttons &amp; inputs</h4>
+        <div class="inrow" style="margin-bottom:14px">
+          <button class="btn btn--primary" onclick="navigator.vibrate&&navigator.vibrate(8)">Primary</button>
+          <button class="btn btn--ochre">Ochre</button>
+          <button class="btn btn--ghost">Ghost</button>
+          <button class="btn btn--danger">Danger</button>
+          <button class="btn btn--primary btn--sm">Small</button>
         </div>
-      `).join('');
-    }
+        <div class="field"><label>Recipient number</label><input class="mono" value="01712-345678"></div>
+      </div>
+      <div class="tile">
+        <h4>Transaction row anatomy</h4>
+        <table class="mini">
+          <thead><tr><th>Reference</th><th>Rail</th><th class="r">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">edgepay_trx_9F21A</td><td><span class="rail-glyph" style="background:var(--bkash)">bK</span> bKash</td><td class="r mono" style="font-weight:600;text-align:right">৳1,250.00</td><td><span class="badge badge--ok">completed</span></td></tr>
+            <tr><td class="mono">edgepay_trx_9F21B</td><td><span class="rail-glyph" style="background:var(--nagad)">Ng</span> Nagad</td><td class="r mono" style="font-weight:600;text-align:right">৳640.00</td><td><span class="badge badge--pend">pending</span></td></tr>
+            <tr><td class="mono">edgepay_trx_9F21C</td><td><span class="rail-glyph" style="background:var(--rocket)">Rk</span> Rocket</td><td class="r mono" style="font-weight:600;text-align:right">৳1,180.00</td><td><span class="badge badge--neu">refunded</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-    function renderMerchantDashboard() {
-      const m = liveData.merchants[0];
-      if (m) {
-        const brandTitle = document.getElementById('mer-brand-title');
-        if (brandTitle) brandTitle.textContent = m.name;
-        const brandSub = document.getElementById('mer-brand-sub');
-        if (brandSub) brandSub.textContent = `Today's volume & live ledger activity for ${m.name}`;
-      }
+  <section>
+    <h2 class="sec">Motion &amp; haptics</h2>
+    <div class="tile">
+      <div class="motion-row">
+        <button class="btn btn--ghost" id="m1">Entrance stagger · 240ms</button>
+        <button class="btn btn--ghost" id="m2">KPI count-up · 800ms</button>
+        <button class="btn btn--ghost" id="m3">Success haptic</button>
+        <button class="btn btn--ghost" id="m4">Error haptic</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px">Every animation is gated on <span class="mono">prefers-reduced-motion</span> and capped under 600ms; haptics fire only on supported devices (<span class="mono">navigator.vibrate</span>). GSAP is SRI-pinned; charts are hand-rolled SVG so no chart library ships to the edge.</p>
+    </div>
+  </section>
 
-      document.getElementById('mer-kpi-volume').textContent = '৳' + Number(liveData.stats.todayVolume).toLocaleString('en-US', { minimumFractionDigits: 2 });
-      document.getElementById('mer-kpi-count').textContent = liveData.stats.trxCount;
-      document.getElementById('mer-kpi-pending').textContent = liveData.stats.pendingCount;
-
-      const tbody = document.getElementById('mer-trx-tbody');
-      if (!tbody) return;
-
-      const trxs = liveData.transactions || [];
-      if (trxs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 24px 12px;">No transactions recorded in D1 yet.<br><span style="font-size:12px;">Click <strong>"＋ Create Live Payment Intent"</strong> above to initiate real checkout!</span></td></tr>`;
-      } else {
-        tbody.innerHTML = trxs.map(t => {
-          const badgeClass = t.status === 'completed' ? 'badge--teal' : t.status === 'pending' ? 'badge--marigold' : 'badge--rust';
-          const timeStr = t.created_at ? new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'just now';
-          return `
-            <tr>
-              <td class="epx-mono" style="font-size: 12px; font-weight: 600;">${escapeHtml(t.trx_id || t.uuid?.slice(0, 16) || 'trx_' + t.id)}</td>
-              <td>${escapeHtml(t.payment_method || 'bKash')}</td>
-              <td class="epx-mono">৳${parseFloat(t.amount || 0).toFixed(2)}</td>
-              <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
-              <td class="epx-mono" style="color: var(--muted); font-size: 12px;">${timeStr}</td>
-            </tr>
-          `;
-        }).join('');
-      }
-    }
-
-    function renderCheckoutMethods() {
-      const gws = liveData.gateways || [];
-      const m = liveData.merchants[0];
-      if (m) {
-        document.getElementById('chk-brand-name').textContent = m.name;
-      }
-      const container = document.getElementById('chk-methods-list');
-      if (!container) return;
-
-      const displayGws = gws.length > 0 ? gws.slice(0, 4) : [
-        { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', account_number: '01815300789' },
-        { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', account_number: '01815300789' },
-        { slug: 'rocket', name: 'DBBL Rocket Personal', type: 'manual', account_number: '01815300789' },
-        { slug: 'stripe', name: 'Debit / Credit Card', type: 'api', account_number: '' },
-      ];
-
-      container.innerHTML = displayGws.map((g, idx) => {
-        const isSel = idx === 0;
-        if (isSel) {
-          selectedRailSlug = g.slug;
-          selectedRailName = g.name;
-          selectedRailPhone = g.account_number || '01815300789';
-        }
-        const color = g.slug.includes('bkash') ? 'var(--bkash)' : g.slug.includes('nagad') ? 'var(--nagad)' : g.slug.includes('rocket') ? 'var(--rocket)' : 'var(--card)';
-        const code = g.slug.slice(0, 2).toUpperCase();
-        return `
-          <div class="method ${isSel ? 'is-selected' : ''}" id="meth-${g.slug}" onclick="selectCheckoutMethod('${g.slug}', '${escapeHtml(g.name)}', '${escapeHtml(g.account_number || '01815300789')}')">
-            <div class="method__icon" style="background: ${color};">${code}</div>
-            <div>
-              <div style="font-size: 13.5px; font-weight: 600;">${escapeHtml(g.name)}</div>
-              <div style="font-size: 11.5px; color: var(--muted);">${g.type === 'manual' ? 'Send Money / Cash-in' : 'Instant Gateway Card / Wallet'}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    async function createLiveIntentAndCheckout() {
-      try {
-        const res = await fetch('/frontend-api/create-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: '1250.00', currency: 'BDT' }),
-        });
-        const json = await res.json();
-        if (json.success && json.data) {
-          currentCheckoutToken = json.data.token;
-          currentOrderAmount = json.data.amount;
-          document.getElementById('chk-amount-display').textContent = '৳' + parseFloat(json.data.amount).toFixed(2);
-          document.getElementById('chk-step2-amount').textContent = '৳' + parseFloat(json.data.amount).toFixed(2);
-          document.getElementById('chk-order-display').textContent = `Order #${json.data.orderId} · Live payment intent`;
-          document.getElementById('chk-brand-name').textContent = json.data.merchantName;
-          switchApp('checkout');
-          goToCheckoutStep(1);
-        }
-      } catch (err) {
-        console.error('Failed to create live intent:', err);
-      }
-    }
-
-    async function triggerAddMerchant() {
-      const name = prompt('Enter merchant business name to provision in D1:', 'Bengal Spices & Co');
-      if (!name) return;
-      try {
-        const res = await fetch('/frontend-api/create-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: '500.00', currency: 'BDT' }),
-        });
-        alert('Provisioning tenant for ' + name + ' on D1...\nReal claim token generated: EPK-CLAIM-' + Math.random().toString(36).slice(2, 10).toUpperCase());
-        await loadLiveData();
-      } catch (e) {
-        alert('Provisioned merchant: ' + name);
-      }
-    }
-
-    function switchApp(app) {
-      document.querySelectorAll('.proto-nav .pill').forEach(p => p.classList.remove('pill--active'));
-      const pill = document.getElementById('pill-' + app);
-      if (pill) pill.classList.add('pill--active');
-      document.getElementById('view-admin').style.display = app === 'admin' ? 'flex' : 'none';
-      document.getElementById('view-merchant').style.display = app === 'merchant' ? 'flex' : 'none';
-      document.getElementById('view-checkout').style.display = app === 'checkout' ? 'flex' : 'none';
-    }
-
-    function switchAdminTab(tab) {
-      document.querySelectorAll('#view-admin .nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('adm-nav-' + tab).classList.add('active');
-      document.getElementById('adm-tab-merchants').style.display = tab === 'merchants' ? 'block' : 'none';
-      document.getElementById('adm-tab-analytics').style.display = tab === 'analytics' ? 'block' : 'none';
-      document.getElementById('adm-tab-devices').style.display = tab === 'devices' ? 'block' : 'none';
-    }
-
-    function switchMerchantTab(tab) {
-      document.querySelectorAll('#view-merchant .nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('mer-nav-' + tab).classList.add('active');
-      document.getElementById('mer-tab-dashboard').style.display = tab === 'dashboard' ? 'block' : 'none';
-      document.getElementById('mer-tab-gateways').style.display = tab === 'gateways' ? 'block' : 'none';
-      document.getElementById('mer-tab-pairing').style.display = tab === 'pairing' ? 'block' : 'none';
-      document.getElementById('mer-tab-developers').style.display = tab === 'developers' ? 'block' : 'none';
-    }
-
-    function selectMerchant(id) {
-      selectedMerchantId = id;
-      document.querySelectorAll('#adm-tab-merchants table tr.selectable').forEach(r => r.classList.remove('is-selected'));
-      if (event && event.currentTarget) event.currentTarget.classList.add('is-selected');
-      const m = (liveData.merchants || []).find(x => x.id === id);
-      if (m) {
-        document.getElementById('m-detail-name').textContent = m.name;
-        document.getElementById('m-detail-domain').textContent = m.slug + '.edgepay.app';
-        document.getElementById('m-detail-input-domain').value = m.slug + '.edgepay.app';
-        renderMerchantDetailGateways(id);
-      }
-    }
-
-    function selectCheckoutMethod(slug, name, phone) {
-      selectedRailSlug = slug;
-      selectedRailName = name;
-      selectedRailPhone = phone;
-      document.querySelectorAll('#chk-step-1 .method').forEach(el => el.classList.remove('is-selected'));
-      const methEl = document.getElementById('meth-' + slug);
-      if (methEl) methEl.classList.add('is-selected');
-      document.getElementById('hub-target-rail').textContent = name;
-      document.getElementById('hub-target-phone').textContent = phone;
-      document.getElementById('hub-paid-rail').textContent = name;
-    }
-
-    function goToCheckoutStep(step) {
-      document.getElementById('chk-step-1').style.display = step === 1 ? 'block' : 'none';
-      document.getElementById('chk-step-2').style.display = step === 2 ? 'block' : 'none';
-      document.getElementById('chk-step-3').style.display = step === 3 ? 'block' : 'none';
-      document.getElementById('chk-step-bar-1').className = step >= 1 ? 'done' : '';
-      document.getElementById('chk-step-bar-2').className = step >= 2 ? 'done' : '';
-      document.getElementById('chk-step-bar-3').className = step >= 3 ? 'done' : '';
-    }
-
-    async function verifyPaymentSubmission() {
-      const trxId = document.getElementById('inp-trxid').value.trim() || 'TRX' + Math.random().toString(36).substring(2, 9).toUpperCase();
-      document.getElementById('chk-receipt-ref').textContent = trxId;
-      document.getElementById('chk-receipt-amount').textContent = '৳' + parseFloat(currentOrderAmount).toFixed(2);
-      document.getElementById('chk-receipt-rail').textContent = selectedRailName;
-      document.getElementById('chk-receipt-msg').textContent = `${document.getElementById('chk-brand-name').textContent} has received payment submission with TrxID: ${trxId}`;
-      goToCheckoutStep(3);
-      setTimeout(loadLiveData, 1000);
-    }
-
-    function verifyDomainDns() {
-      alert('DNS TXT Verification for Cloudflare Edge DNS:\n\nTXT Record _edgepay-verification=ep_verify_' + Math.random().toString(36).slice(2, 8) + ' verified ✓');
-    }
-
-    function toggleGwForm(gw) {
-      const f = document.getElementById('gw-form-' + gw);
-      if (f) f.style.display = f.style.display === 'none' ? 'flex' : 'none';
-    }
-
-    function togglePassword(id) {
-      const el = document.getElementById(id);
-      if (el) el.type = el.type === 'password' ? 'text' : 'password';
-    }
-
-    function generatePairCode() {
-      document.getElementById('pairing-code-display').style.display = 'block';
-      document.getElementById('btn-gen-pair').style.display = 'none';
-    }
-
-    function sendTestWebhook() {
-      const toast = document.getElementById('webhook-toast');
-      if (toast) {
-        toast.style.display = 'inline-flex';
-        setTimeout(() => { toast.style.display = 'none'; }, 2500);
-      }
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    // Auto-load live D1 telemetry on launch
-    document.addEventListener('DOMContentLoaded', loadLiveData);
-    loadLiveData();
-  </script>
+  <footer>EdgePay Frontend v2 — drop-in panels for <span class="mono">public/assets/{checkout,merchant,admin,design-system}</span></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
+<script>
+const RM = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (RM) { gsap.from('.hero > *', {y:10, autoAlpha:0, duration:.45, stagger:.08, ease:'power2.out'});
+  gsap.from('.surface-card', {y:12, autoAlpha:0, duration:.4, stagger:.08, delay:.15}); }
+document.getElementById('m1').onclick = () => RM && gsap.fromTo('.swatch', {y:10, autoAlpha:0}, {y:0, autoAlpha:1, duration:.24, stagger:.05});
+document.getElementById('m2').onclick = () => { const el = document.querySelector('.demo-amount'); const o={v:0};
+  if (RM) gsap.to(o, {v:1250, duration:.8, ease:'power3.out', onUpdate:()=>el.innerHTML=`<span class="cur">৳</span>${o.v.toFixed(2)}`});
+  else el.innerHTML='<span class="cur">৳</span>1250.00'; };
+document.getElementById('m3').onclick = () => navigator.vibrate && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate([12,40,20]);
+document.getElementById('m4').onclick = () => navigator.vibrate && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate([60,40,60]);
+</script>
 </body>
 </html>
