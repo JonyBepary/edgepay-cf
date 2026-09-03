@@ -258,11 +258,17 @@ app.get('/assets/*', async (c) => {
   return new Response(res.body, res);
 });
 
-async function serveAssetDirect(assets: { fetch: typeof fetch }, path: string): Promise<Response> {
+async function serveAssetDirect(assets: { fetch: typeof fetch } | undefined, path: string): Promise<Response> {
+  if (!assets) {
+    return new Response('Assets binding not available', { status: 503 });
+  }
   let res = await assets.fetch(new Request(`http://localhost${path}`));
   if ((res.status === 307 || res.status === 308) && res.headers.has('location')) {
     const loc = res.headers.get('location')!;
     res = await assets.fetch(new Request(new URL(loc, 'http://localhost').toString()));
+  }
+  if (!res.ok) {
+    return new Response(res.body, res);
   }
   return new Response(res.body, {
     status: 200,
@@ -277,6 +283,11 @@ async function serveAssetDirect(assets: { fetch: typeof fetch }, path: string): 
     },
   });
 }
+
+// Redirect root to frontend hub
+app.get('/', (c) => {
+  return c.redirect('/frontend');
+});
 
 app.get('/frontend', async (c) => {
   return serveAssetDirect(c.env.ASSETS, '/design-system/index.html');

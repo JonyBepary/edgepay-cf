@@ -26,6 +26,20 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
   const initialOtp = cfg.mfs.pairingOtp;
   const defaultWebhook = cfg.financial.webhookUrl;
 
+  // 0. Verify D1 database schema is initialized before querying
+  try {
+    const tableCheck = await env.DB.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='op_merchants' LIMIT 1`
+    ).first<{ name: string }>();
+
+    if (!tableCheck) {
+      console.info('D1 schema not yet initialized. Run "npm run db:migrate:local" to apply migrations.');
+      return { merchant_id: 0, pairing_otp: '', bootstrapped: false };
+    }
+  } catch {
+    return { merchant_id: 0, pairing_otp: '', bootstrapped: false };
+  }
+
   // 1. Check if platform merchant exists
   let merchant = await env.DB.prepare(
     `SELECT id, uuid FROM op_merchants WHERE is_platform = 1 LIMIT 1`
