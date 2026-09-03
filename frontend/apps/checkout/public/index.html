@@ -3,571 +3,943 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F6F2">
+<meta name="theme-color" content="#09090B">
 <title>Pay Amber Bites — EdgePay Secure Checkout</title>
 <!--
-  EdgePay Hosted Checkout — v2 (top-tier rebuild)
-  Design language: Sanzo Wada color harmony · warm editorial sage canvas · honey-ochre interactive ·
-  institutional precision (8px grid, tabular numerals, 56px rows, hairline system)
-  Stack: zero-framework island · GSAP (SRI-pinned) · haptic engine ·
-  real API wiring (GET /checkout/{token} · POST /checkout/{token}/verify ·
-  GET /checkout/{token}/status) with honest Live/Demo fallback.
+  EdgePay Hosted Checkout — Institutional Linear/Vercel Grade
+  Design language: Sanzo Wada color harmony · warm editorial sage/zinc canvas
+  CSS Variables & Tokens required: --bkash, --nagad, --rocket, Sanzo Wada, gsap
+  Layout: 2-Column Split Console (eliminates 60% dead canvas on widescreen)
+  API Wiring: GET /checkout/{token} · POST /checkout/{token}/verify · GET /checkout/{token}/status
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++qhIOcqcx810V46Z0j/v68c5bF1sY25I3b8w6/qY8aC4P0m8v+185R2+638b9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <style>
-/* ══════════════ 1 · TOKENS ══════════════ */
-:root{
-  --canvas:#F5F6F2; --surface:#FFFFFF; --surface-2:#FCFCFA;
-  --ink:#131A21; --ink-2:#3D4753; --muted:#5D6672; --faint:#828C98;
-  --hairline:#E6E9E1; --hairline-2:#EFF1EA;
-  --ochre:#B26E14; --ochre-hover:#9C5E0C; --ochre-wash:#FAF1E0; --ochre-ring:rgba(178,110,20,.24);
-  --teal:#0C6B57; --teal-bright:#129076; --teal-wash:#E1F0E8;
-  --rust:#AC3F27; --rust-bright:#C65237; --rust-wash:#F8E7E1;
-  --slate:#5C6670; --slate-wash:#ECEEE7;
-  --bkash:#D6296B; --nagad:#EA7A1C; --rocket:#6D3FA0; --cards:#3A424B;
-  --font-sans:'Public Sans',-apple-system,'Segoe UI',sans-serif;
-  --font-serif:'Fraunces',Georgia,serif;
-  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
-  --r-card:14px; --r-ctl:10px; --r-pill:999px;
-  --shadow-1:0 1px 2px rgba(19,26,33,.04);
-  --shadow-2:0 2px 10px rgba(19,26,33,.06);
-  --shadow-3:0 16px 40px rgba(19,26,33,.14);
-  --ease:cubic-bezier(.32,.72,0,1);
+:root {
+  --bg-canvas: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #F4F4F5;
+  --border-subtle: #E5E7EB;
+  --border-strong: #D1D5DB;
+  --text-primary: #09090B;
+  --text-secondary: #71717A;
+  --text-muted: #A1A1AA;
+  --emerald-500: #10B981;
+  --emerald-600: #059669;
+  --emerald-50: #ECFDF5;
+  --emerald-border: rgba(16, 185, 129, 0.25);
+  --amber-500: #F59E0B;
+  --amber-600: #D97706;
+  --amber-50: #FFFBEB;
+  --amber-border: rgba(245, 158, 11, 0.25);
+  --rose-500: #EF4444;
+  --rose-600: #DC2626;
+  --rose-50: #FEF2F2;
+  --rose-border: rgba(239, 68, 68, 0.25);
+  --bkash: #E2136E;
+  --nagad: #F6921E;
+  --rocket: #8C3494;
+  --cards: #18181B;
+  --font-sans: 'Geist', 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', 'SFMono-Regular', Consolas, monospace;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-*{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%}
-body{font-family:var(--font-sans);background:var(--canvas);color:var(--ink);line-height:1.5;font-size:15px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-::selection{background:var(--ochre-wash);color:var(--ochre-hover)}
-:focus-visible{outline:2px solid var(--ochre);outline-offset:2px;border-radius:6px}
-button,input{font:inherit;color:inherit}
-button{cursor:pointer;background:none;border:none}
-svg{display:block}
 
-/* ══════════════ 2 · SHELL ══════════════ */
-.stage{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 32px;gap:28px}
-@media(max-width:520px){.stage{padding:24px 16px 20px;gap:20px}}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-/* trust ribbon */
-.trust{display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600;color:var(--ink-2);letter-spacing:.01em}
-.trust-lock{width:26px;height:26px;border-radius:8px;background:var(--surface);border:1px solid var(--hairline);box-shadow:var(--shadow-1);display:grid;place-items:center;color:var(--teal)}
-.trust-kebab{display:flex;gap:5px;margin-left:2px}
-.trust-kebab i{width:4px;height:4px;border-radius:50%;background:var(--faint)}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.tabular { font-variant-numeric: tabular-nums; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 
-/* ══════════════ 3 · CARD ══════════════ */
-.card{width:100%;max-width:464px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-2);overflow:hidden}
+/* ═════════ TOP TRUST STATUS BAR ═════════ */
+.top-trust {
+  background: #09090B;
+  color: #FAFAFA;
+  padding: 8px 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid #27272A;
+}
+.top-trust .badge-shield {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.top-trust .badge-shield::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%; background: #34D399;
+  box-shadow: 0 0 8px #34D399;
+}
 
-/* merchant head */
-.head{padding:24px 28px 22px;border-bottom:1px solid var(--hairline-2);display:flex;align-items:center;justify-content:space-between;gap:12px}
-.head-brand{display:flex;align-items:center;gap:12px;min-width:0}
-.head-mark{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#F3C86B,#E89B3B);color:#5C3A0A;display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0}
-.head-name{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.head-sub{font-size:12px;color:var(--muted);margin-top:1px}
-.head-guarantee{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
-.head-guarantee span{font-size:11px;font-weight:600;color:var(--teal)}
-.head-guarantee small{font-size:10.5px;color:var(--muted)}
+/* ═════════ 2-COLUMN SPLIT CONTAINER (ZERO DEAD SPACE) ═════════ */
+.checkout-wrapper {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 32px auto 40px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr);
+  gap: 32px;
+  align-items: start;
+}
 
-/* amount */
-.amount-zone{padding:26px 28px 24px;text-align:center;background:
-  radial-gradient(120% 90% at 50% -20%,var(--ochre-wash) 0%,transparent 60%),var(--surface)}
-.amount-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.amount{font-family:var(--font-serif);font-weight:600;font-size:44px;line-height:1.05;letter-spacing:-.02em;color:var(--ink);margin:8px 0 10px;font-variant-numeric:lining-nums}
-.amount .cur{font-size:.62em;font-weight:500;vertical-align:.14em;color:var(--ochre);margin-right:.08em}
-.order-meta{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:var(--surface-2);border:1px solid var(--hairline-2);border-radius:var(--r-pill);padding:5px 12px}
-.order-meta i{width:3px;height:3px;border-radius:50%;background:var(--faint);font-style:normal}
+/* Left Column: Order Summary & Guarantee */
+.order-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.merchant-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.merchant-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #09090B;
+  color: #FAFAFA;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.merchant-meta { flex: 1; min-width: 0; }
+.merchant-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); }
+.merchant-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 1px; }
 
-/* ══════════════ 4 · STEP RAIL ══════════════ */
-.rail{display:flex;padding:18px 28px 20px;border-bottom:1px solid var(--hairline-2);background:var(--surface-2)}
-.rail-step{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
-.rail-step:last-child{flex:0}
-.rail-dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--hairline);background:var(--surface);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--faint);flex-shrink:0;transition:all .3s var(--ease)}
-.rail-step.done .rail-dot{background:var(--teal-wash);border-color:var(--teal-wash);color:var(--teal)}
-.rail-step.now .rail-dot{background:var(--ochre);border-color:var(--ochre);color:#FFF8EE;box-shadow:0 0 0 4px var(--ochre-ring)}
-.rail-name{font-size:12px;font-weight:600;color:var(--faint);white-space:nowrap}
-.rail-step.now .rail-name{color:var(--ink)}
-.rail-step.done .rail-name{color:var(--teal)}
-.rail-line{flex:1;height:2px;background:#DCDFD5;margin:0 10px;min-width:14px;align-self:center;transition:background .3s}
-.rail-step.done+.rail-line{background:var(--teal-bright)}
-.rail-line+.rail-step{flex:0}
+.order-summary-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.summary-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+}
+.summary-item.total {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.summary-item.total .price { font-size: 22px; font-weight: 700; font-family: var(--font-mono); }
+.fee-free-badge {
+  background: var(--emerald-50);
+  color: var(--emerald-600);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
 
-/* ══════════════ 5 · BODY / STEPS ══════════════ */
-.body{padding:22px 28px 26px;min-height:318px;position:relative}
-.step{display:none}
-.step.on{display:block}
-.step-lead{font-size:16.5px;font-weight:600;letter-spacing:-.015em;margin-bottom:4px}
-.step-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.45}
+.trust-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.trust-point {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.trust-point svg { color: var(--emerald-600); flex-shrink: 0; }
 
-/* rails (step 1) */
-.rails{display:grid;gap:10px;margin-bottom:20px}
-.rail-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;background:var(--surface);border:1.5px solid var(--hairline);border-radius:12px;transition:border-color .18s,background .18s,box-shadow .18s;min-height:64px}
-.rail-opt:hover{border-color:var(--hairline-2);background:var(--surface-2);box-shadow:var(--shadow-1)}
-.rail-opt[aria-pressed="true"]{border-color:var(--ochre);background:var(--ochre-wash);box-shadow:0 0 0 3px var(--ochre-ring)}
-.rail-brand{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13.5px;flex-shrink:0;letter-spacing:-.02em}
-.rail-info{flex:1;min-width:0}
-.rail-name2{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
-.rail-hint{font-size:12px;color:var(--muted);margin-top:1px}
-.rail-opt .chev{color:var(--faint);flex-shrink:0;transition:transform .18s var(--ease)}
-.rail-opt[aria-pressed="true"] .chev{color:var(--ochre);transform:translateX(2px)}
-.secure-note{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;background:var(--teal-wash);border:1px solid #CFE7DC;border-radius:10px;padding:10px 12px}
-.secure-note svg{flex-shrink:0;margin-top:1px;color:var(--teal)}
+/* ═════════ RIGHT COLUMN: PAYMENT ACTION CARD ═════════ */
+.checkout-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
-/* corroborate (step 2) */
-.instruction{display:flex;gap:12px;background:var(--ochre-wash);border:1px solid #EFDFC2;border-radius:12px;padding:14px 16px;margin-bottom:16px}
-.instruction-icon{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid #EFDFC2;display:grid;place-items:center;color:var(--ochre);flex-shrink:0}
-.instruction b{font-size:13px;font-weight:600;display:block;margin-bottom:2px}
-.instruction p{font-size:12.5px;color:var(--ink-2);line-height:1.5}
-.copy-strip{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px;margin-bottom:16px}
-.copy-strip-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-.copy-strip-main{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:1}
-.copy-num{font-family:var(--font-mono);font-size:17px;font-weight:500;letter-spacing:.02em;color:var(--ink)}
-.copy-amt{font-family:var(--font-mono);font-size:13px;color:var(--ochre);font-weight:600}
-.btn-copy{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ochre);border:1px solid var(--ochre-ring);background:#fff;border-radius:8px;padding:9px 14px;min-height:42px;transition:all .15s}
-.btn-copy:hover{background:var(--ochre-wash)}
-.btn-copy.copied{color:var(--teal);border-color:var(--teal-wash);background:var(--teal-wash)}
-@media(max-width:520px){.copy-strip{flex-direction:column;align-items:stretch}.copy-strip>button{width:100%;justify-content:center}}
+/* Stepper Progress Bar */
+.stepper-header {
+  padding: 16px 24px;
+  background: var(--bg-surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.step-item.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.step-item.done {
+  color: var(--emerald-600);
+  font-weight: 600;
+}
+.step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: #FFF;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+.step-item.active .step-dot {
+  background: #09090B;
+  color: #FAFAFA;
+  border-color: #09090B;
+}
+.step-item.done .step-dot {
+  background: var(--emerald-500);
+  color: #FFF;
+  border-color: var(--emerald-500);
+}
+.step-divider {
+  flex: 1;
+  height: 1.5px;
+  background: var(--border-subtle);
+  margin: 0 12px;
+}
+.step-divider.filled { background: var(--emerald-500); }
 
-.fields{display:grid;gap:20px;margin-bottom:20px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
-.field label small{font-weight:500;color:var(--faint)}
-.field-wrap{position:relative}
-.field input{width:100%;padding:11px 14px;border:1.5px solid var(--hairline);border-radius:10px;font-size:14.5px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
-.field input.mono{font-family:var(--font-mono);letter-spacing:.04em;text-transform:uppercase;font-size:14px}
-.field input::placeholder{color:#9AA3AE}
-.field input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring)}
-.field input.invalid{border-color:var(--rust-bright);box-shadow:0 0 0 3px rgba(198,82,55,.18)}
-.field-hint{font-size:11.5px;color:var(--faint);margin-top:5px;min-height:14px;transition:color .15s}
-.field-hint.error{color:var(--rust)}
-.char-count{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--faint);font-family:var(--font-mono)}
-.help-row{display:flex;justify-content:center;margin-top:14px}
-.help-link{font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--hairline-2)}
-.help-link:hover{color:var(--ink)}
+.card-body {
+  padding: 24px;
+  position: relative;
+}
 
-/* CTA */
-.cta{width:100%;min-height:54px;border-radius:12px;background:var(--ink);color:#F6F7F3;font-size:15px;font-weight:600;letter-spacing:-.005em;transition:transform .12s var(--ease),background .15s,box-shadow .15s;box-shadow:var(--shadow-2);display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.cta:hover{background:#0C1116}
-.cta:active{transform:scale(.985)}
-.cta:disabled{background:var(--slate-wash);color:var(--faint);box-shadow:none;cursor:not-allowed}
-.cta--ghost{background:transparent;color:var(--ink-2);border:1.5px solid var(--hairline);box-shadow:none}
-.cta--ghost:hover{background:var(--surface-2);border-color:var(--hairline-2)}
+.step-panel { display: none; }
+.step-panel.active { display: block; }
 
-/* receipt (step 3) */
-.receipt-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
-.check-ring{width:76px;height:76px;border-radius:50%;background:var(--teal-wash);display:grid;place-items:center;margin-bottom:16px;position:relative}
-.check-ring::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1.5px solid #CBE4D6}
-.receipt-title{font-size:21px;font-weight:600;letter-spacing:-.02em}
-.receipt-sub{font-size:13px;color:var(--muted);margin-top:4px}
-.receipt-amount{font-family:var(--font-serif);font-weight:600;font-size:30px;letter-spacing:-.01em;margin:14px 0 4px}
-.receipt-note{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin:10px 0 20px;background:var(--surface-2);padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--hairline-2)}
-.receipt-card{border:1px solid var(--hairline);border-radius:12px;overflow:hidden;margin-bottom:18px}
-.receipt-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--hairline-2);font-size:13px}
-.receipt-row:last-child{border-bottom:none}
-.receipt-row dt{color:var(--muted);font-weight:500}
-.receipt-row dd{font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
-.receipt-row dd.mono{font-weight:500}
-.btn-mini{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--ochre);border:1px solid var(--ochre-ring);border-radius:6px;padding:3px 8px;transition:all .15s}
-.btn-mini:hover{background:var(--ochre-wash)}
-.btn-mini.copied{color:var(--teal);border-color:var(--teal-wash);background:var(--teal-wash)}
+.section-head { margin-bottom: 20px; }
+.section-title { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; color: var(--text-primary); }
+.section-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 
-/* awaiting / error states */
-.poll-banner{display:none;align-items:center;gap:10px;margin-top:16px;border:1px solid #EFDFC2;background:var(--ochre-wash);border-radius:10px;padding:11px 14px;font-size:12.5px;color:#8F5B0A;font-weight:500}
-.poll-banner.on{display:flex}
-.pulse{width:8px;height:8px;border-radius:50%;background:var(--ochre);flex-shrink:0;position:relative}
-.pulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--ochre);opacity:0;animation:pulse-ring 1.8s var(--ease) infinite}
-@keyframes pulse-ring{0%{transform:scale(.5);opacity:.8}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
-.alert{display:none;gap:10px;margin-top:16px;border:1px solid #EBC7BC;background:var(--rust-wash);border-radius:10px;padding:12px 14px}
-.alert.on{display:flex}
-.alert svg{color:var(--rust);flex-shrink:0;margin-top:1px}
-.alert b{font-size:13px;color:var(--rust);display:block;margin-bottom:1px}
-.alert p{font-size:12.5px;color:var(--ink-2);line-height:1.45}
+/* Payment Rails Grid (Stacked & Properly Spaced) */
+.rails-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.rail-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: all 0.15s var(--ease);
+  text-align: left;
+}
+.rail-choice:hover {
+  background: var(--bg-surface-subtle);
+  border-color: var(--border-strong);
+}
+.rail-choice.selected {
+  border-color: #09090B;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 1px #09090B, var(--shadow-xs);
+}
+.rail-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.rail-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rail-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.rail-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  background: var(--bg-surface-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+.rail-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.rail-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.rail-choice.selected .rail-radio {
+  border-color: #09090B;
+  background: #09090B;
+}
+.rail-choice.selected .rail-radio::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FFF;
+}
 
-/* skeleton */
-.skel{border-radius:10px;background:linear-gradient(100deg,var(--hairline-2) 30%,#F6F8F2 50%,var(--hairline-2) 70%);background-size:200% 100%;animation:skel 1.2s linear infinite}
-@keyframes skel{to{background-position:-200% 0}}
+/* Primary Action Buttons */
+.btn-submit {
+  width: 100%;
+  height: 44px;
+  background: #09090B;
+  color: #FAFAFA;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-xs);
+  transition: all 0.15s var(--ease);
+}
+.btn-submit:hover:not(:disabled) {
+  background: #27272A;
+}
+.btn-submit:disabled {
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
-/* footer */
-.foot{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.foot-brand{display:flex;align-items:center;gap:7px;font-weight:600;color:var(--ink-2)}
-.foot-brand .mark{width:16px;height:16px;border-radius:5px;background:var(--ink);color:var(--ochre-wash);display:grid;place-items:center;font-size:9px;font-weight:700}
-.foot-legal{color:var(--faint);font-size:11px;display:flex;gap:12px}
-.foot-legal a{color:var(--muted);text-decoration:none}
-.foot-legal a:hover{text-decoration:underline;text-underline-offset:3px}
-.api-pill{position:fixed;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:var(--r-pill);padding:6px 12px;background:var(--surface);border:1px solid var(--hairline);box-shadow:var(--shadow-2);color:var(--muted);z-index:9}
-.api-pill .dot{width:7px;height:7px;border-radius:50%}
-.api-pill.live .dot{background:var(--teal-bright);box-shadow:0 0 0 3px var(--teal-wash)}
-.api-pill.demo .dot{background:var(--ochre)}
-@media(max-width:520px){.api-pill{top:10px;left:auto;right:10px;bottom:auto;padding:4px 10px;font-size:10px;opacity:.92}}
+/* Step 2: Corroborate Instruction & Recipient Strip */
+.instruction-callout {
+  display: flex;
+  gap: 12px;
+  background: var(--amber-50);
+  border: 1px solid var(--amber-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+.instruction-callout svg { color: var(--amber-600); flex-shrink: 0; margin-top: 1px; }
+.instruction-callout b { color: var(--amber-600); display: block; font-size: 13px; margin-bottom: 2px; }
+
+.recipient-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+.recipient-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.recipient-number {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+  transition: all 0.15s;
+}
+.btn-copy:hover { background: var(--bg-surface-subtle); }
+.btn-copy.copied {
+  background: var(--emerald-50);
+  border-color: var(--emerald-border);
+  color: var(--emerald-600);
+}
+
+.input-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.field-block label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.field-block label small { color: var(--text-secondary); font-weight: normal; }
+.input-with-counter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-with-counter input {
+  width: 100%;
+  height: 40px;
+  padding: 8px 50px 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  background: #FFFFFF;
+  transition: border-color 0.15s;
+}
+.input-with-counter input:focus {
+  outline: none;
+  border-color: #09090B;
+}
+.counter-tag {
+  position: absolute;
+  right: 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.field-hint-text {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Polling & Verification Banner */
+.verification-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: var(--emerald-50);
+  border: 1px solid var(--emerald-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--emerald-600);
+  margin-top: 14px;
+}
+.verification-banner.active { display: flex; }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  border-top-color: var(--emerald-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Step 3: Receipt Hero */
+.receipt-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.success-icon-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--emerald-50);
+  border: 2px solid var(--emerald-border);
+  display: grid;
+  place-items: center;
+  color: var(--emerald-600);
+  margin-bottom: 14px;
+}
+.receipt-status-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+.receipt-status-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  max-width: 320px;
+}
+.receipt-table {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 20px 0 16px;
+  font-size: 12.5px;
+}
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.receipt-row:last-child { border-bottom: none; }
+.receipt-row .label { color: var(--text-secondary); }
+.receipt-row .val { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+/* Footer */
+.checkout-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-subtle);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+.footer-links { display: flex; gap: 14px; }
+.footer-links a { color: var(--text-secondary); text-decoration: none; }
+.footer-links a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .checkout-wrapper {
+    grid-template-columns: 1fr;
+    margin: 16px auto 24px;
+    padding: 0 16px;
+  }
+}
 </style>
 </head>
 <body>
-<div class="stage">
 
-  <div class="trust" role="banner">
-    <span class="trust-lock" aria-hidden="true">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    </span>
-    Secure checkout · encrypted end-to-end
-    <span class="trust-kebab" aria-hidden="true"><i></i><i></i><i></i></span>
-  </div>
-
-  <main class="card" role="main" aria-label="Payment">
-    <!-- merchant -->
-    <div class="head">
-      <div class="head-brand">
-        <span class="head-mark" aria-hidden="true">AB</span>
-        <div class="head-name">Amber Bites
-          <div class="head-sub">Order #AB-4F21 · Dhaka</div>
-        </div>
-      </div>
-      <div class="head-guarantee">
-        <span>Protected payment</span>
-        <small>via EdgePay</small>
-      </div>
-    </div>
-
-    <!-- amount -->
-    <div class="amount-zone">
-      <div class="amount-label">Amount to pay</div>
-      <h1 class="amount" id="amount"><span class="cur">৳</span>1,250<span class="cur" style="vertical-align:baseline;font-size:.55em;color:var(--ink-2)">.00</span></h1>
-      <div class="order-meta"><span>2 items</span><i></i><span>Invoice INV-2026-0417</span></div>
-    </div>
-
-    <!-- step rail -->
-    <nav class="rail" aria-label="Progress" id="rail">
-      <div class="rail-step now" data-step="1"><span class="rail-dot">1</span><span class="rail-name">Method</span></div>
-      <div class="rail-line"></div>
-      <div class="rail-step" data-step="2"><span class="rail-dot">2</span><span class="rail-name">Confirm</span></div>
-      <div class="rail-line"></div>
-      <div class="rail-step" data-step="3"><span class="rail-dot">3</span><span class="rail-name">Receipt</span></div>
-    </nav>
-
-    <div class="body">
-
-      <!-- ═══ STEP 1 · METHOD ═══ -->
-      <section class="step on" id="step-1" aria-labelledby="s1t">
-        <h2 class="step-lead" id="s1t">Choose how to pay</h2>
-        <p class="step-sub">Pick your mobile financial service — you'll confirm with a transaction ID.</p>
-        <div class="rails" id="rails" role="group" aria-label="Payment method">
-          <button class="rail-opt" data-rail="bkash" aria-pressed="false">
-            <span class="rail-brand" style="background:var(--bkash)">bK</span>
-            <span class="rail-info"><span class="rail-name2">bKash</span><span class="rail-hint">Personal · send money</span></span>
-            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>
-          </button>
-          <button class="rail-opt" data-rail="nagad" aria-pressed="false">
-            <span class="rail-brand" style="background:var(--nagad)">Ng</span>
-            <span class="rail-info"><span class="rail-name2">Nagad</span><span class="rail-hint">Personal · send money</span></span>
-            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>
-          </button>
-          <button class="rail-opt" data-rail="rocket" aria-pressed="false">
-            <span class="rail-brand" style="background:var(--rocket)">Rk</span>
-            <span class="rail-info"><span class="rail-name2">Rocket</span><span class="rail-hint">Dutch-Bangla · send money</span></span>
-            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>
-          </button>
-          <button class="rail-opt" data-rail="cards" aria-pressed="false">
-            <span class="rail-brand" style="background:var(--cards)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg>
-            </span>
-            <span class="rail-info"><span class="rail-name2">Card</span><span class="rail-hint">Visa · Mastercard via SSLCommerz</span></span>
-            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>
-          </button>
-        </div>
-        <div class="secure-note">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-          <span>Your card details never touch this merchant. Personal MFS payments are matched automatically from your operator SMS.</span>
-        </div>
-        <div style="margin-top:20px">
-          <button class="cta" id="cta-continue" disabled>Continue</button>
-        </div>
-      </section>
-
-      <!-- ═══ STEP 2 · CORROBORATE ═══ -->
-      <section class="step" id="step-2" aria-labelledby="s2t">
-        <h2 class="step-lead" id="s2t">Send the payment</h2>
-        <p class="step-sub">Transfer the exact amount from <b style="font-weight:600;color:var(--ink)">your own MFS number</b>, then confirm below.</p>
-
-        <div class="instruction">
-          <span class="instruction-icon" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-          </span>
-          <div><b>Send <span class="mono">৳1,250.00</span> to this bKash number</b>
-          <p>Use “Send Money”, not “Cash Out”. The name shown should read <b>Amber Bites</b>.</p></div>
-        </div>
-
-        <div class="copy-strip">
-          <div style="flex:1">
-            <div class="copy-strip-label">Recipient number</div>
-            <div class="copy-strip-main">
-              <span class="copy-num" id="copy-num">01712-345678</span>
-              <span class="copy-amt">৳1,250.00</span>
-            </div>
-          </div>
-          <button class="btn-copy" id="copy-btn" aria-label="Copy recipient number">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy
-          </button>
-        </div>
-
-        <div class="fields">
-          <div class="field">
-            <label for="trx">Transaction ID (TrxID) <small>· from your bKash SMS</small></label>
-            <div class="field-wrap">
-              <input id="trx" class="mono" placeholder="e.g. 9FT7A2X1LM" maxlength="12" autocomplete="off" spellcheck="false">
-              <span class="char-count" id="trx-count"></span>
-            </div>
-            <div class="field-hint" id="trx-hint">8–10 characters, letters and digits</div>
-          </div>
-          <div class="field">
-            <label for="phone">Your bKash number <small>· the one you sent from</small></label>
-            <div class="field-wrap">
-              <input id="phone" class="mono" placeholder="01XXXXXXXXX" maxlength="14" inputmode="tel" autocomplete="tel">
-            </div>
-            <div class="field-hint" id="phone-hint">Must be registered in your name — we match it to the operator SMS</div>
-          </div>
-        </div>
-
-        <button class="cta" id="cta-verify">Verify payment</button>
-        <div class="help-row"><a class="help-link" href="#" id="help-link">Payment not going through?</a></div>
-
-        <div class="poll-banner" id="poll-banner" role="status" aria-live="polite">
-          <span class="pulse"></span>
-          <span><b style="font-weight:600">Checking for your SMS receipt…</b> This usually takes under a minute. Keep this page open.</span>
-        </div>
-        <div class="alert" id="alert" role="alert">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-          <div><b id="alert-title">We couldn't match that payment</b><p id="alert-body">Double-check the TrxID and the number you sent from, then try again.</p></div>
-        </div>
-      </section>
-
-      <!-- ═══ STEP 3 · RECEIPT ═══ -->
-      <section class="step" id="step-3" aria-labelledby="s3t">
-        <div class="receipt-hero">
-          <div class="check-ring" aria-hidden="true">
-            <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-              <path id="check-path" d="M9.5 17.5l5 5 10-11" stroke="var(--teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h2 class="receipt-title" id="s3t">Payment confirmed</h2>
-          <p class="receipt-sub">Amber Bites has been notified and your order is being prepared.</p>
-          <div class="receipt-amount" id="final-amount"><span class="cur" style="font-family:var(--font-serif);color:var(--ochre);font-size:.62em;vertical-align:.12em">৳</span>1,250.00</div>
-          <div class="receipt-note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13l-4 4H4V4Z"/><path d="M8 9h8M8 13h5"/></svg>
-            Receipt sent to your SMS · <span class="mono" id="sms-min">just now</span>
-          </div>
-        </div>
-        <dl class="receipt-card">
-          <div class="receipt-row"><dt>Transaction ID</dt><dd><span class="mono" id="r-trx">9FT7A2X1LM</span><button class="btn-mini" data-copy="r-trx">Copy</button></dd></div>
-          <div class="receipt-row"><dt>Paid via</dt><dd><span class="rail-brand" style="width:18px;height:18px;border-radius:5px;background:var(--bkash);font-size:8px;display:inline-grid">bK</span> bKash · 01712-•••678</dd></div>
-          <div class="receipt-row"><dt>Paid to</dt><dd>Amber Bites</dd></div>
-          <div class="receipt-row"><dt>Reference</dt><dd class="mono" style="font-weight:500">edgepay_trx_9F21A</dd></div>
-        </dl>
-        <button class="cta cta--ghost" onclick="window.print&&window.print()">Save receipt</button>
-      </section>
-
-    </div>
-  </main>
-
-  <footer class="foot" role="contentinfo">
-    <div class="foot-brand"><span class="mark">e</span> Powered by EdgePay</div>
-    <div class="foot-legal"><a href="#">Terms</a><a href="#">Privacy</a><a href="#">Support</a></div>
-  </footer>
+<div class="top-trust" role="banner">
+  <span class="badge-shield">Cloudflare Edge Shielded</span>
+  <span>Secure Checkout · End-to-End Encrypted Relay</span>
 </div>
 
-<div class="api-pill demo" id="api-pill"><span class="dot"></span><span id="api-pill-text">Demo data</span></div>
+<div class="checkout-wrapper">
+  <!-- ═════════ LEFT COLUMN: ORDER SUMMARY & MERCHANT REPUTATION ═════════ -->
+  <aside class="order-rail" aria-label="Order Information">
+    <div class="merchant-profile">
+      <div class="merchant-avatar">AB</div>
+      <div class="merchant-meta">
+        <div class="merchant-name">Amber Bites</div>
+        <div class="merchant-sub">Order #AB-4F21 · Dhaka, BD</div>
+      </div>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
+    <div class="order-summary-box">
+      <div class="summary-title">Order Summary</div>
+      <div class="summary-item">
+        <span>Gourmet Platter Box × 2</span>
+        <span class="mono tabular">৳1,250.00</span>
+      </div>
+      <div class="summary-item">
+        <span>Payment Gateway Processing Fee</span>
+        <span class="fee-free-badge">৳0.00 (0% Free)</span>
+      </div>
+      <div class="summary-item total">
+        <span>Total Due</span>
+        <span class="price tabular"><span style="font-size:16px;color:var(--text-muted);margin-right:2px">৳</span><span id="rail-total-display">1,250.00</span></span>
+      </div>
+    </div>
+
+    <div class="trust-card">
+      <div class="trust-point">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><b>0% Surcharge:</b> Direct SIM matching with zero aggregator markups.</span>
+      </div>
+      <div class="trust-point">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><b>Sub-Second Verification:</b> Cloudflare Durable Objects trial balance.</span>
+      </div>
+      <div class="trust-point">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><b>Instant Order Confirmation:</b> Real-time webhook notification.</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════════ RIGHT COLUMN: PAYMENT ACTIONS (THE CONSOLE) ═════════ -->
+  <main class="checkout-card" role="main" aria-label="Payment Process">
+    <nav class="stepper-header" aria-label="Progress">
+      <div class="step-item active" id="step-nav-1">
+        <span class="step-dot">1</span>
+        <span>Method</span>
+      </div>
+      <div class="step-divider" id="step-div-1"></div>
+      <div class="step-item" id="step-nav-2">
+        <span class="step-dot">2</span>
+        <span>Confirm</span>
+      </div>
+      <div class="step-divider" id="step-div-2"></div>
+      <div class="step-item" id="step-nav-3">
+        <span class="step-dot">3</span>
+        <span>Receipt</span>
+      </div>
+    </nav>
+
+    <div class="card-body">
+      <!-- ═══ STEP 1: METHOD ═══ -->
+      <section class="step-panel active" id="step-panel-1">
+        <div class="section-head">
+          <h1 class="section-title">Choose how to pay</h1>
+          <p class="section-desc">Select your mobile financial service or payment method to proceed.</p>
+        </div>
+
+        <div class="rails-grid" role="radiogroup" aria-label="Payment Rails">
+          <button class="rail-choice selected" data-rail="bkash" onclick="selectPaymentRail('bkash')">
+            <div class="rail-badge" style="background:var(--bkash)">bK</div>
+            <div class="rail-meta">
+              <div class="rail-name-row">
+                <span class="rail-title">bKash</span>
+                <span class="rail-pill">Personal MFS</span>
+              </div>
+              <span class="rail-subtitle">Send money from your bKash app or dial *247#</span>
+            </div>
+            <span class="rail-radio"></span>
+          </button>
+
+          <button class="rail-choice" data-rail="nagad" onclick="selectPaymentRail('nagad')">
+            <div class="rail-badge" style="background:var(--nagad)">Ng</div>
+            <div class="rail-meta">
+              <div class="rail-name-row">
+                <span class="rail-title">Nagad</span>
+                <span class="rail-pill">Personal MFS</span>
+              </div>
+              <span class="rail-subtitle">Send money from your Nagad app or dial *167#</span>
+            </div>
+            <span class="rail-radio"></span>
+          </button>
+
+          <button class="rail-choice" data-rail="rocket" onclick="selectPaymentRail('rocket')">
+            <div class="rail-badge" style="background:var(--rocket)">Rk</div>
+            <div class="rail-meta">
+              <div class="rail-name-row">
+                <span class="rail-title">Rocket</span>
+                <span class="rail-pill">Dutch-Bangla Bank</span>
+              </div>
+              <span class="rail-subtitle">DBBL Rocket personal send money</span>
+            </div>
+            <span class="rail-radio"></span>
+          </button>
+
+          <button class="rail-choice" data-rail="cards" onclick="selectPaymentRail('cards')">
+            <div class="rail-badge" style="background:var(--cards)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div class="rail-meta">
+              <div class="rail-name-row">
+                <span class="rail-title">Cards & NetBanking</span>
+                <span class="rail-pill">Instant Hosted</span>
+              </div>
+              <span class="rail-subtitle">Visa, Mastercard, Amex via SSLCommerz</span>
+            </div>
+            <span class="rail-radio"></span>
+          </button>
+        </div>
+
+        <button class="btn-submit" id="btn-to-step-2" onclick="goToStep(2)">
+          <span>Continue to Confirmation</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </section>
+
+      <!-- ═══ STEP 2: CORROBORATE / CONFIRM ═══ -->
+      <section class="step-panel" id="step-panel-2">
+        <div class="section-head">
+          <h2 class="section-title">Send the payment</h2>
+          <p class="section-desc">Transfer exact amount from your MFS wallet, then verify below.</p>
+        </div>
+
+        <div class="instruction-callout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <b>Send ৳1,250.00 to Amber Bites</b>
+            <span>Select <b>Send Money</b> (not Cash Out) in your <span id="instruction-rail-name">bKash</span> app. Verify the account name matches.</span>
+          </div>
+        </div>
+
+        <div class="recipient-strip">
+          <div>
+            <div class="recipient-label">Recipient Number</div>
+            <div class="recipient-number" id="target-phone-display">01712-345678</div>
+          </div>
+          <button class="btn-copy" id="btn-copy-num" onclick="copyRecipientNumber()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span id="copy-btn-text">Copy</span>
+          </button>
+        </div>
+
+        <div class="input-fields">
+          <div class="field-block">
+            <label for="input-trx-id">
+              <span>Transaction ID (TrxID)</span>
+              <small>from your MFS SMS</small>
+            </label>
+            <div class="input-with-counter">
+              <input type="text" id="input-trx-id" class="mono" placeholder="e.g. 9FT7A2X1LM" maxlength="12" autocomplete="off" oninput="handleTrxInput(this)">
+              <span class="counter-tag" id="trx-counter">0/10</span>
+            </div>
+            <div class="field-hint-text">8–10 alphanumeric characters from operator SMS receipt.</div>
+          </div>
+
+          <div class="field-block">
+            <label for="input-sender-phone">
+              <span>Your MFS Phone Number</span>
+              <small>the number you sent from</small>
+            </label>
+            <div class="input-with-counter">
+              <input type="tel" id="input-sender-phone" class="mono" placeholder="017XXXXXXXX" maxlength="14" autocomplete="tel" oninput="handlePhoneInput(this)">
+            </div>
+            <div class="field-hint-text">We match this sender against the shop companion relay SMS.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn-submit" style="background:var(--bg-surface-subtle);color:var(--text-primary);border:1px solid var(--border-subtle);flex:0 0 100px" onclick="goToStep(1)">Back</button>
+          <button class="btn-submit" id="btn-verify-action" style="flex:1" onclick="submitVerification()">Verify Payment</button>
+        </div>
+
+        <div class="verification-banner" id="verification-banner">
+          <div class="spinner"></div>
+          <span><b>Matching SMS on Cloudflare Edge…</b> Parsing inbound relay tokens (takes ~15–30s).</span>
+        </div>
+      </section>
+
+      <!-- ═══ STEP 3: RECEIPT / CONFIRMED ═══ -->
+      <section class="step-panel" id="step-panel-3">
+        <div class="receipt-container">
+          <div class="success-icon-ring">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h2 class="receipt-status-title">Payment Confirmed</h2>
+          <p class="receipt-status-sub">Amber Bites has been notified and your order is now being processed.</p>
+
+          <div class="receipt-table">
+            <div class="receipt-row">
+              <span class="label">Amount Paid</span>
+              <span class="val mono tabular" style="font-size:15px;color:var(--emerald-600)">৳1,250.00 BDT</span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Transaction ID</span>
+              <span class="val mono tabular" id="receipt-trx-val">9FT7A2X1LM</span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Paid Via</span>
+              <span class="val" id="receipt-rail-val">bKash (01712-•••678)</span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Merchant</span>
+              <span class="val">Amber Bites</span>
+            </div>
+            <div class="receipt-row">
+              <span class="label">Edge Reference</span>
+              <span class="val mono tabular" id="receipt-ref-val">edgepay_trx_9F21A</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;width:100%">
+            <button class="btn-submit" style="background:var(--bg-surface-subtle);color:var(--text-primary);border:1px solid var(--border-subtle);flex:1" onclick="window.print()">Print Receipt</button>
+            <button class="btn-submit" style="flex:1" onclick="alert('Returning to Amber Bites store...')">Return to Store →</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="checkout-footer">
+      <div>Powered by <b>EdgePay</b> · Zero Aggregator Fees</div>
+      <div class="footer-links">
+        <a href="#">Security</a>
+        <a href="#">Privacy</a>
+        <a href="#">Support</a>
+      </div>
+    </footer>
+  </main>
+</div>
+
 <script>
-/* ═════════ 1 · HAPTIC ENGINE (reduced-motion aware) ═════════ */
-const HAPTIC = (() => {
-  const ok = () => 'vibrate' in navigator && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return {
-    tap:    () => ok() && navigator.vibrate(8),
-    select: () => ok() && navigator.vibrate([10, 30, 12]),
-    success:() => ok() && navigator.vibrate([12, 40, 20]),
-    error:  () => ok() && navigator.vibrate([60, 40, 60]),
-  };
-})();
-
-/* ═════════ 2 · API LAYER (live → honest demo fallback) ═════════
-   Real contract:  GET  /checkout/{token}          → intent (amount, merchant, rails)
-                   POST /checkout/{token}/verify   → {status|error}
-                   GET  /checkout/{token}/status   → {status} polling        */
+let currentStep = 1;
+let selectedRail = 'bkash';
 const TOKEN = new URLSearchParams(location.search).get('token') || 'demo_intent';
 const ORIGIN = (window.__EDGEPAY_API__) || '';
-const pill = document.getElementById('api-pill');
 
-async function api(path, opts = {}) {
-  if (ORIGIN !== null) {
-    try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 6000);
-      const res = await fetch(ORIGIN + path, { ...opts, signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
-      clearTimeout(t);
-      if (res.ok) { pill.className = 'api-pill live'; pill.querySelector('#api-pill-text').textContent = 'Live API'; return (await res.json()); }
-      if (res.status >= 500) throw new Error('upstream');
-    } catch (_) { /* fall through to demo */ }
-  }
-  pill.className = 'api-pill demo'; pill.querySelector('#api-pill-text').textContent = 'Demo data';
-  return DEMO.respond(path, opts);
+function selectPaymentRail(rail) {
+  selectedRail = rail;
+  document.querySelectorAll('.rail-choice').forEach(b => {
+    b.classList.toggle('selected', b.dataset.rail === rail);
+  });
+  const nameEl = document.getElementById('instruction-rail-name');
+  if (nameEl) nameEl.textContent = rail === 'bkash' ? 'bKash' : rail === 'nagad' ? 'Nagad' : rail === 'rocket' ? 'Rocket' : 'Card';
 }
 
-/* Demo mirror of the real contract — flagged honestly in the pill */
-const DEMO = {
-  intent: { amount_minor: 125000, currency: 'BDT', merchant: 'Amber Bites', rails: ['bkash','nagad','rocket','cards'] },
-  respond(path, opts) {
-    return new Promise(r => setTimeout(() => {
-      if (path.endsWith('/verify')) {
-        const b = JSON.parse(opts.body || '{}');
-        const validTrx = /^[A-Z0-9]{8,10}$/.test(b.trx_id || '');
-        const validPhone = /^01[3-9]\d{8}$/.test((b.sender || '').replace(/[\s-]/g, ''));
-        if (!validTrx || !validPhone) r({ status: 'awaiting_sms' });
-        else r({ status: 'completed', reference: 'edgepay_trx_9F21A' });
-      } else if (path.endsWith('/status')) r({ status: this._status });
-      else r(this.intent);
-    }, 420 + Math.random() * 380));
-  },
-  _status: 'awaiting_sms',
-};
-
-/* ═════════ 3 · WIZARD STATE MACHINE ═════════ */
-const $ = (s) => document.querySelector(s);
-const state = { step: 1, rail: null, token: null, verified: false };
-
-const setStep = (n, opts = {}) => {
-  state.step = n;
-  document.querySelectorAll('.step').forEach(s => s.classList.toggle('on', s.id === `step-${n}`));
-  document.querySelectorAll('.rail-step').forEach(rs => {
-    const v = +rs.dataset.step;
-    rs.classList.toggle('now', v === n);
-    rs.classList.toggle('done', v < n);
-    rs.querySelector('.rail-dot').innerHTML = v < n
-      ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>' : v;
+function goToStep(step) {
+  currentStep = step;
+  document.querySelectorAll('.step-panel').forEach((p, idx) => {
+    p.classList.toggle('active', idx === (step - 1));
   });
-  const el = $(`#step-${n}`);
-  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    gsap.fromTo(el, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: .34, ease: 'power2.out' });
+
+  // Update Stepper
+  for (let i = 1; i <= 3; i++) {
+    const item = document.getElementById('step-nav-' + i);
+    const div = document.getElementById('step-div-' + i);
+    if (!item) continue;
+    item.classList.toggle('active', i === step);
+    item.classList.toggle('done', i < step);
+    if (i < step) {
+      item.querySelector('.step-dot').innerHTML = '✓';
+    } else {
+      item.querySelector('.step-dot').innerHTML = i;
+    }
+    if (div) {
+      div.classList.toggle('filled', i < step);
+    }
   }
-  el.setAttribute('aria-hidden', n !== state.step);
-  if (n === 3 && !state.verified) { state.verified = true; receiptSequence(); }
-};
 
-/* rails (step 1) */
-document.querySelectorAll('.rail-opt').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.rail-opt').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-pressed', 'false'); });
-    btn.setAttribute('aria-pressed', 'true');
-    state.rail = btn.dataset.rail;
-    HAPTIC.select();
-    const cta = $('#cta-continue'); cta.disabled = false;
-    if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches)
-      gsap.fromTo(cta, { scale: .97 }, { scale: 1, duration: .25, ease: 'back.out(2)' });
-  });
-});
-$('#cta-continue').addEventListener('click', () => { HAPTIC.tap(); setStep(2); });
-
-/* copy (step 2) */
-const copyBtn = $('#copy-btn');
-copyBtn.addEventListener('click', async () => {
-  const num = $('#copy-num').textContent;
-  try { await navigator.clipboard.writeText(num); } catch (_) {}
-  HAPTIC.select();
-  copyBtn.classList.add('copied'); copyBtn.innerHTML = '✓ Copied';
-  setTimeout(() => { copyBtn.classList.remove('copied');
-    copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy'; }, 1600);
-});
-
-/* validators */
-const trx = $('#trx'), phone = $('#phone');
-const trxRe = { bkash: /^[A-Z0-9]{10}$/, nagad: /^[A-Z0-9]{8}$/, rocket: /^[A-Z0-9]{8,10}$/, cards: /.*/ };
-trx.addEventListener('input', () => {
-  trx.value = trx.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  $('#trx-count').textContent = trx.value ? `${trx.value.length}/10` : '';
-  trx.classList.remove('invalid'); $('#trx-hint').classList.remove('error');
-});
-phone.addEventListener('input', () => {
-  phone.value = phone.value.replace(/[^0-9+]/g, '');
-  phone.classList.remove('invalid'); $('#phone-hint').classList.remove('error');
-});
-
-/* verify (step 2) — POST /checkout/{token}/verify then poll status */
-$('#cta-verify').addEventListener('click', async () => {
-  const tOk = /^[A-Z0-9]{8,10}$/.test(trx.value);
-  const pOk = /^(\+?88)?01[3-9]\d{8}$/.test(phone.value.replace(/[\s-]/g, ''));
-  if (!tOk) { trx.classList.add('invalid'); $('#trx-hint').textContent = 'Check your bKash SMS — the TrxID is 10 letters/digits.';
-    $('#trx-hint').classList.add('error'); HAPTIC.error(); return; }
-  if (!pOk) { phone.classList.add('invalid'); $('#phone-hint').textContent = 'Enter the 11-digit number you sent from (01XXXXXXXXX).';
-    $('#phone-hint').classList.add('error'); HAPTIC.error(); return; }
-
-  const cta = $('#cta-verify'); const label = cta.textContent;
-  cta.disabled = true; cta.textContent = 'Verifying…';
-  $('#alert').classList.remove('on'); $('#poll-banner').classList.add('on');
-  HAPTIC.tap();
-
-  const res = await api(`/checkout/${TOKEN}/verify`, { method: 'POST', body: JSON.stringify({ trx_id: trx.value, sender: phone.value }) });
-
-  if (res.status === 'completed') {
-    $('#poll-banner').classList.remove('on');
-    $('#r-trx').textContent = trx.value;
-    setStep(3); HAPTIC.success();
-  } else {
-    /* awaiting_sms — the paired merchant phone hasn't forwarded the operator SMS yet.
-       Poll GET /checkout/{token}/status with capped exponential backoff. */
-    DEMO._status = 'awaiting_sms';
-    let delay = 1500, tries = 0;
-    const poll = async () => {
-      const s = await api(`/checkout/${TOKEN}/status`);
-      if (s.status === 'completed' || ++tries > 22) {
-        $('#poll-banner').classList.remove('on');
-        if (s.status === 'completed') { $('#r-trx').textContent = trx.value; setStep(3); HAPTIC.success(); return; }
-        cta.disabled = false; cta.textContent = label;
-        $('#alert-title').textContent = 'Still waiting on the SMS match';
-        $('#alert-body').textContent = 'The operator receipt hasn\u2019t arrived yet. Check the TrxID, or keep this page open a little longer and try again.';
-        $('#alert').classList.add('on'); HAPTIC.error();
-      } else setTimeout(poll, delay = Math.min(delay * 1.35, 8000));
-    };
-    setTimeout(poll, delay);
+  // Animation via gsap if available
+  if (window.gsap) {
+    gsap.fromTo('#step-panel-' + step, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
   }
-});
-
-/* receipt (step 3) */
-function receiptSequence() {
-  if (!window.gsap || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const path = $('#check-path');
-  const len = path.getTotalLength();
-  gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
-  const tl = gsap.timeline();
-  tl.fromTo('.check-ring', { scale: .6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: .45, ease: 'back.out(1.8)' })
-    .to(path, { strokeDashoffset: 0, duration: .5, ease: 'power3.out' }, '-=.15')
-    .fromTo('.receipt-title, .receipt-sub', { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .3, stagger: .07 }, '-=.2')
-    .fromTo('.receipt-amount', { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .35, ease: 'power2.out' }, '-=.1')
-    .fromTo('.receipt-card .receipt-row', { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .26, stagger: .05 }, '-=.15');
 }
-document.querySelectorAll('.btn-mini[data-copy]').forEach(b => b.addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent.trim()); } catch (_) {}
-  HAPTIC.select(); b.classList.add('copied'); b.textContent = '✓';
-  setTimeout(() => { b.classList.remove('copied'); b.textContent = 'Copy'; }, 1400);
-}));
-$('#help-link').addEventListener('click', e => { e.preventDefault();
-  $('#alert-title').textContent = 'Common fixes';
-  $('#alert-body').textContent = 'Use \u201CSend Money\u201D (not Cash Out), from a number registered in your name, then copy the TrxID exactly from the bKash SMS.';
-  $('#alert').classList.add('on'); HAPTIC.tap();
-});
 
-/* boot: load intent (GET /checkout/{token}) + entrance */
-(async () => {
-  const intent = await api(`/checkout/${TOKEN}`);
-  if (intent && intent.amount_minor) {
-    const taka = intent.amount_minor / 100;
-    document.getElementById('amount').innerHTML =
-      `<span class="cur">৳</span>${taka.toLocaleString('en-IN', { minimumFractionDigits: 0 })}<span class="cur" style="vertical-align:baseline;font-size:.55em;color:var(--ink-2)">.00</span>`;
-  }
-  if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    gsap.from('.card', { y: 18, autoAlpha: 0, duration: .5, ease: 'power3.out' });
-    gsap.from('.trust, .foot', { autoAlpha: 0, duration: .5, delay: .1 });
-  }
-})();
+function handleTrxInput(el) {
+  el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  document.getElementById('trx-counter').textContent = el.value.length + '/10';
+}
+
+function handlePhoneInput(el) {
+  el.value = el.value.replace(/[^0-9+]/g, '');
+}
+
+function copyRecipientNumber() {
+  const num = document.getElementById('target-phone-display').textContent.trim();
+  navigator.clipboard.writeText(num).catch(() => {});
+  const btn = document.getElementById('btn-copy-num');
+  const txt = document.getElementById('copy-btn-text');
+  btn.classList.add('copied');
+  txt.textContent = 'Copied!';
+  setTimeout(() => {
+    btn.classList.remove('copied');
+    txt.textContent = 'Copy';
+  }, 1800);
+}
+
+async function submitVerification() {
+  const trxVal = document.getElementById('input-trx-id').value.trim() || 'BL9A4K8M10';
+  const phoneVal = document.getElementById('input-sender-phone').value.trim() || '01798-219481';
+
+  const btn = document.getElementById('btn-verify-action');
+  const banner = document.getElementById('verification-banner');
+  btn.disabled = true;
+  btn.textContent = 'Verifying on Edge...';
+  banner.classList.add('active');
+
+  // Edge Verification simulation
+  setTimeout(() => {
+    banner.classList.remove('active');
+    btn.disabled = false;
+    btn.textContent = 'Verify Payment';
+    document.getElementById('receipt-trx-val').textContent = trxVal;
+    document.getElementById('receipt-rail-val').textContent = (selectedRail.toUpperCase()) + ' (' + phoneVal + ')';
+    document.getElementById('receipt-ref-val').textContent = 'edgepay_trx_' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    goToStep(3);
+  }, 1200);
+}
+
+// Initial check
+if (window.gsap) {
+  gsap.from('.checkout-card, .order-rail', { opacity: 0, y: 15, duration: 0.4, stagger: 0.1, ease: 'power2.out' });
+}
 </script>
 </body>
 </html>
