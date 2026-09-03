@@ -20,17 +20,19 @@ import {
   isGatewayEnabled,
   assertGatewayEnabled,
   IMPLEMENTED_GATEWAY_SLUGS,
+  DEFAULT_ENABLED_GATEWAY_SLUGS,
 } from '../src/gateways/enabled';
 import { GatewayDisabledError } from '../src/lib/error';
 
 const ALL = [...IMPLEMENTED_GATEWAY_SLUGS];
 
 describe('parseEnabledGateways — the pure parser', () => {
-  it('unset / blank means ALL gateways (v0.2.2 back-compat)', () => {
+  it('unset / blank means the P0-7 default ceiling (7 audited gateways)', () => {
+    const EXPECTED = [...DEFAULT_ENABLED_GATEWAY_SLUGS];
     for (const raw of [undefined, null, '', '   ']) {
       const sel = parseEnabledGateways(raw as string | undefined | null);
-      expect(sel.enabled).toEqual(ALL);
-      expect(sel.allEnabled).toBe(true);
+      expect(sel.enabled).toEqual(EXPECTED);
+      expect(sel.allEnabled).toBe(false);
       expect(sel.dropped).toEqual([]);
     }
   });
@@ -116,7 +118,7 @@ describe('isGatewayEnabled / assertGatewayEnabled', () => {
   });
 });
 
-describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = full catalog default)', () => {
+describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = P0-7 default ceiling)', () => {
   it('GET /api/v1/gateways requires bearer auth (401 envelope)', async () => {
     const res = await SELF.fetch('http://localhost/api/v1/gateways');
     expect(res.status).toBe(401);

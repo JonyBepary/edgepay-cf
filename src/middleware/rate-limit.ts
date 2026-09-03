@@ -22,7 +22,7 @@
 
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../types/env';
-import { metric } from '../lib/observability';
+import { metric, page } from '../lib/observability';
 
 interface RateLimitConfig {
   windowSec: number;
@@ -34,9 +34,9 @@ const ANON_ROUTE_LIMITS: Record<string, RateLimitConfig> = {
   'api-read':    { windowSec: 60, maxRequests: 120, keyPrefix: 'rl:api:r:' },
   'api-write':   { windowSec: 60, maxRequests: 30,  keyPrefix: 'rl:api:w:' },
   'mobile':      { windowSec: 60, maxRequests: 60,  keyPrefix: 'rl:mobile:' },
-  'install':     { windowSec: 60, maxRequests: 120, keyPrefix: 'rl:install:' },
+  'install':     { windowSec: 3600, maxRequests: 3, keyPrefix: 'rl:install:' },
   'otp':         { windowSec: 3600, maxRequests: 10, keyPrefix: 'rl:otp:' },
-  'password':    { windowSec: 3600, maxRequests: 10, keyPrefix: 'rl:pwd:' },
+  'password':    { windowSec: 3600, maxRequests: 5, keyPrefix: 'rl:pwd:' },
   'checkout':    { windowSec: 600, maxRequests: 30,  keyPrefix: 'rl:chk:' },
 };
 
@@ -99,6 +99,11 @@ export const rateLimitMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: 
 /**
  * Anonymous-route rate limiter — per IP via KV (login attempts, OTP
  * pairing, install, checkout). Keyed by IP and route-class group (V3-006 fix).
+ *
+ * FAIL-CLOSED: if the KV counter cannot be read/written (misconfig,
+ * outage), anonymous traffic is rejected with 503 RATE_LIMIT_DEGRADED
+ * rather than allowed unbounded. Authenticated routes keep fail-open
+ * (see rateLimitMiddleware above) since the bearer check still gates them.
  */
 export function perIpRateLimit(group: keyof typeof ANON_ROUTE_LIMITS): MiddlewareHandler<{ Bindings: Env }> {
   const config = ANON_ROUTE_LIMITS[group];
@@ -106,7 +111,22 @@ export function perIpRateLimit(group: keyof typeof ANON_ROUTE_LIMITS): Middlewar
     const clientIp = getClientIp(c.req.raw.headers);
     const key = `${config.keyPrefix}${clientIp}:${group}`;
 
-    const counterRaw = await c.env.KV.get(key);
+    let counterRaw: string | null;
+    try {
+      counterRaw = await c.env.KV.get(key);
+    } catch (err) {
+      metric(c.env, 'rate_limit_degraded', { extra: `${c.req.path}:${group}` });
+      if (c.env.ENVIRONMENT === 'production') {
+        page(c.env, 'RATE_LIMIT_DEGRADED', { path: c.req.path, group, error: String(err) });
+      }
+      return c.json({
+        success: false,
+        error: {
+          code: 'RATE_LIMIT_DEGRADED',
+          message: 'Rate limiter temporarily unavailable. Please retry shortly.',
+        },
+      }, 503);
+    }
     let count = 0;
     let resetAt = Date.now() + config.windowSec * 1000;
 
@@ -137,9 +157,23 @@ export function perIpRateLimit(group: keyof typeof ANON_ROUTE_LIMITS): Middlewar
       }, 429);
     }
 
-    c.executionCtx.waitUntil(
-      c.env.KV.put(key, `${count}|${resetAt}`, { expirationTtl: config.windowSec }),
-    );
+    try {
+      c.executionCtx.waitUntil(
+        c.env.KV.put(key, `${count}|${resetAt}`, { expirationTtl: config.windowSec }),
+      );
+    } catch (err) {
+      metric(c.env, 'rate_limit_degraded', { extra: `${c.req.path}:${group}` });
+      if (c.env.ENVIRONMENT === 'production') {
+        page(c.env, 'RATE_LIMIT_DEGRADED', { path: c.req.path, group, error: String(err) });
+      }
+      return c.json({
+        success: false,
+        error: {
+          code: 'RATE_LIMIT_DEGRADED',
+          message: 'Rate limiter temporarily unavailable. Please retry shortly.',
+        },
+      }, 503);
+    }
 
     rateLimitHeaders(c, config.maxRequests, resetAt, config.maxRequests - count);
     return next();

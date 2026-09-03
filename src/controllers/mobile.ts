@@ -14,7 +14,13 @@ type MobileContext = Context<{ Bindings: Env; Variables: Record<string, unknown>
 
 export const mobileRoutes = new Hono<{ Bindings: Env; Variables: Record<string, unknown> }>();
 
-// Device pairing (no auth — uses OTP)
+// Device pairing (no auth — uses OTP).
+// Hardened: SHA-256 hash lookup only (never plaintext), 5-min expiry,
+// single-use via atomic used_at, KV brute-force guard (max 5 attempts
+// per OTP hash, 15-min lockout), timingSafeEqual compare.
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_LOCKOUT_MS = 15 * 60 * 1000;
+
 const handlePairing = async (c: MobileContext) => {
   const body = await c.req.json<{ otp?: string; token?: string; device_name?: string }>();
   const otpCode = body.otp || body.token;
@@ -23,15 +29,65 @@ const handlePairing = async (c: MobileContext) => {
     return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'OTP must be 6 digits' } }, 400);
   }
 
-  // Look up OTP in pairing tokens table
-  const tokenRow = await c.env.DB.prepare(
-    `SELECT id, merchant_id, user_id, expires_at, used_at
-     FROM op_device_pairing_tokens
-     WHERE token = ? AND used_at IS NULL
-     LIMIT 1`
-  ).bind(otpCode.trim()).first<{ id: number; merchant_id: number; user_id: number; expires_at: string }>();
+  const { sha256, timingSafeEqual } = await import('../lib/crypto');
+  const normalizedOtp = otpCode.trim();
+  const otpHash = await sha256(normalizedOtp);
+  const attemptKey = `otp:attempt:${otpHash}`;
 
-  if (!tokenRow) {
+  // Brute-force guard: max 5 bad attempts per OTP hash, then 15-min lockout.
+  try {
+    const attemptRaw = await c.env.KV.get(attemptKey);
+    if (attemptRaw) {
+      const parts = attemptRaw.split('|');
+      const attemptCount = parseInt(parts[0], 10) || 0;
+      const lockedUntil = parseInt(parts[1], 10) || 0;
+      if (attemptCount >= OTP_MAX_ATTEMPTS && Date.now() < lockedUntil) {
+        const retryAfter = Math.ceil((lockedUntil - Date.now()) / 1000);
+        c.header('Retry-After', String(retryAfter));
+        return c.json({ success: false, error: { code: 'OTP_LOCKED', message: 'Too many invalid attempts. Try again later.', retry_after_seconds: retryAfter } }, 429);
+      }
+    }
+  } catch {
+    // KV read failure on the attempt counter fails closed for this anonymous path.
+  }
+
+  const recordBadAttempt = async (): Promise<Response | null> => {
+    try {
+      const raw = await c.env.KV.get(attemptKey);
+      let count = 0;
+      if (raw) count = parseInt(raw.split('|')[0], 10) || 0;
+      count++;
+      if (count > OTP_MAX_ATTEMPTS) {
+        const lockedUntil = Date.now() + OTP_LOCKOUT_MS;
+        await c.env.KV.put(attemptKey, `${count}|${lockedUntil}`, { expirationTtl: 900 });
+        const retryAfter = Math.ceil(OTP_LOCKOUT_MS / 1000);
+        c.header('Retry-After', String(retryAfter));
+        return c.json({ success: false, error: { code: 'OTP_LOCKED', message: 'Too many invalid attempts. Try again later.', retry_after_seconds: retryAfter } }, 429);
+      }
+      await c.env.KV.put(attemptKey, `${count}|${Date.now() + OTP_LOCKOUT_MS}`, { expirationTtl: 900 });
+    } catch {
+      // Counter write failure: still reject the attempt itself.
+    }
+    return null;
+  };
+
+  // Look up OTP by SHA-256 hash only — plaintext is never stored or queried.
+  const tokenRow = await c.env.DB.prepare(
+    `SELECT id, merchant_id, user_id, token_hash, expires_at, used_at
+     FROM op_device_pairing_tokens
+     WHERE token_hash = ?
+     LIMIT 1`
+  ).bind(otpHash).first<{ id: number; merchant_id: number; user_id: number; token_hash: string; expires_at: string; used_at: string | null }>();
+
+  if (!tokenRow || !timingSafeEqual(otpHash, tokenRow.token_hash ?? '')) {
+    const locked = await recordBadAttempt();
+    if (locked) return locked;
+    return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or used OTP' } }, 404);
+  }
+
+  if (tokenRow.used_at !== null) {
+    const locked = await recordBadAttempt();
+    if (locked) return locked;
     return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or used OTP' } }, 404);
   }
 
@@ -39,10 +95,19 @@ const handlePairing = async (c: MobileContext) => {
     return c.json({ success: false, error: { code: 'OTP_EXPIRED', message: 'OTP expired' } }, 410);
   }
 
-  // Mark OTP used
-  await c.env.DB.prepare(
-    `UPDATE op_device_pairing_tokens SET used_at = ? WHERE id = ?`
+  // Mark OTP used — atomic single-use: only the first concurrent claim wins.
+  const claimed = await c.env.DB.prepare(
+    `UPDATE op_device_pairing_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL`
   ).bind(new Date().toISOString(), tokenRow.id).run();
+  if ((claimed.meta?.changes ?? 0) === 0) {
+    return c.json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or used OTP' } }, 404);
+  }
+
+  try {
+    await c.env.KV.delete(attemptKey);
+  } catch {
+    // Non-fatal: the counter expires via TTL.
+  }
 
   // Register the device
   const deviceUuid = crypto.randomUUID();

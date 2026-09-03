@@ -19,9 +19,30 @@
 import type { Env } from '../types/env';
 import type { Money } from '../lib/money';
 import { gatewayRegistry } from '../gateways/base';
+import { catalogFind } from '../gateways/catalog';
+import { GatewayNotPortedError } from '../gateways/planned';
 import { decrypt } from '../lib/crypto';
 import { triggerRefundReconciliation } from './reconciliation';
 import { page } from '../lib/observability';
+import { HttpError } from '../lib/error';
+
+/**
+ * Thrown when the gateway adapter reports refunds as unsupported
+ * (adapter.refund() resolves `{ success: false }`). Surfaces as
+ * 422 REFUND_NOT_SUPPORTED — never a generic error, never a
+ * silently-pending refund row.
+ */
+export class RefundNotSupportedError extends HttpError {
+  constructor(slug: string, detail?: string) {
+    super(
+      422,
+      detail
+        ? `Refunds are not supported by gateway '${slug}': ${detail}`
+        : `Refunds are not supported by gateway '${slug}'.`,
+      'REFUND_NOT_SUPPORTED',
+    );
+  }
+}
 
 export interface CreateRefundInput {
   merchant_id: number;
@@ -74,6 +95,14 @@ export class RefundService {
     }
     if (tx.status !== 'completed') {
       throw new Error(`Only completed transactions can be refunded (status: ${tx.status})`);
+    }
+
+    // Fail closed on quarantined (planned) gateways: an explicit
+    // ENABLED_GATEWAYS listing must NOT resolve to a usable adapter.
+    // The planned stub would only report refund_not_supported — surface
+    // the louder GatewayNotPortedError (422) instead.
+    if (tx.gateway_slug && catalogFind(tx.gateway_slug)?.status === 'planned') {
+      throw new GatewayNotPortedError(tx.gateway_slug);
     }
 
     // Enforce cumulative refund bounds: amount <= captured - sum(prior refunds)
@@ -150,9 +179,23 @@ export class RefundService {
             .prepare(`UPDATE op_refunds SET gateway_refund_id = ?, updated_at = ? WHERE id = ?`)
             .bind(gatewayRefundId, new Date().toISOString(), refundRowId)
             .run();
+        } else if (!result.success) {
+          // Fail closed: an unsupported refund is a 422, not a pending row
+          // left for the reconciliation workflow to chase. Mark failed so
+          // the reservation releases, then throw the typed error.
+          await env.DB
+            .prepare(`UPDATE op_refunds SET status = 'failed', updated_at = ? WHERE id = ?`)
+            .bind(new Date().toISOString(), refundRowId)
+            .run();
+          throw new RefundNotSupportedError(tx.gateway_slug ?? 'unknown', result.error);
         }
       }
     } catch (err) {
+      // Typed fail-closed errors propagate to the controller's 422 mapping.
+      // Everything else keeps the legacy behaviour: page + reconcile.
+      if (err instanceof RefundNotSupportedError || err instanceof GatewayNotPortedError) {
+        throw err;
+      }
       page(env, 'REFUND_INITIATION_FAILED', {
         transaction_id: input.transaction_id,
         merchant_id: input.merchant_id,

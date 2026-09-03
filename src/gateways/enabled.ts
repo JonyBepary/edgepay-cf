@@ -21,9 +21,13 @@
  *   ENABLED_GATEWAYS=all
  *
  * Semantics (documented in docs/GATEWAYS.md):
- *   - unset / empty / whitespace   -> ALL catalog gateways enabled
- *     (back-compat: deployments that never set the var keep v0.2.2 behavior)
+ *   - unset / empty / whitespace   -> the P0-7 default ceiling (7 audited
+ *     gateways: bkash-api, nagad-merchant-api, sslcommerz, aamarpay,
+ *     shurjopay, portwallet, stripe). Planned/quarantined providers stay
+ *     hidden unless explicitly listed.
  *   - "all" or "*" (single token)  -> ALL catalog gateways enabled
+ *     (explicit opt-in, including planned stubs which fail closed with
+ *     GatewayNotPortedError on initiate)
  *   - otherwise                    -> only listed gateways enabled; unknown
  *     tokens are dropped and surfaced via GET /api/v1/gateways as
  *     `dropped_aliases` (typo feedback, not a crash)
@@ -45,6 +49,7 @@
 import { catalogAliases, catalogFind } from './catalog';
 import { IMPLEMENTED_GATEWAY_SLUGS } from './registry-slugs';
 import { GatewayDisabledError } from '../lib/error';
+import { GatewayNotPortedError } from './planned';
 
 export { IMPLEMENTED_GATEWAY_SLUGS };
 
@@ -74,6 +79,23 @@ export interface GatewaySelection {
 
 const ALL_TOKENS = new Set(['all', '*']);
 
+/**
+ * P0-7 default ceiling — the audited gateway set served when
+ * ENABLED_GATEWAYS is unset/blank. Canonical registry slugs, in the order
+ * GET /api/v1/gateways lists them. Everything else (including the 53
+ * planned/quarantined providers) requires explicit opt-in via the var or
+ * ?include=planned.
+ */
+export const DEFAULT_ENABLED_GATEWAY_SLUGS: readonly string[] = [
+  'bkash-api',
+  'nagad-merchant-api',
+  'sslcommerz',
+  'aamarpay',
+  'shurjopay',
+  'portwallet',
+  'stripe',
+];
+
 /** Split an ENABLED_GATEWAYS value on commas, semicolons and/or whitespace. */
 function tokenize(raw: string): string[] {
   return raw
@@ -91,8 +113,8 @@ export function parseEnabledGateways(raw: string | undefined | null): GatewaySel
   const base: GatewaySelection = { enabled: [], dropped: [], allEnabled: false, raw: value };
 
   if (value === '') {
-    // Unset/blank -> every adapter (v0.2.2 back-compat default).
-    return { ...base, enabled: [...IMPLEMENTED_GATEWAY_SLUGS], allEnabled: true };
+    // Unset/blank -> P0-7 default ceiling (7 audited gateways).
+    return { ...base, enabled: [...DEFAULT_ENABLED_GATEWAY_SLUGS], allEnabled: false };
   }
 
   const tokens = tokenize(value);
@@ -171,4 +193,17 @@ export function suggestCanonical(token: string): string | undefined {
 /** Catalog status helper for gateways route + install readiness. */
 export function gatewayStatus(slug: string): string | undefined {
   return catalogFind(slug)?.status;
+}
+
+/**
+ * Fail-closed quarantine guard for planned (not-yet-ported) gateways.
+ * An explicit `?include=planned` listing or an ENABLED_GATEWAYS entry
+ * naming a planned slug must NOT resolve to a usable adapter — throw
+ * GatewayNotPortedError (the controllers map it to 422) instead of
+ * letting the call fall through to the planned stub.
+ */
+export function assertGatewayPorted(slug: string): void {
+  if (catalogFind(slug)?.status === 'planned') {
+    throw new GatewayNotPortedError(slug);
+  }
 }

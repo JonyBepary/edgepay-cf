@@ -126,9 +126,10 @@ export function getPlatformConfig(env: Env): PlatformConfig {
   const defaultPhone = normalizeNullableString(env.DEFAULT_MFS_NUMBER);
   const defaultWebhook = normalizeNullableString(env.DEFAULT_WEBHOOK_URL);
   
-  // Pairing OTP: If configured use it; otherwise generate a cryptographically secure 6-digit OTP
+  // Pairing OTP: If configured use it; otherwise always generate a cryptographically secure 6-digit OTP.
+  // There is no predictable fallback (no '123456') in any environment.
   const customOtp = normalizeNullableString(env.DEFAULT_PAIRING_OTP);
-  const pairingOtp = customOtp ?? (env.ENVIRONMENT === 'production' ? randomNumericOtp(6) : '123456');
+  const pairingOtp = customOtp ?? randomNumericOtp(6);
 
   const enabledGatewaysRaw = env.ENABLED_GATEWAYS ?? '';
   const enabledList = enabledGatewaysRaw

@@ -1,20 +1,62 @@
 /**
  * EdgePay Customer Checkout Island — Client Data Hydration & Motion
  * Framework: Astro Island Client Component
- * 100% Dynamic Data: Hydrates from server dataset, URL token, or live backend API.
+ * 100% Dynamic Data: Hydrates from live EdgePay API only. No demo fallbacks.
+ *
+ * Data sources (all live):
+ *   - GET /checkout/:token            (Accept: application/json) checkout session
+ *   - GET /api/v1/gateways            enabled-only payment rails (Bearer when available)
+ *   - POST /checkout/:token/submit-trx  customer TrxID corroboration
+ *     (falls back to POST /checkout/:token/verify — same handler)
+ *   - GET /checkout/:token/status      poll while awaiting carrier SMS
  */
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_ATTEMPTS = 20;
+
+function getApiKey(container) {
+  return (
+    container.dataset.apiKey ||
+    window.localStorage.getItem('edgepay_api_key') ||
+    ''
+  );
+}
+
+function authHeaders(container) {
+  const key = getApiKey(container);
+  const h = { Accept: 'application/json' };
+  if (key) h.Authorization = `Bearer ${key}`;
+  return h;
+}
+
+function emptyState(message, hint) {
+  return `
+    <div class="checkout-card" style="padding: 36px 24px; text-align: center;">
+      <div style="font-size: 13px; color: var(--muted); margin-bottom: 8px;">${escapeHtml(message)}</div>
+      ${hint ? `<div class="epx-mono" style="font-size: 12px; font-weight: 600;">${escapeHtml(hint)}</div>` : ''}
+    </div>
+  `;
+}
+
+function inlineError(container, message) {
+  let el = container.querySelector('#island-form-error');
+  if (!el) return;
+  if (!message) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.style.display = 'block';
+  el.textContent = message;
+}
 
 export async function initCheckoutIsland() {
   const container = document.getElementById('checkout-island') || document.getElementById('app');
   if (!container) return;
 
-  // 1. Read initial attributes
+  // 1. Read initial attributes (server dataset or ?token=)
   const urlParams = new URLSearchParams(window.location.search);
-  let token = urlParams.get('token') || container.dataset.token || '';
-  let amount = container.dataset.amount || '';
-  let currency = container.dataset.currency || 'BDT';
-  let merchantName = container.dataset.merchant || '';
-  let orderId = container.dataset.orderId || '';
+  const token = urlParams.get('token') || container.dataset.token || '';
   const apiOrigin = container.dataset.apiOrigin || '';
 
   // Render initial loading state
@@ -25,60 +67,97 @@ export async function initCheckoutIsland() {
     </div>
   `;
 
-  // 2. Fetch live data
-  let gateways = [];
+  if (!token) {
+    container.innerHTML = emptyState(
+      'No checkout session found.',
+      'Ask the merchant for a fresh payment link.'
+    );
+    return;
+  }
+
+  // 2. Load live checkout session (amount / currency / merchant / rails)
+  let session = null;
   try {
-    const liveRes = await fetch(`${apiOrigin}/frontend-api/live-data`);
-    if (liveRes.ok) {
-      const liveJson = await liveRes.json();
-      if (liveJson.success && liveJson.data) {
-        gateways = liveJson.data.gateways || [];
-        if (!merchantName && liveJson.data.merchants?.length > 0) {
-          merchantName = liveJson.data.merchants[0].name;
-        }
-      }
+    const sessionRes = await fetch(`${apiOrigin}/checkout/${encodeURIComponent(token)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (sessionRes.ok) {
+      session = await sessionRes.json();
+    } else {
+      container.innerHTML = emptyState(
+        'This checkout link is invalid or expired.',
+        'Ask the merchant for a fresh payment link.'
+      );
+      return;
     }
   } catch {
-    // API unavailable or running standalone
+    container.innerHTML = emptyState(
+      'Checkout is unreachable right now.',
+      'Check your connection and try again.'
+    );
+    return;
   }
 
-  // 3. Ensure intent exists or create live intent in D1
-  if (!token || !amount) {
-    try {
-      const intentRes = await fetch(`${apiOrigin}/frontend-api/create-intent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: '1250.00', currency: 'BDT' }),
-      });
-      if (intentRes.ok) {
-        const intentJson = await intentRes.json();
-        if (intentJson.success && intentJson.data) {
-          token = intentJson.data.token;
-          amount = intentJson.data.amount;
-          currency = intentJson.data.currency;
-          orderId = intentJson.data.orderId;
-          merchantName = intentJson.data.merchantName || merchantName;
-        }
-      }
-    } catch {
-      amount = '1250.00';
-      orderId = 'ORD-' + Date.now().toString().slice(-6);
-      merchantName = merchantName || 'EdgePay Merchant';
+  let amount = session.amount_minor != null ? String(Number(session.amount_minor) / 100) : (session.amount || '');
+  let currency = session.currency || container.dataset.currency || 'BDT';
+  let merchantName = session.merchant || container.dataset.merchant || '';
+  let orderId = session.order_id || session.orderId || container.dataset.orderId || '';
+  let sessionGateways = Array.isArray(session.rails) ? session.rails : [];
+  let sessionStatus = session.status || '';
+
+  if (sessionStatus === 'completed') {
+    container.innerHTML = emptyState('This payment is already completed.', orderId ? `Order #${orderId}` : '');
+    return;
+  }
+
+  if (!amount) {
+    container.innerHTML = emptyState(
+      'This checkout session has no amount.',
+      'Ask the merchant for a fresh payment link.'
+    );
+    return;
+  }
+
+  // 3. Load enabled-only gateway catalog
+  let gateways = [];
+  try {
+    const gwRes = await fetch(`${apiOrigin}/api/v1/gateways`, {
+      headers: authHeaders(container),
+    });
+    if (gwRes.ok) {
+      const gwJson = await gwRes.json();
+      const enabled = gwJson?.data?.enabled || gwJson?.enabled || [];
+      gateways = enabled.map((g) => ({
+        slug: g.slug,
+        name: g.name,
+        type: g.type || (String(g.slug || '').includes('api') ? 'api' : 'manual'),
+        account_number: g.account_number || '',
+      }));
     }
+  } catch {
+    // Falls through to the empty-state below — never to hardcoded rails.
   }
 
-  // 4. Default active payment rails if DB is currently querying
-  const activeGateways = gateways.length > 0 ? gateways.slice(0, 4) : [
-    { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', account_number: '01815300789' },
-    { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', account_number: '01815300789' },
-    { slug: 'rocket', name: 'DBBL Rocket Personal', type: 'manual', account_number: '01815300789' },
-    { slug: 'stripe', name: 'Debit / Credit Card', type: 'api', account_number: '' },
-  ];
+  // Prefer session rails when the session names a subset of enabled gateways.
+  if (sessionGateways.length > 0 && gateways.length > 0) {
+    const wanted = new Set(sessionGateways.map((s) => String(s).toLowerCase()));
+    const subset = gateways.filter((g) => wanted.has(String(g.slug).toLowerCase()));
+    if (subset.length > 0) gateways = subset;
+  }
 
+  if (gateways.length === 0) {
+    container.innerHTML = emptyState(
+      'No payment rails are available for this checkout.',
+      'Please try again later or contact the merchant.'
+    );
+    return;
+  }
+
+  const activeGateways = gateways;
   let selectedRail = activeGateways[0];
   const currencySymbol = currency === 'BDT' ? '৳' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency;
 
-  // 5. Render Full Interactive Island Markup
+  // 4. Render Full Interactive Island Markup
   container.innerHTML = `
     <div class="checkout-card">
       <div class="checkout-steps">
@@ -92,7 +171,7 @@ export async function initCheckoutIsland() {
         <div style="font-size: 12px; color: var(--muted); margin-bottom: 2px;" id="island-merchant-name">${escapeHtml(merchantName)}</div>
         <div class="checkout-amount epx-serif" id="island-amount">${currencySymbol}${parseFloat(amount).toFixed(2)}</div>
         <div style="font-size: 12px; color: var(--muted); margin: 2px 0 20px;">Order #${escapeHtml(orderId)} · Live Checkout Session</div>
-        
+
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Choose how to pay</div>
         <div id="island-methods-container">
           ${activeGateways.map((g, idx) => {
@@ -127,9 +206,10 @@ export async function initCheckoutIsland() {
           <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">Send exactly</div>
           <div class="epx-mono" style="font-size: 22px; font-weight: 700;">${currencySymbol}${parseFloat(amount).toFixed(2)}</div>
           <div style="font-size: 12px; color: var(--muted); margin: 8px 0 4px;">To this <span id="island-target-rail">${escapeHtml(selectedRail.name)}</span> number</div>
-          <div class="epx-mono" id="island-target-phone" style="font-size: 16px; font-weight: 700; color: var(--ink);">${escapeHtml(selectedRail.account_number || '01815300789')}</div>
+          <div class="epx-mono" id="island-target-phone" style="font-size: 16px; font-weight: 700; color: var(--ink);">${escapeHtml(selectedRail.account_number || '—')}</div>
         </div>
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Then confirm your payment</div>
+        <div id="island-form-error" style="display: none; font-size: 12.5px; color: #9E2A2B; background: #F7D7D4; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;"></div>
         <div class="field">
           <label>Transaction ID from confirmation SMS</label>
           <input id="inp-trxid" placeholder="e.g. BL9A4K8M10" class="epx-mono" style="font-weight: 600; text-transform: uppercase;">
@@ -138,6 +218,7 @@ export async function initCheckoutIsland() {
           <label>Number you sent from</label>
           <input id="inp-sender" placeholder="017XX-XXXXXX" class="epx-mono">
         </div>
+        <div id="island-awaiting-note" style="display: none; font-size: 12.5px; color: #8A5A0F; background: #F3E3C7; border-radius: 8px; padding: 8px 12px; margin-top: 12px;"></div>
         <button id="btn-chk-verify" class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 18px; padding: 12px 0; font-size: 14px;">Verify payment</button>
       </div>
 
@@ -151,14 +232,14 @@ export async function initCheckoutIsland() {
         <div class="card card-pad" style="text-align: left; margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Amount</span><span class="epx-mono" style="font-weight: 600;">${currencySymbol}${parseFloat(amount).toFixed(2)}</span></div>
           <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Paid via</span><span style="font-weight: 600;" id="island-receipt-rail">${escapeHtml(selectedRail.name)}</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;" id="island-receipt-ref">TRX_LIVE</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;" id="island-receipt-ref">—</span></div>
         </div>
         <button id="btn-chk-reset" class="btn btn--primary" style="width: 100%; justify-content: center; padding: 12px 0; font-size: 14px;">Return to Merchant</button>
       </div>
     </div>
   `;
 
-  // 6. Interactive Event Wiring
+  // 5. Interactive Event Wiring
   const step1 = document.getElementById('chk-step-1');
   const step2 = document.getElementById('chk-step-2');
   const step3 = document.getElementById('chk-step-3');
@@ -175,6 +256,44 @@ export async function initCheckoutIsland() {
     if (bar3) bar3.className = s >= 3 ? 'done' : '';
   }
 
+  function showReceipt(trxId) {
+    const refEl = document.getElementById('island-receipt-ref');
+    const msgEl = document.getElementById('island-receipt-msg');
+    if (refEl) refEl.textContent = trxId;
+    if (msgEl) msgEl.textContent = `${merchantName} has confirmed your payment (${trxId}).`;
+    setStep(3);
+  }
+
+  async function pollStatus(submittedTrxId, attemptsLeft) {
+    if (attemptsLeft <= 0) return;
+    try {
+      const statusRes = await fetch(`${apiOrigin}/checkout/${encodeURIComponent(token)}/status`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (statusRes.ok) {
+        const statusJson = await statusRes.json();
+        const status = statusJson?.data?.status || statusJson?.status || '';
+        if (status === 'completed') {
+          showReceipt(statusJson?.data?.trx_id || statusJson?.trx_id || submittedTrxId);
+          return;
+        }
+      }
+    } catch {
+      // Transient — keep polling until attempts run out.
+    }
+    setTimeout(() => pollStatus(submittedTrxId, attemptsLeft - 1), POLL_INTERVAL_MS);
+  }
+
+  async function submitTrx(path, payload) {
+    const res = await fetch(`${apiOrigin}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => null);
+    return { res, json };
+  }
+
   // Method selection
   container.querySelectorAll('#island-methods-container .method').forEach(el => {
     el.addEventListener('click', () => {
@@ -188,7 +307,7 @@ export async function initCheckoutIsland() {
         const targetPhone = document.getElementById('island-target-phone');
         const receiptRail = document.getElementById('island-receipt-rail');
         if (targetRail) targetRail.textContent = found.name;
-        if (targetPhone) targetPhone.textContent = found.account_number || '01815300789';
+        if (targetPhone) targetPhone.textContent = found.account_number || '—';
         if (receiptRail) receiptRail.textContent = found.name;
       }
     });
@@ -201,27 +320,68 @@ export async function initCheckoutIsland() {
   document.getElementById('btn-chk-verify')?.addEventListener('click', async () => {
     const trxInp = document.getElementById('inp-trxid');
     const senderInp = document.getElementById('inp-sender');
-    const trxId = trxInp?.value.trim() || 'TRX' + Math.random().toString(36).substring(2, 9).toUpperCase();
-    const senderPhone = senderInp?.value.trim() || '01711000000';
+    const verifyBtn = document.getElementById('btn-chk-verify');
+    const awaitingNote = document.getElementById('island-awaiting-note');
+    inlineError(container, '');
+    if (awaitingNote) awaitingNote.style.display = 'none';
 
-    // Submit TrxID to real checkout endpoint
-    if (token) {
-      try {
-        await fetch(`${apiOrigin}/checkout/${token}/submit-trx`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trx_id: trxId, sender_phone: senderPhone }),
-        });
-      } catch {
-        // Fallback for standalone preview
-      }
+    const trxId = (trxInp?.value || '').trim().toUpperCase();
+    const senderPhone = (senderInp?.value || '').trim();
+
+    if (trxId.length < 4) {
+      inlineError(container, 'Enter the Transaction ID from your payment confirmation message (at least 4 characters).');
+      return;
     }
 
-    const refEl = document.getElementById('island-receipt-ref');
-    const msgEl = document.getElementById('island-receipt-msg');
-    if (refEl) refEl.textContent = trxId;
-    if (msgEl) msgEl.textContent = `${merchantName} has recorded your transaction ID (${trxId}).`;
-    setStep(3);
+    if (verifyBtn) {
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying…';
+    }
+
+    const payload = { trx_id: trxId, sender_phone: senderPhone || undefined };
+    try {
+      // Primary: submit-trx corroboration endpoint; fallback: verify alias.
+      let { res, json } = await submitTrx(`/checkout/${encodeURIComponent(token)}/submit-trx`, payload);
+      if (res.status === 404) {
+        ({ res, json } = await submitTrx(`/checkout/${encodeURIComponent(token)}/verify`, payload));
+      }
+
+      if (json?.success && json?.data) {
+        const status = json.data.status;
+        const returnedTrx = json.data.trx_id || trxId;
+        if (status === 'completed') {
+          showReceipt(returnedTrx);
+        } else {
+          // awaiting_sms / processing — record the claim, stay on step 2, poll.
+          if (awaitingNote) {
+            awaitingNote.style.display = 'block';
+            awaitingNote.textContent =
+              json.data.message ||
+              `Transaction ${returnedTrx} recorded — waiting for carrier SMS confirmation. This page updates automatically.`;
+          }
+          pollStatus(returnedTrx, POLL_MAX_ATTEMPTS);
+        }
+      } else {
+        const code = json?.error?.code || '';
+        const message =
+          json?.error?.message ||
+          (res.status === 404 ? 'This checkout link is invalid or expired.' : 'Verification failed — please check the Transaction ID and try again.');
+        if (code === 'TRX_ALREADY_USED') {
+          inlineError(container, 'This Transaction ID was already used for another payment.');
+        } else if (code === 'AMOUNT_MISMATCH') {
+          inlineError(container, 'The payment received does not match the order amount.');
+        } else {
+          inlineError(container, message);
+        }
+      }
+    } catch {
+      inlineError(container, 'Verification is unreachable right now — check your connection and try again.');
+    } finally {
+      if (verifyBtn) {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify payment';
+      }
+    }
   });
 }
 

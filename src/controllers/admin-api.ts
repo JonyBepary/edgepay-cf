@@ -414,14 +414,16 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
       }
     }
 
-    // 5. Seed companion pairing OTP using CSPRNG
+    // 5. Seed companion pairing OTP using CSPRNG.
+    // Stored as SHA-256 hash only (never plaintext); 5-minute expiry; single-use via used_at.
     const pairingOtp = randomNumericOtp(6);
-    const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+    const pairingOtpHash = await sha256(pairingOtp);
+    const otpExpiresAt = new Date(Date.now() + 300 * 1000).toISOString();
     await c.env.DB.prepare(
       `INSERT INTO op_device_pairing_tokens
-         (merchant_id, user_id, token, expires_at, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).bind(newMerchantId, adminUserId, pairingOtp, otpExpiresAt, now).run();
+         (merchant_id, user_id, token, token_hash, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(newMerchantId, adminUserId, pairingOtpHash, pairingOtpHash, otpExpiresAt, now).run();
 
     // 6. Generate One-Time Claim Token for credentials (V3-004 encrypted at rest)
     const claimToken = randomBase64Key(24).replace(/[^a-zA-Z0-9]/g, '');

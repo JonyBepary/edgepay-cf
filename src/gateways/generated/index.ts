@@ -3,7 +3,8 @@
  * One lazy factory per ported provider. Do not edit; regenerate.
  */
 
-import { gatewayRegistry } from '../base';
+import { gatewayRegistry, type BaseGatewayAdapter } from '../base';
+import { PLANNED_GATEWAY_SLUGS } from '../catalog.data';
 import { Gw2checkoutGateway } from './2checkout.gateway';
 import { AdyenGateway } from './adyen.gateway';
 import { AffirmGateway } from './affirm.gateway';
@@ -81,8 +82,8 @@ import { WorldlineGateway } from './worldline.gateway';
 import { WorldpayGateway } from './worldpay.gateway';
 import { XenditGateway } from './xendit.gateway';
 
-/** Registry slugs of every adapter produced by the port pipeline. */
-export const GENERATED_GATEWAY_SLUGS = [
+/** Registry slugs of every adapter produced by the port pipeline (raw, includes quarantined). */
+const RAW_GENERATED_GATEWAY_SLUGS = [
   '2checkout',
   'adyen',
   'affirm',
@@ -161,79 +162,97 @@ export const GENERATED_GATEWAY_SLUGS = [
   'xendit',
 ] as const;
 
-gatewayRegistry.register('2checkout', () => new Gw2checkoutGateway());
-gatewayRegistry.register('adyen', () => new AdyenGateway());
-gatewayRegistry.register('affirm', () => new AffirmGateway());
-gatewayRegistry.register('afterpay', () => new AfterpayGateway());
-gatewayRegistry.register('amazon-pay', () => new AmazonPayGateway());
-gatewayRegistry.register('authorize-net', () => new AuthorizeNetGateway());
-gatewayRegistry.register('bancontact', () => new BancontactGateway());
-gatewayRegistry.register('biller-genie', () => new BillerGenieGateway());
-gatewayRegistry.register('bitpay', () => new BitpayGateway());
-gatewayRegistry.register('bluesnap', () => new BluesnapGateway());
-gatewayRegistry.register('btcpay', () => new BtcpayGateway());
-gatewayRegistry.register('cellfin', () => new CellfinGateway());
-gatewayRegistry.register('chase-paymentech', () => new ChasePaymentechGateway());
-gatewayRegistry.register('coinbase-commerce', () => new CoinbaseCommerceGateway());
-gatewayRegistry.register('cybersource', () => new CybersourceGateway());
-gatewayRegistry.register('dana', () => new DanaGateway());
-gatewayRegistry.register('dlocal', () => new DlocalGateway());
-gatewayRegistry.register('easypaisa', () => new EasypaisaGateway());
-gatewayRegistry.register('ebanx', () => new EbanxGateway());
-gatewayRegistry.register('elavon', () => new ElavonGateway());
-gatewayRegistry.register('fastspring', () => new FastspringGateway());
-gatewayRegistry.register('fattmerchant', () => new FattmerchantGateway());
-gatewayRegistry.register('first-data', () => new FirstDataGateway());
-gatewayRegistry.register('fiserv', () => new FiservGateway());
-gatewayRegistry.register('flutterwave', () => new FlutterwaveGateway());
-gatewayRegistry.register('gcash', () => new GcashGateway());
-gatewayRegistry.register('global-payments', () => new GlobalPaymentsGateway());
-gatewayRegistry.register('gocardless', () => new GocardlessGateway());
-gatewayRegistry.register('grabpay', () => new GrabpayGateway());
-gatewayRegistry.register('heartland', () => new HeartlandGateway());
-gatewayRegistry.register('helcim', () => new HelcimGateway());
-gatewayRegistry.register('ideal', () => new IdealGateway());
-gatewayRegistry.register('kakaopay', () => new KakaopayGateway());
-gatewayRegistry.register('maya', () => new MayaGateway());
-gatewayRegistry.register('mercadolibre-wallet', () => new MercadolibreWalletGateway());
-gatewayRegistry.register('mercadopago', () => new MercadopagoGateway());
-gatewayRegistry.register('midtrans', () => new MidtransGateway());
-gatewayRegistry.register('mobikwik', () => new MobikwikGateway());
-gatewayRegistry.register('mollie', () => new MollieGateway());
-gatewayRegistry.register('momo', () => new MomoGateway());
-gatewayRegistry.register('moneris', () => new MonerisGateway());
-gatewayRegistry.register('mpesa', () => new MpesaGateway());
-gatewayRegistry.register('neteller', () => new NetellerGateway());
-gatewayRegistry.register('nexuspay', () => new NexuspayGateway());
-gatewayRegistry.register('nmi', () => new NmiGateway());
-gatewayRegistry.register('ok-wallet', () => new OkWalletGateway());
-gatewayRegistry.register('opay', () => new OpayGateway());
-gatewayRegistry.register('opennode', () => new OpennodeGateway());
-gatewayRegistry.register('ovo', () => new OvoGateway());
-gatewayRegistry.register('payline-data', () => new PaylineDataGateway());
-gatewayRegistry.register('payme', () => new PaymeGateway());
-gatewayRegistry.register('payment-depot', () => new PaymentDepotGateway());
-gatewayRegistry.register('payoneer', () => new PayoneerGateway());
-gatewayRegistry.register('paystack', () => new PaystackGateway());
-gatewayRegistry.register('paytrace', () => new PaytraceGateway());
-gatewayRegistry.register('payu', () => new PayuGateway());
-gatewayRegistry.register('phonepe', () => new PhonepeGateway());
-gatewayRegistry.register('promptpay', () => new PromptpayGateway());
-gatewayRegistry.register('rapyd', () => new RapydGateway());
-gatewayRegistry.register('sezzle', () => new SezzleGateway());
-gatewayRegistry.register('shift4', () => new Shift4Gateway());
-gatewayRegistry.register('shopeepay', () => new ShopeepayGateway());
-gatewayRegistry.register('skrill', () => new SkrillGateway());
-gatewayRegistry.register('square', () => new SquareGateway());
-gatewayRegistry.register('stax', () => new StaxGateway());
-gatewayRegistry.register('tap', () => new TapGateway());
-gatewayRegistry.register('touch-n-go', () => new TouchNGoGateway());
-gatewayRegistry.register('truemoney', () => new TruemoneyGateway());
-gatewayRegistry.register('trustcommerce', () => new TrustcommerceGateway());
-gatewayRegistry.register('tsys', () => new TsysGateway());
-gatewayRegistry.register('upay', () => new UpayGateway());
-gatewayRegistry.register('wechat-pay', () => new WechatPayGateway());
-gatewayRegistry.register('wise', () => new WiseGateway());
-gatewayRegistry.register('worldline', () => new WorldlineGateway());
-gatewayRegistry.register('worldpay', () => new WorldpayGateway());
-gatewayRegistry.register('xendit', () => new XenditGateway());
+/**
+ * Registry slugs of generated adapters that are actually usable.
+ * Quarantined ports (slugs the catalog marks `planned`) are excluded so the
+ * planned stub (GatewayNotPortedError, fail-closed) wins. Files stay on disk.
+ */
+export const GENERATED_GATEWAY_SLUGS: readonly string[] = (
+  RAW_GENERATED_GATEWAY_SLUGS as readonly string[]
+).filter((s) => !(PLANNED_GATEWAY_SLUGS as readonly string[]).includes(s));
+
+/**
+ * Generated registration helper — skips any slug the catalog marks planned
+ * so registerPlannedGateways() can claim it as a fail-closed stub.
+ */
+function registerGenerated(slug: string, factory: () => BaseGatewayAdapter): void {
+  if ((PLANNED_GATEWAY_SLUGS as readonly string[]).includes(slug)) return;
+  gatewayRegistry.register(slug, factory);
+}
+
+registerGenerated('2checkout', () => new Gw2checkoutGateway());
+registerGenerated('adyen', () => new AdyenGateway());
+registerGenerated('affirm', () => new AffirmGateway());
+registerGenerated('afterpay', () => new AfterpayGateway());
+registerGenerated('amazon-pay', () => new AmazonPayGateway());
+registerGenerated('authorize-net', () => new AuthorizeNetGateway());
+registerGenerated('bancontact', () => new BancontactGateway());
+registerGenerated('biller-genie', () => new BillerGenieGateway());
+registerGenerated('bitpay', () => new BitpayGateway());
+registerGenerated('bluesnap', () => new BluesnapGateway());
+registerGenerated('btcpay', () => new BtcpayGateway());
+registerGenerated('cellfin', () => new CellfinGateway());
+registerGenerated('chase-paymentech', () => new ChasePaymentechGateway());
+registerGenerated('coinbase-commerce', () => new CoinbaseCommerceGateway());
+registerGenerated('cybersource', () => new CybersourceGateway());
+registerGenerated('dana', () => new DanaGateway());
+registerGenerated('dlocal', () => new DlocalGateway());
+registerGenerated('easypaisa', () => new EasypaisaGateway());
+registerGenerated('ebanx', () => new EbanxGateway());
+registerGenerated('elavon', () => new ElavonGateway());
+registerGenerated('fastspring', () => new FastspringGateway());
+registerGenerated('fattmerchant', () => new FattmerchantGateway());
+registerGenerated('first-data', () => new FirstDataGateway());
+registerGenerated('fiserv', () => new FiservGateway());
+registerGenerated('flutterwave', () => new FlutterwaveGateway());
+registerGenerated('gcash', () => new GcashGateway());
+registerGenerated('global-payments', () => new GlobalPaymentsGateway());
+registerGenerated('gocardless', () => new GocardlessGateway());
+registerGenerated('grabpay', () => new GrabpayGateway());
+registerGenerated('heartland', () => new HeartlandGateway());
+registerGenerated('helcim', () => new HelcimGateway());
+registerGenerated('ideal', () => new IdealGateway());
+registerGenerated('kakaopay', () => new KakaopayGateway());
+registerGenerated('maya', () => new MayaGateway());
+registerGenerated('mercadolibre-wallet', () => new MercadolibreWalletGateway());
+registerGenerated('mercadopago', () => new MercadopagoGateway());
+registerGenerated('midtrans', () => new MidtransGateway());
+registerGenerated('mobikwik', () => new MobikwikGateway());
+registerGenerated('mollie', () => new MollieGateway());
+registerGenerated('momo', () => new MomoGateway());
+registerGenerated('moneris', () => new MonerisGateway());
+registerGenerated('mpesa', () => new MpesaGateway());
+registerGenerated('neteller', () => new NetellerGateway());
+registerGenerated('nexuspay', () => new NexuspayGateway());
+registerGenerated('nmi', () => new NmiGateway());
+registerGenerated('ok-wallet', () => new OkWalletGateway());
+registerGenerated('opay', () => new OpayGateway());
+registerGenerated('opennode', () => new OpennodeGateway());
+registerGenerated('ovo', () => new OvoGateway());
+registerGenerated('payline-data', () => new PaylineDataGateway());
+registerGenerated('payme', () => new PaymeGateway());
+registerGenerated('payment-depot', () => new PaymentDepotGateway());
+registerGenerated('payoneer', () => new PayoneerGateway());
+registerGenerated('paystack', () => new PaystackGateway());
+registerGenerated('paytrace', () => new PaytraceGateway());
+registerGenerated('payu', () => new PayuGateway());
+registerGenerated('phonepe', () => new PhonepeGateway());
+registerGenerated('promptpay', () => new PromptpayGateway());
+registerGenerated('rapyd', () => new RapydGateway());
+registerGenerated('sezzle', () => new SezzleGateway());
+registerGenerated('shift4', () => new Shift4Gateway());
+registerGenerated('shopeepay', () => new ShopeepayGateway());
+registerGenerated('skrill', () => new SkrillGateway());
+registerGenerated('square', () => new SquareGateway());
+registerGenerated('stax', () => new StaxGateway());
+registerGenerated('tap', () => new TapGateway());
+registerGenerated('touch-n-go', () => new TouchNGoGateway());
+registerGenerated('truemoney', () => new TruemoneyGateway());
+registerGenerated('trustcommerce', () => new TrustcommerceGateway());
+registerGenerated('tsys', () => new TsysGateway());
+registerGenerated('upay', () => new UpayGateway());
+registerGenerated('wechat-pay', () => new WechatPayGateway());
+registerGenerated('wise', () => new WiseGateway());
+registerGenerated('worldline', () => new WorldlineGateway());
+registerGenerated('worldpay', () => new WorldpayGateway());
+registerGenerated('xendit', () => new XenditGateway());

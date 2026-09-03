@@ -36,7 +36,7 @@ export class Logger {
       level,
       message,
       timestamp: new Date().toISOString(),
-      ...context,
+      ...redact(context),
     };
 
     // Workers console.* routes to wrangler tail / Logpush
@@ -84,4 +84,39 @@ export class Logger {
  */
 export function createLogger(level: string = 'info'): Logger {
   return new Logger(level as LogLevel);
+}
+
+/** Keys whose values must never reach logs — replaced with [REDACTED]. */
+const REDACTED_KEYS = new Set([
+  'sender',
+  'phone',
+  'phone_number',
+  'email',
+  'trx_id',
+  'transaction_id',
+  'api_key',
+  'apikey',
+  'authorization',
+]);
+
+/**
+ * Recursively redact sensitive fields in a log context object.
+ * Denylist: sender / phone / email / trx_id / api_key / Authorization.
+ */
+export function redact<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => redact(v)) as unknown as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (REDACTED_KEYS.has(k.toLowerCase())) {
+        out[k] = '[REDACTED]';
+      } else {
+        out[k] = redact(v);
+      }
+    }
+    return out as unknown as T;
+  }
+  return value;
 }

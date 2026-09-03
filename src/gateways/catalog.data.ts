@@ -14,6 +14,11 @@
  *                 signature scheme exists — unsigned-webhook providers are
  *                 listed with flag `webhook-unsigned-rejected` instead)
  *   status        implemented (core 5) | ported (full TS port) | planned (catalog stub)
+ *                 P0-7 quarantine: 'planned' also covers 16 quarantined
+ *                 generated adapters whose port is broken (PHP leftover /
+ *                 empty-redirect initiate / stub-only verify) — files are
+ *                 kept on disk but hidden from the default list. See
+ *                 docs/GATEWAYS-PLANNED.md.
  *   flags         legacy-md5 | webhook-unsigned-rejected | token-grant
  *   fields        credential definitions for the admin install UI —
  *                 NAMES only are stored; values live AES-256-GCM encrypted
@@ -192,7 +197,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#4A90E2',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['public_key', 'Public Key', 't', 1],
@@ -208,7 +213,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#B2FCE4',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['merchant_id', 'Merchant ID', 't', 1],
@@ -224,7 +229,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#FF9900',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: [],
     fields: [
     ['merchant_id', 'Merchant ID', 't', 1],
@@ -259,7 +264,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#FFE600',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['api_key', 'Mollie API Key', 'p', 1]
@@ -289,7 +294,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#1A2B49',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['api_token', 'BitPay API Token', 'p', 1]
@@ -405,7 +410,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#108EE9',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['secret_key', 'Xendit Secret Key', 'p', 1]
@@ -453,7 +458,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#009944',
     currencies: [],
     capabilities: [],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['store_id', 'Store ID', 't', 1],
@@ -632,7 +637,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#00B14F',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: [],
     fields: [
     ['client_id', 'Client ID', 't', 1],
@@ -694,7 +699,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#FFCD00',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: [],
     fields: [
     ['admin_key', 'Admin Key', 't', 1],
@@ -728,7 +733,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#00F076',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['public_key', 'Public API Key', 't', 1],
@@ -744,7 +749,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#00B1EA',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: ['token-grant'],
     fields: [
     ['access_token', 'Access Token', 'p', 1]
@@ -759,7 +764,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#FFE600',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: ['token-grant'],
     fields: [
     ['access_token', 'Access Token', 'p', 1]
@@ -935,7 +940,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#1A1A1A',
     currencies: [],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: ['webhook-unsigned-rejected'],
     fields: [
     ['api_key', 'API Key (Charge Permission)', 'p', 1]
@@ -981,7 +986,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#E60028',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: ['token-grant'],
     fields: [
     ['client_id', 'Client ID', 't', 1],
@@ -1061,7 +1066,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#84c01a',
     currencies: ['INR'],
     capabilities: ['verification'],
-    status: 'ported',
+    status: 'planned',
     flags: [],
     fields: [
     ['merchant_key', 'Merchant Key', 't', 1],
@@ -1221,7 +1226,7 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     color: '#000000',
     currencies: [],
     capabilities: ['verification', 'webhook'],
-    status: 'ported',
+    status: 'planned',
     flags: ['token-grant'],
     fields: [
     ['access_token', 'Access Token', 'p', 1],
@@ -2052,3 +2057,18 @@ export const GATEWAY_CATALOG: readonly CatalogEntry[] = [
     ],
   },
 ];
+
+/**
+ * P0-7 quarantine helpers — planned-subset support for
+ * GET /api/v1/gateways (?include=planned) and docs.
+ *
+ * `planned` = 37 catalog scaffolds + 16 quarantined broken ports = 53.
+ * Files for quarantined adapters stay on disk (generated/*.gateway.ts)
+ * but are hidden from the default list; explicit opt-in surfaces them
+ * as fail-closed planned stubs (GatewayNotPortedError on initiate).
+ */
+export const PLANNED_GATEWAY_SLUGS: readonly string[] = GATEWAY_CATALOG.filter(
+  (e) => e.status === 'planned',
+).map((e) => e.slug);
+
+export const PLANNED_GATEWAY_COUNT: number = PLANNED_GATEWAY_SLUGS.length;

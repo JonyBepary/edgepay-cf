@@ -380,7 +380,8 @@ export class LedgerDO extends DurableObject<Env> {
     fail_do_writes?: boolean;
     fail_d1_posted?: boolean;
   }): Promise<void> {
-    if (this.env.ENVIRONMENT === 'production' && this.env.ALLOWED_ORIGINS !== 'https://allowed.example') {
+    // Fault injection is NEVER available in production — throw unconditionally.
+    if (this.env.ENVIRONMENT === 'production') {
       throw new Error('fault injection disabled in production');
     }
     this.faults = faults;

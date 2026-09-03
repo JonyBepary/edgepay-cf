@@ -42,9 +42,11 @@ export default defineConfig({
         // else). Production ships ALLOWED_ORIGINS="" (fail closed).
         bindings: {
           ALLOWED_ORIGINS: 'https://allowed.example',
-          JWT_SECRET: 'test-jwt-secret-at-least-32-chars-long-for-testing',
-          APP_KEY: 'dGVzdC1hcHAta2V5LWF0LWxlYXN0LTMyLWNoYXJzLWxvbmc=',
-          ENCRYPTION_KEY: 'dGVzdC1lbmNyeXB0aW9uLWtleS1hdC1sZWFzdC0zMi1jaGFycw==',
+          JWT_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          APP_KEY: 'dGVzdC1hcHAta2V5LTAxMjM0NTY3ODlhYmNkZWYxMjM=',
+          ENCRYPTION_KEY: 'dGVzdC1lbmNyeXB0aW9uLWtleS0wMTIzNDU2Nzg5YWI=',
+          CF_ACCESS_TEAM_DOMAIN: 'test.cloudflareaccess.com',
+          CF_ACCESS_AUD_TAG: 'test-aud-tag-for-vitest-only',
         },
       },
     }),

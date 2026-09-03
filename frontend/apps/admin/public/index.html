@@ -1029,13 +1029,63 @@ table.data-table tbody tr:hover { background: #F4F4F5; }
 </div>
 
 <script>
-const MERCHANTS_DATA = [
-  { id: 'merchant_1f4a', name: 'Amber Bites', email: 'owner@amberbites.bd', vol: '৳1,24,300', status: 'Active', rails: 4 },
-  { id: 'merchant_2d7b', name: 'Dhaka Threads', email: 'ops@dhakathreads.com', vol: '৳98,540', status: 'Active', rails: 2 },
-  { id: 'merchant_9e2c', name: 'Kabul Fresh Mart', email: 'h.kabul@freshmart.af', vol: '৳1,42,760', status: 'Onboarding', rails: 1 }
-];
+const ADMIN_ORIGIN = (window.__EDGEPAY_BFF__) || '';
 
-let selectedMerchant = MERCHANTS_DATA[0];
+function adminKey() {
+  return window.localStorage.getItem('edgepay_admin_key') || window.localStorage.getItem('edgepay_api_key') || '';
+}
+
+function adminHeaders(extra) {
+  const h = { Accept: 'application/json', ...(extra || {}) };
+  const key = adminKey();
+  if (key) h.Authorization = `Bearer ${key}`;
+  const accessJwt = window.localStorage.getItem('edgepay_access_jwt');
+  if (accessJwt) h['Cf-Access-Jwt-Assertion'] = accessJwt;
+  return h;
+}
+
+async function adminFetch(path, options) {
+  const res = await fetch(`${ADMIN_ORIGIN}${path}`, {
+    credentials: 'include',
+    ...(options || {}),
+    headers: adminHeaders((options && options.headers) || {}),
+  });
+  const json = await res.json().catch(() => null);
+  return { res, json };
+}
+
+let MERCHANTS_DATA = [];
+let MERCHANTS_ERROR = '';
+
+async function loadMerchants() {
+  try {
+    const { res, json } = await adminFetch('/api/admin/v1/merchants');
+    if (!res.ok || !(json && json.success)) {
+      MERCHANTS_DATA = [];
+      MERCHANTS_ERROR = (res.status === 401 || res.status === 403)
+        ? 'Admin API rejected the request (401/403). Sign in via Cloudflare Access with an admin-scope key.'
+        : `Admin API unavailable (HTTP ${res.status}).`;
+    } else {
+      MERCHANTS_DATA = (json.data || []).map(m => ({
+        id: String(m.id),
+        name: m.name || 'Unnamed',
+        email: m.email || '',
+        vol: '—',
+        status: m.status === 'active' ? 'Active' : (m.status || 'Onboarding'),
+        rails: 0,
+      }));
+      MERCHANTS_ERROR = MERCHANTS_DATA.length === 0 ? 'No tenants provisioned yet. Click "Provision merchant" above.' : '';
+    }
+  } catch {
+    MERCHANTS_DATA = [];
+    MERCHANTS_ERROR = 'Admin API is unreachable. Check your connection and try again.';
+  }
+  selectedMerchant = MERCHANTS_DATA[0] || null;
+  renderMerchants(MERCHANTS_DATA);
+  if (selectedMerchant) selectMerchant(selectedMerchant.id);
+}
+
+let selectedMerchant = null;
 
 /* Tab Switching */
 document.querySelectorAll('.nav-link').forEach(link => {
@@ -1050,8 +1100,12 @@ document.querySelectorAll('.nav-link').forEach(link => {
 /* Render Merchants Master List */
 function renderMerchants(list) {
   const container = document.getElementById('merchants-list-container');
+  if (list.length === 0) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:24px 12px;font-size:12.5px">${MERCHANTS_ERROR || 'No tenants provisioned yet.'}</div>`;
+    return;
+  }
   container.innerHTML = list.map(m => `
-    <div class="merchant-item ${m.id === selectedMerchant.id ? 'selected' : ''}" onclick="selectMerchant('${m.id}')">
+    <div class="merchant-item ${selectedMerchant && m.id === selectedMerchant.id ? 'selected' : ''}" onclick="selectMerchant('${m.id}')">
       <div class="m-avatar">${m.name.slice(0, 2).toUpperCase()}</div>
       <div class="m-info">
         <div class="m-name">${m.name}</div>
@@ -1063,7 +1117,8 @@ function renderMerchants(list) {
 }
 
 function selectMerchant(id) {
-  selectedMerchant = MERCHANTS_DATA.find(x => x.id === id) || MERCHANTS_DATA[0];
+  selectedMerchant = MERCHANTS_DATA.find(x => x.id === id) || MERCHANTS_DATA[0] || null;
+  if (!selectedMerchant) return;
   document.getElementById('det-avatar').textContent = selectedMerchant.name.slice(0, 2).toUpperCase();
   document.getElementById('det-name').textContent = selectedMerchant.name;
   document.getElementById('det-id').textContent = selectedMerchant.id + ' · vol ' + selectedMerchant.vol;
@@ -1077,6 +1132,19 @@ function filterMerchants(query) {
 }
 
 /* SMS Parse Inspector Sheet */
+async function retrySmsParse(smsDbId, btn) {
+  const numericId = String(smsDbId).replace(/[^0-9]/g, '');
+  if (!numericId) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Re-queueing...'; }
+  try {
+    const { res, json } = await adminFetch(`/api/admin/v1/sms-queues/${numericId}/retries`, { method: 'POST' });
+    if (btn) btn.textContent = res.ok ? 'Re-queued ✓' : ((json && json.error && json.error.message) || `Retry failed (${res.status})`);
+  } catch {
+    if (btn) btn.textContent = 'Retry unreachable';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 function inspectSms(smsId, carrier, raw, status, amount, trx, phone) {
   document.getElementById('adm-d-title').textContent = 'SMS Payload ' + smsId;
   document.getElementById('adm-d-sub').textContent = 'Carrier Relay: ' + carrier + ' · Parse State: ' + status.toUpperCase();
@@ -1105,7 +1173,7 @@ DO_MUTATION: LedgerDO shard committed</div>
 
     <div style="display:flex;gap:10px;margin-top:auto">
       <button class="btn-cta btn-cta-ghost" style="flex:1;justify-content:center" onclick="closeAdminDrawer()">Close</button>
-      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="alert('SMS re-queued for edge parsing.')">⚡ Re-run Parser</button>
+      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="retrySmsParse('${smsId}', this)">⚡ Re-run Parser</button>
     </div>
   `;
 
@@ -1130,29 +1198,60 @@ function closeProvisionModal() {
   document.getElementById('provision-modal').classList.remove('open');
 }
 
-function submitProvision() {
-  const name = document.getElementById('pv-name').value.trim() || 'New Merchant';
-  const email = document.getElementById('pv-email').value.trim() || 'owner@newmerchant.bd';
-  const rndClaim = 'edgepay_claim_' + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,24);
+async function submitProvision() {
+  const nameEl = document.getElementById('pv-name');
+  const emailEl = document.getElementById('pv-email');
+  const name = (nameEl.value || '').trim();
+  const email = (emailEl.value || '').trim();
+  const submitBtn = document.getElementById('btn-submit-pv');
+  if (!name || !email) {
+    if (nameEl && !name) nameEl.style.borderColor = 'var(--rose-500, #EF4444)';
+    if (emailEl && !email) emailEl.style.borderColor = 'var(--rose-500, #EF4444)';
+    return;
+  }
 
-  document.getElementById('pv-claim-token').textContent = rndClaim;
-  document.getElementById('modal-form-content').style.display = 'none';
-  document.getElementById('modal-claim-content').style.display = 'block';
-  document.getElementById('btn-submit-pv').style.display = 'none';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Provisioning...'; }
+  try {
+    const { res, json } = await adminFetch('/api/admin/v1/merchants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    });
+    if ((res.status === 201 || res.ok) && json && json.success && json.data && json.data.merchant) {
+      const m = json.data.merchant;
+      document.getElementById('pv-claim-token').textContent = (json.data && json.data.claim_token) || '(no claim token returned)';
+      document.getElementById('modal-form-content').style.display = 'none';
+      document.getElementById('modal-claim-content').style.display = 'block';
+      if (submitBtn) submitBtn.style.display = 'none';
 
-  MERCHANTS_DATA.push({
-    id: 'merchant_' + Math.random().toString(36).substring(2, 6),
-    name: name,
-    email: email,
-    vol: '৳0.00',
-    status: 'Active',
-    rails: 1
-  });
-  renderMerchants(MERCHANTS_DATA);
+      MERCHANTS_DATA.push({
+        id: String(m.id),
+        name: m.name || name,
+        email: m.email || email,
+        vol: '৳0.00',
+        status: 'Active',
+        rails: 0
+      });
+      renderMerchants(MERCHANTS_DATA);
+    } else {
+      document.getElementById('pv-claim-token').textContent =
+        'Provision failed: ' + ((json && json.error && json.error.message) || `HTTP ${res.status}`);
+      document.getElementById('modal-form-content').style.display = 'none';
+      document.getElementById('modal-claim-content').style.display = 'block';
+      if (submitBtn) submitBtn.style.display = 'none';
+    }
+  } catch {
+    document.getElementById('pv-claim-token').textContent = 'Provision unreachable — check your connection and try again.';
+    document.getElementById('modal-form-content').style.display = 'none';
+    document.getElementById('modal-claim-content').style.display = 'block';
+    if (submitBtn) submitBtn.style.display = 'none';
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create & Generate Claim Token'; }
+  }
 }
 
 // Initial render
-renderMerchants(MERCHANTS_DATA);
+loadMerchants();
 </script>
 </body>
 </html>

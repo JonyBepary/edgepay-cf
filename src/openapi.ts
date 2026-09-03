@@ -320,7 +320,16 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
           tags: ['Merchant API'],
           summary: 'Gateway-plugin catalog for this deployment',
           description:
-            'Reflects the ENABLED_GATEWAYS platform gate: which gateway adapters this deployment may use (with credential field definitions — names only, never values), which ENABLED_GATEWAYS tokens were dropped as unrecognized (typo feedback), and how many adapters remain in the port backlog. Per-merchant gateway installs and credentials live in D1 (AES-256-GCM) and are configured in the admin UI.',
+            'Reflects the ENABLED_GATEWAYS platform gate: which gateway adapters this deployment may use (with credential field definitions — names only, never values), which ENABLED_GATEWAYS tokens were dropped as unrecognized (typo feedback), and how many adapters remain in the port backlog. Planned (not-yet-ported) adapters stay hidden unless the caller passes ?include=planned; operations against them still fail closed (422). Per-merchant gateway installs and credentials live in D1 (AES-256-GCM) and are configured in the admin UI.',
+          parameters: [
+            {
+              name: 'include',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+              description: 'Comma-separated opt-ins. Pass include=planned to list planned (quarantined) adapters with status planned.',
+            },
+          ],
           responses: {
             200: {
               description: 'Enabled gateway catalog.',
@@ -343,6 +352,14 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
                             type: 'integer',
                             description: 'Adapters in the catalog that are not yet ported (see docs/GATEWAYS.md).',
                           },
+                          planned_count: {
+                            type: 'integer',
+                            description: 'Entries in this response with status planned (0 unless ?include=planned).',
+                          },
+                          catalog: {
+                            type: 'object',
+                            description: 'Full catalog counts { total, implemented, ported, planned } (123 total).',
+                          },
                         },
                       },
                     },
@@ -356,6 +373,49 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
       },
 
       '/api/v1/payments': {
+        get: {
+          tags: ['Merchant API'],
+          summary: 'List payments for the merchant console',
+          description:
+            'Bearer-scoped payment-intent listing (newest first, cap 100). Each row carries the server-resolved rail (gateway slug recorded on the transaction) plus minutes-since-creation for console rendering.',
+          parameters: [{ $ref: '#/components/parameters/LimitParam' }],
+          responses: {
+            200: {
+              description: 'Recent payment intents.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      payments: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string' },
+                            rail: { type: 'string' },
+                            rail_label: { type: 'string' },
+                            amount: { type: 'number' },
+                            status: { type: 'string' },
+                            minutes: { type: 'integer' },
+                            created_at: { type: 'string', format: 'date-time' },
+                          },
+                        },
+                      },
+                      data: {
+                        type: 'array',
+                        items: { type: 'object', additionalProperties: true },
+                        description: 'Mirror of payments (back-compat).',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 429),
+          },
+        },
         post: {
           tags: ['Merchant API'],
           summary: 'Create a payment intent',
@@ -497,7 +557,8 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
           tags: ['Merchant API'],
           summary: 'Refund a completed transaction',
           description:
-            'Synchronous refund path: verifies the transaction is completed, the gateway is enabled on this deployment, then calls the gateway refund API and records the refund. For gateway-refunds that need polling, the admin API path (POST /api/admin/v1/refunds) drives the per-refund reconciliation workflow instead.',
+            'Async refund path: verifies the transaction is completed, the gateway is enabled on this deployment, then records the refund as pending and drives gateway settlement through the per-refund reconciliation workflow. Poll GET /api/v1/refunds/{id} for terminal state. Requires X-Idempotency-Key.',
+          parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }],
           requestBody: {
             required: true,
             content: {
@@ -505,8 +566,8 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
             },
           },
           responses: {
-            201: {
-              description: 'Refund recorded as completed.',
+            202: {
+              description: 'Refund accepted as pending; reconciliation workflow now driving to terminal state.',
               content: {
                 'application/json': {
                   schema: {
@@ -517,10 +578,12 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
                         type: 'object',
                         properties: {
                           refund_id: { type: 'string' },
-                          gateway_refund_id: { type: 'string', nullable: true },
+                          transaction_id: { type: 'string' },
                           amount: { $ref: '#/components/schemas/Money' },
                           currency: { $ref: '#/components/schemas/Currency' },
-                          status: { type: 'string', enum: ['completed'] },
+                          status: { type: 'string', enum: ['pending'] },
+                          gateway_refund_id: { type: 'string', nullable: true },
+                          workflow_instance_id: { type: 'string' },
                         },
                       },
                     },
@@ -529,6 +592,48 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
               },
             },
             ...errorResponses(400, 401, 404, 422, 429, 502),
+          },
+        },
+      },
+
+      '/api/v1/refunds/{id}': {
+        get: {
+          tags: ['Merchant API'],
+          summary: 'Fetch a refund by id',
+          description: 'Bearer-scoped refund status (includes the gateway refund id and the parent transaction trx_id).',
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          ],
+          responses: {
+            200: {
+              description: 'Refund detail.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          refund_id: { type: 'string' },
+                          amount: { $ref: '#/components/schemas/Money' },
+                          currency: { $ref: '#/components/schemas/Currency' },
+                          reason: { type: 'string', nullable: true },
+                          status: { type: 'string' },
+                          gateway_refund_id: { type: 'string', nullable: true },
+                          transaction_id: { type: 'integer' },
+                          transaction_trx_id: { type: 'string' },
+                          created_at: { type: 'string', format: 'date-time' },
+                          updated_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 404, 429),
           },
         },
       },
@@ -652,6 +757,141 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
               },
             },
             ...errorResponses(400, 401, 403, 429),
+          },
+        },
+      },
+
+      '/api/v1/api-keys/{id}': {
+        patch: {
+          tags: ['Merchant API'],
+          summary: 'Revoke an API key (admin scope)',
+          description: 'Idempotent: revoking an already-revoked key succeeds. Merchant-scoped; 404 when the key does not belong to this merchant.',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: {
+            200: {
+              description: 'Key revoked.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          status: { type: 'string', enum: ['revoked'] },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 403, 404, 429),
+          },
+        },
+        delete: {
+          tags: ['Merchant API'],
+          summary: 'Revoke an API key — DELETE alias (admin scope)',
+          description: 'DELETE alias for PATCH /api/v1/api-keys/{id} (the merchant dashboard island issues DELETE). Identical idempotent revoke semantics.',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: {
+            200: {
+              description: 'Key revoked.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          status: { type: 'string', enum: ['revoked'] },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 403, 404, 429),
+          },
+        },
+      },
+
+      '/api/v1/api-keys/{id}/rotate': {
+        post: {
+          tags: ['Merchant API'],
+          summary: 'Rotate an API key (admin scope)',
+          description: 'Atomically inserts a replacement key and revokes the old one (D1 batch, revoke conditional on still-active). The new secret is returned ONCE; revocation is immediate (no grace window). Only active keys can be rotated.',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: {
+            201: {
+              description: 'Replacement key issued; old key revoked.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          api_key: { type: 'string' },
+                          key_prefix: { type: 'string' },
+                          scopes: { type: 'array', items: { type: 'string' } },
+                          rotated_from: { type: 'integer' },
+                          revocation: { type: 'string', const: 'immediate' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 403, 404, 409, 422, 429),
+          },
+        },
+      },
+
+      '/api/v1/merchant/summary': {
+        get: {
+          tags: ['Merchant API'],
+          summary: 'Merchant overview: today-at-a-glance + recent transactions',
+          description: "Bearer-scoped merchant overview: today's revenue / transaction count / pending count plus the 5 most recent transactions. Same SQL as the mobile dashboard.",
+          responses: {
+            200: {
+              description: 'Merchant summary.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          today: {
+                            type: 'object',
+                            properties: {
+                              today_count: { type: 'integer' },
+                              today_revenue: { type: 'string' },
+                              pending_count: { type: 'integer' },
+                            },
+                          },
+                          recent_transactions: { type: 'array', items: { $ref: '#/components/schemas/Transaction' } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 429),
           },
         },
       },
@@ -834,6 +1074,40 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
               },
             },
             ...errorResponses(401, 429),
+          },
+        },
+      },
+
+      '/api/v1/webhooks/deliveries/{id}/retry': {
+        post: {
+          tags: ['Merchant API'],
+          summary: 'Retry a failed outbound webhook delivery',
+          description:
+            'Re-enqueues a failed outbound delivery onto WEBHOOK_QUEUE (bearer-scoped to merchant). Only outbound deliveries with a live endpoint (for the HMAC secret) can be retried; the delivery flips to retrying with attempt + 1. Inbound deliveries return 422 CANNOT_RETRY_INBOUND.',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: {
+            200: {
+              description: 'Retry queued.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          status: { type: 'string', const: 'retrying' },
+                          attempt: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 404, 422, 429),
           },
         },
       },
@@ -1729,6 +2003,98 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
               },
             },
             ...errorResponses(400, 404, 409),
+          },
+        },
+      },
+      '/checkout/{token}/submit-trx': {
+        post: {
+          tags: ['Checkout'],
+          summary: 'Submit customer TrxID — submit-trx alias of verify',
+          description: 'Alias for POST /checkout/{token}/verify (same handler, same per-gateway format gate + SMS corroboration). The hosted checkout HTML posts here via fetch; both paths are rate limited (checkout group: 30/10m per IP).',
+          security: [],
+          parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['trx_id'],
+                  properties: {
+                    trx_id: { type: 'string', description: 'Transaction ID from customer confirmation SMS/app statement', example: 'BK998877' },
+                    sender_phone: { type: 'string', description: 'Sender mobile number', example: '01711223344' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Verification result (completed or awaiting carrier SMS confirmation).',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['completed', 'awaiting_sms'] },
+                          trx_id: { type: 'string' },
+                          message: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 404, 409),
+          },
+        },
+      },
+      '/callback': {
+        get: {
+          tags: ['Checkout'],
+          summary: 'Gateway callback (token in query)',
+          description: 'Top-level alias of the synchronous gateway-callback handler (also mounted at /checkout/{token}/callback and /payment/callback). Unsigned callbacks NEVER complete: they stay pending and are logged as CALLBACK_UNSIGNED_REJECTED; signed callbacks verify via the adapter, complete the transaction, and post the idempotent ledger entry.',
+          security: [],
+          responses: {
+            200: { description: 'Result page (HTML).', content: { 'text/html': { schema: { type: 'string' } } } },
+            404: { description: 'Unknown token.', content: { 'text/html': { schema: { type: 'string' } } } },
+          },
+        },
+        post: {
+          tags: ['Checkout'],
+          summary: 'Gateway callback (server-to-server POST)',
+          description: 'POST variant of /callback for gateways that notify server-to-server. Same unsigned-stays-pending contract as the GET variant.',
+          security: [],
+          responses: {
+            200: { description: 'Result page (HTML).', content: { 'text/html': { schema: { type: 'string' } } } },
+            404: { description: 'Unknown token.', content: { 'text/html': { schema: { type: 'string' } } } },
+          },
+        },
+      },
+      '/payment/callback': {
+        get: {
+          tags: ['Checkout'],
+          summary: 'Gateway callback (legacy /payment prefix)',
+          description: 'Legacy-prefix alias of /callback (same handler, same unsigned-stays-pending contract).',
+          security: [],
+          responses: {
+            200: { description: 'Result page (HTML).', content: { 'text/html': { schema: { type: 'string' } } } },
+            404: { description: 'Unknown token.', content: { 'text/html': { schema: { type: 'string' } } } },
+          },
+        },
+        post: {
+          tags: ['Checkout'],
+          summary: 'Gateway callback POST (legacy /payment prefix)',
+          description: 'POST variant of /payment/callback. Same unsigned-stays-pending contract.',
+          security: [],
+          responses: {
+            200: { description: 'Result page (HTML).', content: { 'text/html': { schema: { type: 'string' } } } },
+            404: { description: 'Unknown token.', content: { 'text/html': { schema: { type: 'string' } } } },
           },
         },
       },

@@ -30,8 +30,8 @@ describe('catalog data integrity', () => {
     const counts = catalogCounts();
     expect(counts.total).toBe(123);
     expect(counts.implemented).toBe(5);
-    // the port covers the overwhelming majority — BD set is complete
-    expect(counts.ported).toBeGreaterThanOrEqual(80);
+    expect(counts.ported).toBe(65);
+    expect(counts.planned).toBe(53);
     expect(counts.implemented + counts.ported + counts.planned).toBe(123);
   });
 

@@ -1,0 +1,37 @@
+name: Gitleaks secret scan (P0-4)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  gitleaks:
+    name: Detect committed secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks (no-git file scan + full history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: detect --no-git --verbose --redact
+
+      - name: Block known secret variable names with live values
+        run: |
+          set -eu
+          echo "Scanning tracked files for live JWT_SECRET / APP_KEY / ENCRYPTION_KEY assignments..."
+          # Matches NAME=<non-empty, non-placeholder value> in tracked text files.
+          # Placeholders (YOUR_*, EXAMPLE, CHANGEME, *** ) are allowed.
+          if git grep -n -E '(JWT_SECRET|APP_KEY|ENCRYPTION_KEY)\s*[:=]\s*.+' -- ':!*.md' ':!package.json' ':!gitleaks.yml' | \
+            grep -v -E 'YOUR_|EXAMPLE|CHANGEME|\*\*\*|YOUR-32|HERE' ; then
+            echo "::error::Live secret assignment detected (JWT_SECRET|APP_KEY|ENCRYPTION_KEY). Use \`wrangler secret put <NAME>\` and remove the value from the repo."
+            exit 1
+          fi
+          echo "No live secret assignments found."

@@ -159,22 +159,25 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     }
   }
 
-  // 5. Ensure device pairing OTP (FK-safe: bound to real admin user)
+  // 5. Ensure device pairing OTP (FK-safe: bound to real admin user).
+  // Stored as SHA-256 hash only; 5-minute expiry; single-use via used_at.
+  const { sha256: sha256Bootstrap } = await import('../lib/crypto');
+  const initialOtpHash = await sha256Bootstrap(initialOtp);
   const existingOtp = await env.DB.prepare(
-    `SELECT token FROM op_device_pairing_tokens WHERE merchant_id = ? AND token = ? LIMIT 1`
-  ).bind(merchantId, initialOtp).first<{ token: string }>();
+    `SELECT token_hash FROM op_device_pairing_tokens WHERE merchant_id = ? AND token_hash = ? LIMIT 1`
+  ).bind(merchantId, initialOtpHash).first<{ token_hash: string }>();
 
   if (!existingOtp) {
     const otpUser = await env.DB.prepare(
       `SELECT id FROM op_merchant_users WHERE merchant_id = ? LIMIT 1`
     ).bind(merchantId).first<{ id: number }>();
     if (otpUser) {
-      const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+      const otpExpiresAt = new Date(Date.now() + 300 * 1000).toISOString();
       await env.DB.prepare(
         `INSERT INTO op_device_pairing_tokens
-           (merchant_id, user_id, token, expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?)`
-      ).bind(merchantId, otpUser.id, initialOtp, otpExpiresAt, now).run();
+           (merchant_id, user_id, token, token_hash, expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(merchantId, otpUser.id, initialOtpHash, initialOtpHash, otpExpiresAt, now).run();
     }
   }
 

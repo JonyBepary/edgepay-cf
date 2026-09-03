@@ -25,6 +25,7 @@
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../types/env';
 import { page } from '../lib/observability';
+import { timingSafeEqual } from '../lib/crypto';
 
 // ------------------------------------------------------------------
 // JWT verification (pure — unit-testable without network)
@@ -281,53 +282,6 @@ export function accessAuthMiddleware(): MiddlewareHandler<{
   Variables: Partial<AccessAuthVariables>;
 }> {
   return async (c, next) => {
-    // --- Bearer API Key with admin scope (allows direct REST administration) ---
-    const authHeader = c.req.header('Authorization');
-    if (authHeader && authHeader.startsWith('Bearer op_live_')) {
-      const apiKey = authHeader.slice(7);
-      const keyMatch = apiKey.match(/^op_live_([a-z0-9]{12})_([a-z0-9]+)$/i);
-      if (keyMatch) {
-        const prefix = keyMatch[1];
-        const { sha256, timingSafeEqual } = await import('../lib/crypto');
-        const keyHash = await sha256(apiKey);
-
-        const keyRow = await c.env.DB.prepare(
-          `SELECT ak.id, ak.merchant_id, ak.scopes, ak.status, ak.expires_at,
-                  m.status AS merchant_status
-           FROM op_api_keys ak
-           JOIN op_merchants m ON m.id = ak.merchant_id
-           WHERE ak.key_prefix = ? AND ak.status = 'active'
-           LIMIT 1`
-        ).bind(prefix).first<{
-          id: number;
-          merchant_id: number;
-          scopes: string;
-          status: string;
-          expires_at: string | null;
-          merchant_status: string;
-        }>();
-
-        if (keyRow && keyRow.merchant_status === 'active') {
-          const storedHash = await c.env.DB.prepare(
-            `SELECT key_hash FROM op_api_keys WHERE id = ?`
-          ).bind(keyRow.id).first<{ key_hash: string }>();
-
-          if (storedHash && timingSafeEqual(storedHash.key_hash, keyHash)) {
-            const grantedScopes = JSON.parse(keyRow.scopes || '[]') as string[];
-            if (grantedScopes.includes('*') || grantedScopes.includes('admin')) {
-              c.set('accessEmail', `merchant-${keyRow.merchant_id}@edgepay.dev`);
-              c.set('accessSub', `api-key-${keyRow.id}`);
-              c.set('merchantId', keyRow.merchant_id);
-              c.set('authType', 'bearer');
-              c.set('authSubject', keyRow.id);
-              c.set('authScopes', grantedScopes);
-              return next();
-            }
-          }
-        }
-      }
-    }
-
     const teamDomain = c.env.CF_ACCESS_TEAM_DOMAIN?.trim();
     const aud = c.env.CF_ACCESS_AUD_TAG?.trim();
 
@@ -335,11 +289,15 @@ export function accessAuthMiddleware(): MiddlewareHandler<{
     const bgId = c.req.header('Cf-Access-Client-Id');
     const bgSecret = c.req.header('Cf-Access-Client-Secret');
     if (bgId || bgSecret) {
-      const valid =
+      const idOk =
         !!c.env.BREAK_GLASS_CLIENT_ID &&
+        !!bgId &&
+        timingSafeEqual(bgId, c.env.BREAK_GLASS_CLIENT_ID);
+      const secretOk =
         !!c.env.BREAK_GLASS_CLIENT_SECRET &&
-        bgId === c.env.BREAK_GLASS_CLIENT_ID &&
-        bgSecret === c.env.BREAK_GLASS_CLIENT_SECRET;
+        !!bgSecret &&
+        timingSafeEqual(bgSecret, c.env.BREAK_GLASS_CLIENT_SECRET);
+      const valid = idOk && secretOk;
       if (!valid) {
         // Invalid break-glass attempt — page; do NOT fall through to a
         // header-trust path (that was the v0.2.0 backdoor).
@@ -363,21 +321,23 @@ export function accessAuthMiddleware(): MiddlewareHandler<{
       return next();
     }
 
-    // --- If Cloudflare Access is not configured, fall through to Admin Bearer API key auth ---
+    // --- Fail closed when Cloudflare Access is not configured ---
+    // P0-3: no Bearer fallback, no header trust — misconfiguration denies.
     if (!teamDomain || !aud) {
-      const authHeader = c.req.header('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        return next();
-      }
+      page(c.env, 'ACCESS_NOT_CONFIGURED', {
+        path: c.req.path,
+        team_domain_configured: !!teamDomain,
+        aud_configured: !!aud,
+      });
       return c.json(
         {
           success: false,
           error: {
             code: 'ACCESS_NOT_CONFIGURED',
-            message: 'Cloudflare Access not configured. Provide an Admin Bearer API key or configure CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD_TAG.',
+            message: 'Cloudflare Access is not configured. Set CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD_TAG.',
           },
         },
-        401,
+        503,
       );
     }
 

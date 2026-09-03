@@ -205,14 +205,17 @@ installRoutes.post('/', async (c) => {
     ).bind(merchantId, tmpl.gateway_slug, tmpl.name, tmpl.regex, tmpl.sample, now, now).run();
   }
 
-  // 7. Seed initial companion device pairing OTP using CSPRNG
+  // 7. Seed initial companion device pairing OTP using CSPRNG.
+  // Stored as SHA-256 hash only (never plaintext); 5-minute expiry; single-use via used_at.
   const initialOtp = cfg.mfs.pairingOtp;
-  const otpExpiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+  const { sha256: sha256Otp } = await import('../lib/crypto');
+  const otpHash = await sha256Otp(initialOtp);
+  const otpExpiresAt = new Date(Date.now() + 300 * 1000).toISOString();
   await c.env.DB.prepare(
     `INSERT INTO op_device_pairing_tokens
-       (merchant_id, user_id, token, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).bind(merchantId, adminUserId, initialOtp, otpExpiresAt, now).run();
+       (merchant_id, user_id, token, token_hash, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(merchantId, adminUserId, otpHash, otpHash, otpExpiresAt, now).run();
 
   // 8. Mark installed (KV flag)
   await c.env.KV.put('system:installed', 'true');

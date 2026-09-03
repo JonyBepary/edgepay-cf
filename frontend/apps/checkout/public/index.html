@@ -851,8 +851,50 @@ button { cursor: pointer; background: none; border: none; }
 <script>
 let currentStep = 1;
 let selectedRail = 'bkash';
-const TOKEN = new URLSearchParams(location.search).get('token') || 'demo_intent';
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
 const ORIGIN = (window.__EDGEPAY_API__) || '';
+
+async function hydrateCheckoutSession() {
+  if (!TOKEN) {
+    const banner = document.getElementById('verification-banner');
+    if (banner) {
+      banner.classList.add('active');
+      banner.textContent = 'No checkout session found. Ask the merchant for a fresh payment link.';
+    }
+    const btn = document.getElementById('btn-verify-action');
+    if (btn) btn.disabled = true;
+    return;
+  }
+  try {
+    const res = await fetch(`${ORIGIN}/checkout/${encodeURIComponent(TOKEN)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      const banner = document.getElementById('verification-banner');
+      if (banner) {
+        banner.classList.add('active');
+        banner.textContent = res.status === 404
+          ? 'This checkout link is invalid or expired. Ask the merchant for a fresh payment link.'
+          : `Checkout unavailable (HTTP ${res.status}). Check your connection and try again.`;
+      }
+      const btn = document.getElementById('btn-verify-action');
+      if (btn) btn.disabled = true;
+      return;
+    }
+    const s = await res.json();
+    const totalEl = document.getElementById('rail-total-display');
+    if (totalEl && s.amount_minor != null) {
+      totalEl.textContent = (Number(s.amount_minor) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+    if (s.status === 'completed') goToStep(3);
+  } catch {
+    const banner = document.getElementById('verification-banner');
+    if (banner) {
+      banner.classList.add('active');
+      banner.textContent = 'Checkout is unreachable right now. Check your connection and try again.';
+    }
+  }
+}
 
 function selectPaymentRail(rail) {
   selectedRail = rail;
@@ -914,29 +956,110 @@ function copyRecipientNumber() {
   }, 1800);
 }
 
+async function pollCheckoutStatus(submittedTrx, attemptsLeft) {
+  if (!TOKEN || attemptsLeft <= 0) return;
+  try {
+    const res = await fetch(`${ORIGIN}/checkout/${encodeURIComponent(TOKEN)}/status`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const status = (json && json.data && json.data.status) || json.status || '';
+      if (status === 'completed') {
+        document.getElementById('receipt-trx-val').textContent = (json.data && json.data.trx_id) || submittedTrx;
+        goToStep(3);
+        return;
+      }
+    }
+  } catch {
+    // Transient — keep polling until attempts run out.
+  }
+  setTimeout(() => pollCheckoutStatus(submittedTrx, attemptsLeft - 1), 3000);
+}
+
+async function postTrxVerify(path, payload) {
+  const res = await fetch(`${ORIGIN}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => null);
+  return { res, json };
+}
+
 async function submitVerification() {
-  const trxVal = document.getElementById('input-trx-id').value.trim() || 'BL9A4K8M10';
-  const phoneVal = document.getElementById('input-sender-phone').value.trim() || '01798-219481';
+  const trxEl = document.getElementById('input-trx-id');
+  const phoneEl = document.getElementById('input-sender-phone');
+  const trxVal = (trxEl.value.trim() || '').toUpperCase();
+  const phoneVal = phoneEl.value.trim();
 
   const btn = document.getElementById('btn-verify-action');
   const banner = document.getElementById('verification-banner');
+
+  if (!TOKEN) {
+    banner.classList.add('active');
+    banner.textContent = 'No checkout session found. Ask the merchant for a fresh payment link.';
+    return;
+  }
+  if (trxVal.length < 4) {
+    banner.classList.add('active');
+    banner.textContent = 'Enter the Transaction ID from your payment confirmation message (at least 4 characters).';
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Verifying on Edge...';
   banner.classList.add('active');
+  banner.textContent = 'Verifying with the EdgePay ledger...';
 
-  // Edge Verification simulation
-  setTimeout(() => {
-    banner.classList.remove('active');
+  try {
+    let { res, json } = await postTrxVerify(
+      `/checkout/${encodeURIComponent(TOKEN)}/submit-trx`,
+      { trx_id: trxVal, sender_phone: phoneVal || undefined }
+    );
+    if (res.status === 404) {
+      ({ res, json } = await postTrxVerify(
+        `/checkout/${encodeURIComponent(TOKEN)}/verify`,
+        { trx_id: trxVal, sender_phone: phoneVal || undefined }
+      ));
+    }
+
+    if (json && json.success && json.data) {
+      const returnedTrx = json.data.trx_id || trxVal;
+      if (json.data.status === 'completed') {
+        banner.classList.remove('active');
+        btn.disabled = false;
+        btn.textContent = 'Verify Payment';
+        document.getElementById('receipt-trx-val').textContent = returnedTrx;
+        document.getElementById('receipt-rail-val').textContent = (selectedRail.toUpperCase()) + ' (' + phoneVal + ')';
+        goToStep(3);
+      } else {
+        // awaiting_sms / processing — stay on step 2 and poll for the SMS match.
+        banner.textContent = (json.data && json.data.message) ||
+          `Transaction ${returnedTrx} recorded — waiting for carrier SMS confirmation. This page updates automatically.`;
+        btn.disabled = false;
+        btn.textContent = 'Verify Payment';
+        pollCheckoutStatus(returnedTrx, 20);
+      }
+    } else {
+      const code = (json && json.error && json.error.code) || '';
+      banner.textContent = code === 'TRX_ALREADY_USED'
+        ? 'This Transaction ID was already used for another payment.'
+        : code === 'AMOUNT_MISMATCH'
+          ? 'The payment received does not match the order amount.'
+          : ((json && json.error && json.error.message) || `Verification failed (HTTP ${res.status}). Check the Transaction ID and try again.`);
+      btn.disabled = false;
+      btn.textContent = 'Verify Payment';
+    }
+  } catch {
+    banner.textContent = 'Verification is unreachable right now — check your connection and try again.';
     btn.disabled = false;
     btn.textContent = 'Verify Payment';
-    document.getElementById('receipt-trx-val').textContent = trxVal;
-    document.getElementById('receipt-rail-val').textContent = (selectedRail.toUpperCase()) + ' (' + phoneVal + ')';
-    document.getElementById('receipt-ref-val').textContent = 'edgepay_trx_' + Math.random().toString(36).substring(2, 7).toUpperCase();
-    goToStep(3);
-  }, 1200);
+  }
 }
 
 // Initial check
+hydrateCheckoutSession();
 if (window.gsap) {
   gsap.from('.checkout-card, .order-rail', { opacity: 0, y: 15, duration: 0.4, stagger: 0.1, ease: 'power2.out' });
 }

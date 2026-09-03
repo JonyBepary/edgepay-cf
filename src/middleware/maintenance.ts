@@ -76,9 +76,18 @@ p{color:#94a3b8;line-height:1.6}
 <body>
 <div class="box">
 <h1>Maintenance in progress</h1>
-<p>${info.reason}</p>
+<p>${escapeHtml(info.reason)}</p>
 <p>Please retry in ${Math.ceil(info.retry_after / 60)} minutes.</p>
 </div>
 </body>
 </html>`, 503, { 'Retry-After': String(info.retry_after) });
 };
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}

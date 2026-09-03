@@ -1307,7 +1307,7 @@ table.data-table tbody tr.row-flash {
           <div class="card-panel">
             <div class="panel-header">
               <div class="panel-title">Production API Keys</div>
-              <button class="btn-cta btn-cta-primary" style="font-size:11px;padding:3px 8px" onclick="alert('Key generated and sealed with AES-256-GCM.')">+ Create Key</button>
+              <button class="btn-cta btn-cta-primary" style="font-size:11px;padding:3px 8px" onclick="createMerchantApiKey()">+ Create Key</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1482,14 +1482,79 @@ table.data-table tbody tr.row-flash {
 /* ═════════ 1 · STATE & DATA LAYER ═════════ */
 const ORIGIN = (window.__EDGEPAY_BFF__) || '';
 
-let TRANSACTIONS = [
-  { id: 'edgepay_trx_9F21A', rail: 'bkash', rail_label: 'bKash', amount: 1250, status: 'completed', latency: '142ms', sender: '01798-219481', trx_id: 'BL9A4K8M10', when: '2 min ago' },
-  { id: 'edgepay_trx_9F21B', rail: 'nagad', rail_label: 'Nagad', amount: 640, status: 'pending', latency: 'awaiting', sender: '01812-409182', trx_id: '71A89KC2', when: '6 min ago' },
-  { id: 'edgepay_trx_9F21C', rail: 'bkash', rail_label: 'bKash', amount: 320, status: 'failed', latency: '404ms', sender: '01711-098234', trx_id: '9FT7A2X', when: '22 min ago' },
-  { id: 'edgepay_trx_9F21D', rail: 'rocket', rail_label: 'Rocket', amount: 1180, status: 'completed', latency: '168ms', sender: '01920-581920', trx_id: 'R902189K', when: '47 min ago' },
-  { id: 'edgepay_trx_9F21E', rail: 'bkash', rail_label: 'bKash', amount: 1450, status: 'completed', latency: '135ms', sender: '01732-901823', trx_id: 'BL90184A', when: '1 h ago' },
-  { id: 'edgepay_trx_9F21F', rail: 'nagad', rail_label: 'Nagad', amount: 450, status: 'completed', latency: '154ms', sender: '01855-291048', trx_id: 'NG8012A', when: '3 h ago' }
-];
+function merchantKey() {
+  return window.localStorage.getItem('edgepay_api_key') || window.localStorage.getItem('edgepay_merchant_key') || '';
+}
+
+function merchantHeaders(extra) {
+  const h = { Accept: 'application/json', ...(extra || {}) };
+  const key = merchantKey();
+  if (key) h.Authorization = `Bearer ${key}`;
+  return h;
+}
+
+let TRANSACTIONS = [];
+let TRANSACTIONS_ERROR = '';
+
+function mapTransaction(t) {
+  const rail = String(t.gateway_slug || t.payment_method || t.rail || 'bkash').toLowerCase();
+  const label = t.gateway_slug === 'bkash' || rail === 'bkash' ? 'bKash'
+    : rail === 'nagad' ? 'Nagad'
+    : rail === 'rocket' ? 'Rocket' : (t.payment_method || t.gateway_slug || 'Card');
+  return {
+    id: t.trx_id || (t.uuid ? 'edgepay_trx_' + String(t.uuid).slice(0, 5).toUpperCase() : 'trx_' + t.id),
+    trxDbRef: t.trx_id || '',
+    rail: rail.includes('nagad') ? 'nagad' : rail.includes('rocket') ? 'rocket' : rail.includes('card') ? 'cards' : 'bkash',
+    rail_label: label,
+    amount: parseFloat(t.amount || 0) || 0,
+    status: t.status || 'pending',
+    latency: t.latency || (t.status === 'completed' ? 'edge' : 'awaiting'),
+    sender: t.sender_phone || t.sender || '—',
+    trx_id: t.gateway_trx_id || t.trx_id || '—',
+    when: t.created_at ? new Date(t.created_at).toLocaleString() : 'just now',
+  };
+}
+
+async function loadTransactions() {
+  const tbody = document.getElementById('tx-tbody');
+  try {
+    const res = await fetch(`${ORIGIN}/api/v1/transactions?limit=20`, { headers: merchantHeaders() });
+    if (!res.ok) {
+      TRANSACTIONS = [];
+      TRANSACTIONS_ERROR = res.status === 401 || res.status === 403
+        ? 'Merchant API rejected the request (401/403). Save a valid API key in Developers to load live transactions.'
+        : `Merchant API unavailable (HTTP ${res.status}).`;
+    } else {
+      const json = await res.json();
+      const rows = (json && json.success && json.data) || [];
+      TRANSACTIONS = rows.map(mapTransaction);
+      TRANSACTIONS_ERROR = TRANSACTIONS.length === 0 ? 'No transactions yet. Create a payment intent to open a live checkout session.' : '';
+    }
+  } catch {
+    TRANSACTIONS = [];
+    TRANSACTIONS_ERROR = 'Merchant API is unreachable. Check your connection and try again.';
+  }
+  selectedRowIndex = 0;
+  renderTransactions();
+  if (!TRANSACTIONS_ERROR) refreshKpisFromLive();
+}
+
+function refreshKpisFromLive() {
+  const today = new Date().toISOString().slice(0, 10);
+  // KPIs intentionally left as last rendered values when no live rows exist.
+  if (TRANSACTIONS.length === 0) return;
+  const volEl = document.getElementById('kpi-volume');
+  const cntEl = document.getElementById('kpi-count');
+  let vol = 0;
+  let pending = 0;
+  for (const t of TRANSACTIONS) {
+    if (t.status === 'completed') vol += t.amount;
+    if (t.status === 'pending' || t.status === 'processing') pending += 1;
+  }
+  if (volEl) volEl.textContent = Math.round(vol).toLocaleString('en-IN');
+  if (cntEl) cntEl.textContent = String(TRANSACTIONS.length);
+  void pending; void today;
+}
 
 let selectedRowIndex = 0;
 
@@ -1543,6 +1608,10 @@ function toggleCmdk(open) {
 /* ═════════ 4 · RENDER TRANSACTIONS TABLE ═════════ */
 function renderTransactions() {
   const tbody = document.getElementById('tx-tbody');
+  if (TRANSACTIONS.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:24px 12px;font-size:12.5px">${TRANSACTIONS_ERROR || 'No transactions yet.'}</td></tr>`;
+    return;
+  }
   tbody.innerHTML = TRANSACTIONS.map((t, idx) => `
     <tr class="${idx === selectedRowIndex ? 'row-selected' : ''}" onclick="inspectTransaction('${t.id}')">
       <td class="mono" style="font-weight:600">${t.id}</td>
@@ -1560,54 +1629,21 @@ function renderTransactions() {
   `).join('');
 }
 
-/* ═════════ 5 · ZERO-LATENCY SIMULATOR ENGINE ═════════ */
-function fireInboundSmsSimulation() {
-  const carrier = document.getElementById('sim-carrier').value;
-  const rawAmt = document.getElementById('sim-amount').value.replace(/,/g, '');
-  const amount = parseFloat(rawAmt) || 1250;
-  const rndTrx = 'BL' + Math.random().toString(36).substring(2, 9).toUpperCase();
-  const phone = '01798-' + Math.floor(100000 + Math.random() * 900000);
-  const newId = 'edgepay_trx_' + Math.random().toString(36).substring(2, 7).toUpperCase();
-
-  // 1. Android Slide Notification
+/* ═════════ 5 · LIVE EDGE RELOAD (SIMULATOR DOCK) ═════════ */
+// The dock button re-pulls live ledger state — it never fabricates transactions.
+async function fireInboundSmsSimulation() {
   const toast = document.getElementById('phone-toast');
-  document.getElementById('pt-carrier').textContent = `${carrier.toUpperCase()} Inbound Relay`;
-  document.getElementById('pt-text').textContent = `You have received Tk ${amount.toLocaleString('en-IN')}.00 from ${phone}. TrxID ${rndTrx}. Balance Tk 58,400.00.`;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 4000);
-
-  // 2. Prepend row with flash highlight
-  const newTx = {
-    id: newId,
-    rail: carrier,
-    rail_label: carrier === 'bkash' ? 'bKash' : carrier === 'nagad' ? 'Nagad' : 'Rocket',
-    amount: amount,
-    status: 'completed',
-    latency: '142ms',
-    sender: phone,
-    trx_id: rndTrx,
-    when: 'just now'
-  };
-  TRANSACTIONS.unshift(newTx);
-  renderTransactions();
-
-  // Highlight flash
+  await loadTransactions();
+  if (toast) {
+    document.getElementById('pt-carrier').textContent = 'EdgePay Live Relay';
+    document.getElementById('pt-text').textContent = TRANSACTIONS_ERROR
+      ? TRANSACTIONS_ERROR
+      : `Live ledger refreshed — ${TRANSACTIONS.length} transaction(s) from the Merchant API.`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
   const firstRow = document.querySelector('#tx-tbody tr:first-child');
-  if (firstRow) firstRow.classList.add('row-flash');
-
-  // 3. Increment Today's Volume and Transactions Count
-  const volEl = document.getElementById('kpi-volume');
-  const curVol = parseInt(volEl.textContent.replace(/,/g, ''), 10) || 8930;
-  const newVol = curVol + amount;
-  animateCountUp(volEl, curVol, newVol);
-
-  const cntEl = document.getElementById('kpi-count');
-  cntEl.textContent = parseInt(cntEl.textContent, 10) + 1;
-
-  const savedEl = document.getElementById('kpi-saved');
-  const curSaved = parseInt(savedEl.textContent.replace(/,/g, ''), 10) || 18420;
-  const newSaved = curSaved + Math.round(amount * 0.015);
-  animateCountUp(savedEl, curSaved, newSaved);
+  if (firstRow && TRANSACTIONS.length > 0) firstRow.classList.add('row-flash');
 }
 
 function animateCountUp(el, start, end) {
@@ -1651,12 +1687,42 @@ WEBHOOK_STATUS: dispatched (200 OK)</div>
 
     <div style="display:flex;gap:10px;margin-top:auto">
       <button class="btn-cta btn-cta-ghost" style="flex:1;justify-content:center" onclick="closeDrawer()">Done</button>
-      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="alert('Refund reconciliation initiated via Cloudflare Workflow.')">Refund ৳${t.amount}</button>
+      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="refundTransaction('${t.trxDbRef || t.id}', ${t.amount})">Refund ৳${t.amount}</button>
     </div>
   `;
 
   document.getElementById('drawer-backdrop').classList.add('open');
   document.getElementById('drawer-sheet').classList.add('open');
+}
+
+async function refundTransaction(transactionId, amount) {
+  if (!transactionId) return;
+  try {
+    const res = await fetch(`${ORIGIN}/api/v1/refunds`, {
+      method: 'POST',
+      headers: merchantHeaders({
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': (window.crypto && window.crypto.randomUUID && window.crypto.randomUUID()) || String(Date.now()),
+      }),
+      body: JSON.stringify({ transaction_id: transactionId }),
+    });
+    const json = await res.json().catch(() => null);
+    const body = document.getElementById('d-body');
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:12px;border-radius:6px;padding:8px 12px;margin-top:10px;';
+    if ((res.status === 201 || res.status === 202) && json && json.success) {
+      note.style.background = 'var(--emerald-50)';
+      note.style.color = 'var(--emerald-600)';
+      note.textContent = `Refund accepted for ৳${amount} (id ${(json.data && (json.data.refund_id || json.data.workflow_instance_id)) || 'pending'}). The reconciliation workflow drives it to terminal state.`;
+    } else {
+      note.style.background = 'var(--rose-50)';
+      note.style.color = 'var(--rose-600)';
+      note.textContent = (json && json.error && json.error.message) || `Refund failed (HTTP ${res.status}).`;
+    }
+    if (body) body.appendChild(note);
+  } catch {
+    closeDrawer();
+  }
 }
 
 function inspectWebhook(evtId, status, evtName, latency) {
@@ -1690,12 +1756,29 @@ function inspectWebhook(evtId, status, evtName, latency) {
 
     <div style="display:flex;gap:10px;margin-top:auto">
       <button class="btn-cta btn-cta-ghost" style="flex:1;justify-content:center" onclick="closeDrawer()">Close</button>
-      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="alert('Webhook replayed. Inbound 200 OK received in 118ms.')">⚡ Replay Webhook</button>
+      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="replayWebhook(this)">⚡ Replay Webhook</button>
     </div>
   `;
 
   document.getElementById('drawer-backdrop').classList.add('open');
   document.getElementById('drawer-sheet').classList.add('open');
+}
+
+async function replayWebhook(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Replaying...'; }
+  try {
+    const res = await fetch(`${ORIGIN}/api/v1/webhooks/tests`, {
+      method: 'POST',
+      headers: merchantHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({}),
+    });
+    const json = await res.json().catch(() => null);
+    if (btn) btn.textContent = res.ok ? 'Replay queued ✓' : ((json && json.error && json.error.message) || `Replay failed (${res.status})`);
+  } catch {
+    if (btn) btn.textContent = 'Replay unreachable';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function openGatewayDrawer(railKey) {
@@ -1748,7 +1831,26 @@ function togglePass(id) {
 
 function copyText(txt) {
   navigator.clipboard.writeText(txt).catch(() => {});
-  alert('Copied to clipboard: ' + txt);
+}
+
+async function createMerchantApiKey() {
+  const name = prompt('Name for the new API key:');
+  if (!name) return;
+  try {
+    const res = await fetch(`${ORIGIN}/api/v1/api-keys`, {
+      method: 'POST',
+      headers: merchantHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name, scopes: ['read', 'write'] }),
+    });
+    const json = await res.json().catch(() => null);
+    if ((res.status === 201) && json && json.success && json.data && json.data.api_key) {
+      window.localStorage.setItem('edgepay_api_key', json.data.api_key);
+      await navigator.clipboard.writeText(json.data.api_key).catch(() => {});
+      await loadTransactions();
+    }
+  } catch {
+    // Leave the console untouched on failure — the Developers island surfaces errors.
+  }
 }
 
 function openOnboardingModal() {
@@ -1759,12 +1861,20 @@ function triggerHealthProbe() {
   alert('Edge Health Probe dispatched: All 4 rails healthy, p95 latency 18ms.');
 }
 
-function testWebhookSend() {
-  alert('Test webhook dispatched with HMAC-SHA256 signature. Response: 200 OK.');
+async function testWebhookSend() {
+  try {
+    await fetch(`${ORIGIN}/api/v1/webhooks/tests`, {
+      method: 'POST',
+      headers: merchantHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({}),
+    });
+  } catch {
+    // No-op: delivery status is visible in the Developers island log.
+  }
 }
 
 // Initial render
-renderTransactions();
+loadTransactions();
 </script>
 </body>
 </html>

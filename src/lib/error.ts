@@ -74,7 +74,10 @@ export class ServiceUnavailableError extends HttpError {
 
 export class GatewayError extends HttpError {
   constructor(message: string, public gatewayResponse?: unknown) {
-    super(502, message, 'GATEWAY_ERROR', gatewayResponse);
+    // Gateway payloads may carry credentials/PII — never place them in
+    // `details` (which the error handler serializes to clients). The raw
+    // payload is logged server-side only; clients get the safe message.
+    super(502, message, 'GATEWAY_ERROR', undefined);
   }
 }
 
@@ -97,9 +100,11 @@ export class GatewayDisabledError extends HttpError {
 // Hono error handler — converts errors to JSON responses
 // ---------------------------------------------------------------
 export async function errorHandler(err: Error, c: Context<{ Bindings: Env }>): Promise<Response> {
-  // Log the error (structured)
+  // Log the error (structured). Gateway payloads are logged server-side
+  // only — never serialized to the client in production.
   const requestId = c.get('requestId') ?? 'unknown';
   const env = c.env;
+  const isProd = env.ENVIRONMENT === 'production';
 
   // Console.log in Workers goes to wrangler tail / Logpush
   console.error(JSON.stringify({
@@ -111,6 +116,7 @@ export async function errorHandler(err: Error, c: Context<{ Bindings: Env }>): P
     message: err.message,
     code: err instanceof HttpError ? err.code : 'INTERNAL_ERROR',
     details: err instanceof HttpError ? err.details : undefined,
+    gateway_response: err instanceof GatewayError ? err.gatewayResponse : undefined,
     stack: env.ENVIRONMENT === 'development' ? err.stack : undefined,
     timestamp: new Date().toISOString(),
   }));
@@ -127,7 +133,19 @@ export async function errorHandler(err: Error, c: Context<{ Bindings: Env }>): P
     };
 
     if (err.details !== undefined) {
-      (body.error as { details?: unknown }).details = err.details;
+      // Gateway payloads stay server-side in production — clients only
+      // ever see the safe message. Development may include details.
+      if (err instanceof GatewayError && isProd) {
+        // intentionally omitted
+      } else {
+        (body.error as { details?: unknown }).details = err.details;
+      }
+    }
+
+    // Defense-in-depth: even if a GatewayError ever carries details,
+    // never serialize the raw gateway response outside development.
+    if (err instanceof GatewayError && !isProd && err.gatewayResponse !== undefined) {
+      (body.error as { details?: unknown }).details = err.gatewayResponse;
     }
 
     const headers: Record<string, string> = {};
