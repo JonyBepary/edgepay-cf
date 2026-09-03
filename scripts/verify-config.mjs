@@ -69,23 +69,51 @@ try {
   // Not in a git repo (e.g. zip distribution), filesystem scan covers it
 }
 
-// 3. Check wrangler configs with JSONC parser (V7-002)
-const configFiles = ['wrangler.jsonc', 'wrangler.dev.jsonc', 'wrangler.staging.jsonc'];
-for (const file of configFiles) {
+// 3. Check wrangler configs with JSONC parser (V7-002, V11-002, V11-005)
+const coreConfigFiles = ['wrangler.jsonc', 'wrangler.dev.jsonc', 'wrangler.staging.jsonc'];
+const frontendConfigFiles = [
+  'frontend/apps/admin/wrangler.jsonc',
+  'frontend/apps/checkout/wrangler.jsonc',
+  'frontend/apps/hub/wrangler.jsonc',
+  'frontend/apps/merchant/wrangler.jsonc',
+];
+const allConfigFiles = [...coreConfigFiles, ...frontendConfigFiles];
+
+for (const file of allConfigFiles) {
   if (existsSync(file)) {
     const raw = readFileSync(file, 'utf8');
     const stripped = stripJsonComments(raw);
     try {
       const parsed = JSON.parse(stripped);
-      // Verify parsed JSON structure across all configs without exemptions (V8-002)
-      if (!parsed.analytics_engine_datasets || !Array.isArray(parsed.analytics_engine_datasets)) {
-        console.error(`[FAIL] Active analytics_engine_datasets must be declared in ${file}`);
+
+      // Verify compatibility_date is pinned across all 7 configs (V11-005)
+      if (parsed.compatibility_date !== '2026-07-21') {
+        console.error(`[FAIL] compatibility_date in ${file} must be '2026-07-21' (found '${parsed.compatibility_date}')`);
         errors++;
+      }
+
+      // Verify core parsed JSON structure across all root configs (V8-002)
+      if (coreConfigFiles.includes(file)) {
+        if (!parsed.analytics_engine_datasets || !Array.isArray(parsed.analytics_engine_datasets)) {
+          console.error(`[FAIL] Active analytics_engine_datasets must be declared in ${file}`);
+          errors++;
+        }
+      }
+
+      // Verify frontend config assets binding (V11-002)
+      if (frontendConfigFiles.includes(file)) {
+        if (!parsed.assets || !parsed.assets.binding) {
+          console.error(`[FAIL] Static assets binding must be declared in ${file}`);
+          errors++;
+        }
       }
     } catch (parseErr) {
       console.error(`[FAIL] Invalid JSONC in ${file}: ${parseErr.message}`);
       errors++;
     }
+  } else {
+    console.error(`[FAIL] Expected configuration file missing: ${file}`);
+    errors++;
   }
 }
 

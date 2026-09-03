@@ -656,6 +656,122 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
         },
       },
 
+      '/api/v1/webhooks': {
+        get: {
+          tags: ['Merchant API'],
+          summary: 'List registered webhooks',
+          description: 'Lists all registered webhook endpoints for the current merchant.',
+          responses: {
+            200: {
+              description: 'List of registered webhooks.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'integer' },
+                            url: { type: 'string', format: 'uri' },
+                            events: { type: 'string' },
+                            status: { type: 'string', enum: ['active', 'inactive'] },
+                            created_at: { type: 'string', format: 'date-time' },
+                            updated_at: { type: 'string', format: 'date-time' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 429),
+          },
+        },
+        post: {
+          tags: ['Merchant API'],
+          summary: 'Register a webhook endpoint',
+          description: 'Registers a public HTTPS URL to receive signed payment notification webhooks.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['url'],
+                  properties: {
+                    url: { type: 'string', format: 'uri', description: 'Public HTTPS endpoint URL' },
+                    events: { type: 'array', items: { type: 'string' }, default: ['*'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Webhook registered successfully.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          url: { type: 'string' },
+                          secret: { type: 'string', description: 'Signing secret (whsec_...)' },
+                          events: { type: 'array', items: { type: 'string' } },
+                          status: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 429),
+          },
+        },
+      },
+
+      '/api/v1/webhooks/{id}': {
+        delete: {
+          tags: ['Merchant API'],
+          summary: 'Delete a registered webhook',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'Webhook ID to delete',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Webhook deleted.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 404, 429),
+          },
+        },
+      },
+
       '/api/v1/webhooks/tests': {
         post: {
           tags: ['Merchant API'],
@@ -1299,8 +1415,139 @@ export function buildOpenApiDocument(env: Pick<Env, 'APP_URL' | 'APP_VERSION' | 
                   },
                 },
               },
-            },
             ...errorResponses(400, 401, 403, 429),
+          },
+        },
+      },
+    },
+
+      '/api/admin/v1/merchants': {
+        get: {
+          tags: ['Admin API'],
+          summary: 'List all merchants (Platform Admin only)',
+          description: 'Lists all registered merchant tenants on this platform deployment.',
+          security: [{ ApiKeyAuth: [], AccessJwt: [] }],
+          responses: {
+            200: {
+              description: 'List of all merchants.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'integer' },
+                            uuid: { type: 'string' },
+                            name: { type: 'string' },
+                            slug: { type: 'string' },
+                            email: { type: 'string' },
+                            timezone: { type: 'string' },
+                            default_currency: { type: 'string' },
+                            status: { type: 'string' },
+                            is_platform: { type: 'integer' },
+                            created_at: { type: 'string', format: 'date-time' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(401, 403, 429),
+          },
+        },
+        post: {
+          tags: ['Admin API'],
+          summary: 'Provision a new merchant tenant (Platform Admin only)',
+          description: 'Creates a merchant tenant, generates default chart of accounts, admin user, and returns an encrypted one-time claim token.',
+          security: [{ ApiKeyAuth: [], AccessJwt: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'email'],
+                  properties: {
+                    name: { type: 'string', description: 'Merchant brand name' },
+                    email: { type: 'string', format: 'email', description: 'Merchant owner email' },
+                    currency: { type: 'string', default: 'BDT' },
+                    timezone: { type: 'string', default: 'Asia/Dhaka' },
+                    phone: { type: 'string', description: 'Default personal MFS receiving number' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Merchant provisioned successfully.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          merchant: { type: 'object', additionalProperties: true },
+                          claim_token: { type: 'string' },
+                          claim_expires_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 403, 500),
+          },
+        },
+      },
+
+      '/api/admin/v1/merchants/claim': {
+        post: {
+          tags: ['Admin API'],
+          summary: 'Redeem one-time merchant onboarding credentials',
+          description: 'Exchanges a claim token for provisioned API key and admin credentials. Token is immediately invalidated.',
+          security: [{ ApiKeyAuth: [], AccessJwt: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['claim_token'],
+                  properties: {
+                    claim_token: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Claim credentials redeemed.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: { type: 'object', additionalProperties: true },
+                    },
+                  },
+                },
+              },
+            },
+            ...errorResponses(400, 401, 404, 500),
           },
         },
       },

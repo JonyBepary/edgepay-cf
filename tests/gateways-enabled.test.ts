@@ -153,7 +153,7 @@ describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = full catalog de
     for (const key of ['jwt_secret', 'app_key', 'encryption_key']) {
       expect(['ok', 'weak', 'missing']).toContain(body.data.secrets[key]);
     }
-    expect(body.data.version).toBe('0.3.0');
+    expect(body.data.version).toBe('0.4.5');
   });
 
   it('POST /webhook/{unregistered} stays a clean 404 UNKNOWN_GATEWAY', async () => {

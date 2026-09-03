@@ -22,10 +22,11 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds.sql",
     "db:backup": "wrangler d1 export DB --remote --output=backup.sql",
-    "lint": "eslint src tests",
+    "lint": "eslint src tests frontend",
     "format": "prettier --write 'src/**/*.ts'",
     "package": "node scripts/package-release.mjs",
-    "package:handoff": "node scripts/package-handoff.mjs"
+    "package:handoff": "node scripts/package-handoff.mjs",
+    "package:audit": "node scripts/package-audit.mjs"
   },
   "cloudflare": {
     "label": "EdgePay — Self-hosted Payment Gateway",

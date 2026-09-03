@@ -18,7 +18,7 @@
   "vars": {
     "ENVIRONMENT": "development",
     "APP_NAME": "EdgePay",
-    "APP_VERSION": "0.3.0",
+    "APP_VERSION": "0.4.5",
     "APP_URL": "http://localhost:8787",
     "APP_DOMAIN": "localhost:8787",
     "LOG_LEVEL": "debug",

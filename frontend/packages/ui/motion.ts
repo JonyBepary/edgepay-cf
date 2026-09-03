@@ -3,7 +3,18 @@
  * Built on GSAP with strict performance budgets and prefers-reduced-motion gates.
  */
 
-declare const gsap: any;
+interface GsapTimeline {
+  to: (targets: unknown, vars: Record<string, unknown>) => GsapTimeline;
+  fromTo: (targets: unknown, fromVars: Record<string, unknown>, toVars: Record<string, unknown>) => GsapTimeline;
+  call: (callback: () => void) => GsapTimeline;
+}
+
+declare const gsap: {
+  from: (targets: unknown, vars: Record<string, unknown>) => unknown;
+  to: (targets: unknown, vars: Record<string, unknown>) => unknown;
+  set: (targets: unknown, vars: Record<string, unknown>) => unknown;
+  timeline: (vars?: Record<string, unknown>) => GsapTimeline;
+};
 
 export function hasReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;

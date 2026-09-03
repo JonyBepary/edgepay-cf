@@ -16,7 +16,7 @@
   "vars": {
     "ENVIRONMENT": "staging",
     "APP_NAME": "EdgePay",
-    "APP_VERSION": "0.3.0",
+    "APP_VERSION": "0.4.5",
     "APP_URL": "https://edgepay-cf-staging.your-subdomain.workers.dev",
     "APP_DOMAIN": "edgepay-cf-staging.your-subdomain.workers.dev",
     "LOG_LEVEL": "info",

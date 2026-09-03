@@ -35,7 +35,7 @@ describe('GET /api/openapi.json', () => {
 
     expect(doc.openapi).toBe('3.1.0');
     expect(doc.info.title).toContain('EdgePay');
-    expect(doc.info.version).toBe('0.3.0');
+    expect(doc.info.version).toBe('0.4.5');
     expect(doc.servers[0].url).toBeTruthy();
   });
 

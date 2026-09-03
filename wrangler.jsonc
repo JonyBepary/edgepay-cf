@@ -47,7 +47,7 @@
   "vars": {
     "ENVIRONMENT": "production",
     "APP_NAME": "EdgePay",
-    "APP_VERSION": "0.3.0",
+    "APP_VERSION": "0.4.5",
     "APP_URL": "https://edgepay-cf.bm-jonybepary.workers.dev",
     "APP_DOMAIN": "edgepay-cf.bm-jonybepary.workers.dev",
     "LOG_LEVEL": "info",

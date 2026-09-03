@@ -2,7 +2,7 @@
  * Verifies docs/REMEDIATIONS.md structure, citation relevance, and non-colliding finding IDs.
  * (V4-003, V5-004, V5-005)
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const mdPath = 'docs/REMEDIATIONS.md';
 if (!existsSync(mdPath)) {
@@ -16,6 +16,18 @@ const lines = content.split('\n');
 let checked = 0;
 let errors = 0;
 const seenIds = new Set();
+
+// Check test suite synchronization (V11-004)
+const actualTestFiles = readdirSync('tests').filter(f => f.endsWith('.test.ts'));
+const actualSuiteCount = actualTestFiles.length;
+const suiteMatch = content.match(/(\d+)\s+test\s+(?:suites|files)/i);
+if (suiteMatch) {
+  const declaredSuites = parseInt(suiteMatch[1], 10);
+  if (declaredSuites !== actualSuiteCount) {
+    console.error(`[FAIL] Test suite count mismatch: docs/REMEDIATIONS.md declares ${declaredSuites} test suites, but tests/ contains ${actualSuiteCount} test files.`);
+    errors++;
+  }
+}
 
 for (const line of lines) {
   // Only skip true markdown table header rows (e.g. | Finding ID | ... or |---|...)

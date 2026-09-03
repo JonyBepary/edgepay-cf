@@ -273,7 +273,7 @@ export class LedgerService {
     const stmts = DEFAULT_CHART_OF_ACCOUNTS.map(a =>
       this.env.DB
         .prepare(
-          `INSERT INTO op_ledger_accounts (merchant_id, code, name, type, currency, is_system, created_at, updated_at)
+          `INSERT OR IGNORE INTO op_ledger_accounts (merchant_id, code, name, type, currency, is_system, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
         )
         .bind(merchantId, a.code, a.name, a.type, currency, now, now),

@@ -37,8 +37,11 @@ app.get('/api/checkout/:token/status', async (c) => {
       headers: { 'Accept': 'application/json' },
     });
     const data = await res.json();
-    return c.json(data, res.status as any);
-  } catch (err) {
+    return new Response(JSON.stringify(data), {
+      status: res.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch {
     return c.json({ status: 'error', message: 'Unable to reach payment core' }, 502);
   }
 });

@@ -4,9 +4,9 @@ This document tracks all security findings, remediations, and verification test 
 
 ## Status Summary
 - **Verified Money-Path P0s**: 100% Fixed & Tested
-- **Test Automation Battery**: 30 test suites, 263 tests, 0 skips, 100% green
-- **Static Analysis & Typecheck**: ESLint 9 (0 warnings), TypeScript (0 errors), zero `as any` in `src/`
-- **Hygiene & Verification Gate**: Direct filesystem tree scan + JSONC config parser + release archive builder (`npm run package`) + clean distribution hand-off builder (`npm run package:handoff`)
+- **Test Automation Battery**: 32 test suites, 276 tests, 0 skips, 100% green
+- **Static Analysis & Typecheck**: ESLint 9 (0 errors, 0 warnings across src, tests, and frontend), TypeScript (0 errors across src, tests, and frontend)
+- **Hygiene & Verification Gate**: Direct filesystem tree scan + JSONC config parser + release archive builder (`npm run package`) + clean distribution hand-off builder (`npm run package:handoff`) + clean audit distribution builder (`npm run package:audit`)
 
 ---
 
@@ -105,3 +105,10 @@ This document tracks all security findings, remediations, and verification test 
 | **V10-003** | P4 | Comprehensive Binary Allowlist Inversion | FIXED | `scripts/package-release.mjs` | Strict allowlist denies all non-code/non-text binaries |
 | **V10-004** | P4 | OWASP 600K Constant & Cost Pinning | FIXED | `src/lib/crypto.ts`, `tests/crypto-security.test.ts` | Pinned 600,000 cost and universal getPbkdf2Iterations wiring |
 | **V10-005** | P3 | Fail-Closed AES-256-GCM Claim Encryption & Test | FIXED | `src/controllers/admin-api.ts`, `tests/audit-poc-r4.test.ts` | Fail-closed provisioning & redemption with end-to-end integration test |
+| **V11-001** | P2 | Audit Distribution Purity | FIXED | `scripts/package-audit.mjs`, `package.json` | Clean audit distribution pipeline strictly excludes .dev.vars, dev state, node_modules, and git (`npm run package:audit`) |
+| **V11-002** | P3 | Frontend Quality Gate Coverage | FIXED | `tsconfig.json`, `eslint.config.js`, `frontend/` | `npm run lint` & `npm run typecheck` cover frontend apps and packages with 0 errors and 0 warnings (`tests/frontend-bff.test.ts`) |
+| **V11-003** | P2 | Merchant BFF Security Hardening | FIXED | `frontend/apps/merchant/src/index.ts` | Fail-closed login, AES-256-GCM sealed session payload in KV, strict cookie, proxy 401 on missing session (`tests/frontend-bff.test.ts`) |
+| **V11-004** | P4 | Test Metric Accounting Synchronization | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md`, `scripts/verify-remediations.mjs` | Automated script verifies 32 test suites & 276 tests across repository (`node scripts/verify-remediations.mjs`) |
+| **V11-005** | P4 | Cloudflare Compatibility Date Pinning | FIXED | `wrangler*.jsonc`, `frontend/apps/*/wrangler.jsonc`, `scripts/verify-config.mjs` | All 7 wrangler configurations pinned to compatibility_date 2026-07-21 (`node scripts/verify-config.mjs`) |
+| **V11-006** | P3 | Production CSP & Asset Security Headers | FIXED | `src/index.ts`, `frontend/apps/merchant/src/index.ts` | Strict Content-Security-Policy, Cache-Control, and Referrer-Policy headers mounted on `/frontend/*` and BFF (`tests/frontend-bff.test.ts`) |
+| **V11-007** | P3 | Account Seeding Idempotency on Cold Run | FIXED | `src/services/ledger.ts` | `INSERT OR IGNORE INTO op_ledger_accounts` makes parallel tenant initialization idempotent (`tests/ledger-consistency.test.ts`) |
