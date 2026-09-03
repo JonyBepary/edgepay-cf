@@ -12,6 +12,120 @@ It operates **100% on the Cloudflare Free Tier** (~3.3K payments/day practical c
 
 ---
 
+## Deploy in 1 click
+
+Copy-paste this button into any markdown file. It is the official snippet. Only the `url` parameter is supported — there are no custom parameters.
+
+```md
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
+```
+
+Click it, paste 3 secrets on the setup page, and you get a live payment platform in 3–5 minutes. No terminal needed.
+
+Official docs: [Deploy to Cloudflare buttons](https://developers.cloudflare.com/workers/platform/deploy-buttons/) · [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) · [Wrangler environments](https://developers.cloudflare.com/workers/wrangler/environments/)
+
+### Prerequisites
+
+You need 2 accounts and 1 tool version:
+
+- A **Cloudflare account** (free works) + a **GitHub account** (the button clones this repo into your GitHub).
+- **Node.js 20+** only if you use the Wrangler fallback below. The 1-click path needs no local tools.
+- **Analytics Engine (AE) note:** you do nothing. The AE dataset auto-creates on the first `writeDataPoint` call. Do not create it by hand. If you see error `10089`, it just means no data has been written yet — open the app once and it goes away. See [docs/DASHBOARD-PITFALLS.md](docs/DASHBOARD-PITFALLS.md).
+
+Generate the 3 secrets **before** you click (you paste them on the setup page — values are never prefilled):
+
+```bash
+openssl rand -hex 32        # JWT_SECRET — signs mobile + pairing tokens (min 32 chars)
+openssl rand -base64 32     # APP_KEY — HMAC key for webhook signing
+openssl rand -base64 32     # ENCRYPTION_KEY — AES-256-GCM key for gateway creds + PII. Back this up: losing it makes stored credentials unrecoverable.
+```
+
+> Never commit real secrets to git. On Cloudflare they are set with `wrangler secret put`. Details: [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md).
+
+### What 1-click does in 3–5 minutes
+
+1. **Clone** — copies this repo into your GitHub so you own the code.
+2. **Setup page** — you pick a Worker name and paste the 3 secrets above. Secrets are typed in by you; the page never prefills them.
+3. **Provision** — Cloudflare auto-creates KV, D1, R2, Queues, Durable Objects, and Workers AI bindings. The resource IDs are rewritten in your clone automatically.
+4. **Migrate** — the deploy script applies the D1 schema before upload, referenced by binding name (`wrangler d1 migrations apply DB --remote`), so it hits the right database no matter what it was named.
+5. **Deploy** — Workers Builds installs, builds, and puts your Worker live.
+
+### What 1-click does NOT do
+
+You finish these after deploy (5–10 min):
+
+- **Secret values** — the button never invents secrets for you. You paste them.
+- **Custom domains** — add them manually in the Cloudflare dashboard after deploy.
+- **Access app** — create the Cloudflare Access app for `/api/admin/*` yourself (admin API returns 503 until you do — that is intentional).
+- **`ALLOWED_ORIGINS` / `ENABLED_GATEWAYS`** — set these vars yourself if the defaults do not fit.
+- **`/install` bootstrap** — open `/install` yourself to create the platform merchant + super-admin. The wizard locks after one run.
+
+Monorepos, Pages projects, and private repos are **not supported** by the button. Use the Wrangler fallback instead.
+
+### Post-deploy checklist
+
+Do these in order:
+
+1. Open `https://<your-worker>.workers.dev/install` and complete the wizard.
+2. Save the `bootstrap-key` the wizard shows (shown once).
+3. Create your Access app: Cloudflare Zero Trust at <https://one.dash.cloudflare.com> → app covering `https://<your-worker>/api/admin/*` → set `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD_TAG`.
+4. In the admin UI, install gateways and paste gateway credentials.
+5. Send a `webhook.test` event to verify your endpoint.
+6. Explore `https://<your-worker>/api/reference` (live Scalar docs).
+
+Full walkthrough: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md). Gotcha table: [docs/DASHBOARD-PITFALLS.md](docs/DASHBOARD-PITFALLS.md).
+
+### Wrangler fallback (full control)
+
+```bash
+npm install
+npx wrangler login
+
+# Create resources, paste returned IDs into wrangler.jsonc
+npx wrangler d1 create edgepay-cf
+npx wrangler kv namespace create KV
+npx wrangler r2 bucket create edgepay-uploads
+npx wrangler queues create webhook-out
+npx wrangler queues create webhook-out-dlq
+npx wrangler queues create email-out
+npx wrangler queues create sms-parse
+
+# Local dev secrets
+cp .dev.vars.example .dev.vars   # then fill in JWT_SECRET, APP_KEY, ENCRYPTION_KEY
+
+# Local DB then remote DB (binding name DB, always --remote for live)
+npm run db:migrate:local
+npx wrangler d1 migrations apply DB --remote
+
+# Live secrets (typed, never committed)
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put APP_KEY
+npx wrangler secret put ENCRYPTION_KEY
+
+npm run deploy
+```
+
+`npm run deploy` = apply D1 migrations by binding name + `wrangler deploy`. It works no matter what your database is named.
+
+### Verify it works
+
+```bash
+curl https://<your-worker>.workers.dev/health
+curl https://<your-worker>.workers.dev/api/v1/health
+```
+
+Then check: Cloudflare dashboard → your Worker → Bindings (D1, KV, R2, Queues, DO all present) → open `/install` (shows requirements report) → open `/api/reference` (Scalar UI loads).
+
+### Security notes
+
+- Set secrets only with `wrangler secret put` (or the setup page). Never in code or git.
+- JWTs + 6-digit OTPs: OTPs are hashed, expire in 300s, and lock out after a few wrong tries.
+- Webhooks use HMAC signatures with a 300s replay window — old or reused payloads are rejected.
+- Refunds need an `Idempotency-Key` header so a retry never charges twice.
+- Rotate keys with narrow scopes, and PII is encrypted/redacted in logs. More: [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md) · [docs/SECURITY.md](docs/SECURITY.md).
+
+---
+
 ## ⚡ Key Highlights & Core Capabilities
 
 ```mermaid
@@ -60,38 +174,6 @@ sequenceDiagram
 * **Interactive Scalar OpenAPI 3.1**: Built-in API reference and test console live at `/api/reference`.
 * **Zero-Trust Security**: Cloudflare Access JWT validation for operators, AES-256-GCM PII encryption, scoped Bearer API keys, SSRF loopback blocking, and CSP headers.
 * **Autonomous Companion Daemon**: Android forwarder daemon with 30s heartbeat telemetry, local FIFO outbox queue, exponential retry backoff, auto token refresh, and live MFS payment simulator.
-
----
-
-## 🚀 Pre-Deployment Requirements: What Data to Put
-
-When clicking **Deploy to Cloudflare**, you only need to supply **3 cryptographic secrets**. No business data or merchant information is required at deploy time.
-
-### 1. The 3 Required Secrets
-
-Generate these 3 secrets in your terminal:
-
-```bash
-# 1. JWT_SECRET — Signs mobile companion & pairing session tokens (Min 32 chars)
-openssl rand -hex 32
-
-# 2. APP_KEY — Base64-encoded 32-byte HMAC key for webhook signing
-openssl rand -base64 32
-
-# 3. ENCRYPTION_KEY — Base64-encoded 32-byte key for AES-256-GCM at-rest PII encryption
-openssl rand -base64 32
-```
-
-### 2. Variables Configured Automatically in `wrangler.jsonc`
-
-| Variable | Default Value | Description |
-| :--- | :--- | :--- |
-| `ENVIRONMENT` | `production` | Deployment mode |
-| `DEFAULT_CURRENCY` | `BDT` | Fallback merchant currency |
-| `DEFAULT_TIMEZONE` | `Asia/Dhaka` | Default merchant timezone |
-| `ENABLED_GATEWAYS` | `bkash,nagad,rocket,sslcommerz,stripe...` | Active payment plugin catalog |
-| `JWT_TTL_SECONDS` | `3600` | Companion token expiration |
-| `SESSION_TTL_SECONDS` | `86400` | Web session lifetime |
 
 ---
 

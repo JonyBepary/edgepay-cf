@@ -15,13 +15,7 @@ reference.
 
 ## Route A: one-click deploy
 
-1. **Generate the three secrets** (you'll paste them on the setup page):
-
-   ```bash
-   openssl rand -hex 32        # JWT_SECRET
-   openssl rand -base64 32     # APP_KEY
-   openssl rand -base64 32     # ENCRYPTION_KEY — back this up
-   ```
+1. **Generate the three secrets** — copy-paste commands in the [README](../README.md#prerequisites) (you paste the values on the setup page; crypto rules: [CRYPTO-NORMS](CRYPTO-NORMS.md)).
 
 2. **Click the Deploy to Cloudflare button** in the README. On the setup page:
    - pick a Worker name,
@@ -35,7 +29,8 @@ reference.
    Workflows/Durable Objects, applies the 53-table schema, and deploys.
 
 Full walkthrough incl. what gets provisioned and troubleshooting:
-[DEPLOYMENT.md](DEPLOYMENT.md).
+[DEPLOYMENT.md](DEPLOYMENT.md). Stuck on a dashboard error? Check
+[DASHBOARD-PITFALLS.md](DASHBOARD-PITFALLS.md) first.
 
 ## Route B: local development
 
@@ -133,5 +128,9 @@ then sets a KV install lock — the wizard can never run twice.
 - **SECURITY.md** — the admin-surface Access setup and the ops checklist.
 - **DEPLOYMENT.md** — environments, free-tier budget, and the deploy-button
   internals.
+- **DASHBOARD-PITFALLS.md** — the 8 dashboard gotchas (AE 10089, D1 local vs
+  remote, KV lock, Access 503, rate binding, DLQ, domains, build cmd).
+- **CRYPTO-NORMS.md** — secrets, JWT/OTP, HMAC replay, idempotency, scopes,
+  PII in plain language.
 - **POSTING-PROTOCOL.md** — how the ledger stays correct under failure
   (worth reading before you trust it with real money).

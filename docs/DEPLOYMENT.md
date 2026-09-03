@@ -6,6 +6,8 @@ Wrangler CLI (full control). Both paths end at the same place: an install wizard
 at `/install`, an admin surface behind Cloudflare Access, and an interactive API
 reference at `/api/reference`.
 
+> Start with the [README](../README.md) 1-click guide (button snippet, prerequisites, checklist). Gotchas live in [DASHBOARD-PITFALLS](DASHBOARD-PITFALLS.md); crypto rules in [CRYPTO-NORMS](CRYPTO-NORMS.md).
+
 - [Deploy to Cloudflare button](#deploy-to-cloudflare-button)
 - [Choosing your gateway plugins](#choosing-your-gateway-plugins)
 - [Secrets you need before deploying](#secrets-you-need-before-deploying)
@@ -97,21 +99,15 @@ curl -H "Authorization: Bearer op_live_…" https://<your-worker>/api/v1/gateway
 
 ## Secrets you need before deploying
 
-Generate these **before** you click the button — the setup page asks for them,
-and each field carries the same guidance via `package.json → cloudflare.bindings`:
+See the [README](../README.md) (Prerequisites + what 1-click does NOT do) for the 3-secret setup. Quick version:
 
-| Secret | Generate with | Notes |
-|--------|---------------|-------|
-| `JWT_SECRET` | `openssl rand -hex 32` | Signs mobile-companion JWTs. Minimum 32 characters (enforced at runtime). |
-| `APP_KEY` | `openssl rand -base64 32` | HMAC signing key. |
-| `ENCRYPTION_KEY` | `openssl rand -base64 32` | AES-256-GCM key for gateway credentials + PII at rest. **Losing it makes stored credentials unrecoverable** — keep a copy in a password manager. |
+```bash
+openssl rand -hex 32        # JWT_SECRET
+openssl rand -base64 32     # APP_KEY
+openssl rand -base64 32     # ENCRYPTION_KEY — back this up
+```
 
-Optional fields can be left empty at deploy time and configured later:
-`CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD_TAG` (the admin surface stays closed
-with 503 until both are set — see [SECURITY.md](SECURITY.md)), the break-glass
-service token, custom-hostname API credentials, and `PBKDF2_ITERATIONS`
-(strictly-free deployments should set `100000`; see
-[free-tier budget](#free-tier-budget)).
+Paste them on the setup page (values are never prefilled). Rules for handling them: [CRYPTO-NORMS](CRYPTO-NORMS.md). Optional fields (`CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD_TAG`, break-glass token, `PBKDF2_ITERATIONS=100000` for strictly-free) can be left empty and set later — see [SECURITY.md](SECURITY.md) and [free-tier budget](#free-tier-budget).
 
 ## What the button provisions
 
@@ -243,6 +239,8 @@ the 30s CPU budget removes the PBKDF2 caveat — but free tier is a fully
 supported posture, not a demo mode.
 
 ## Troubleshooting
+
+Full 8-row gotcha table: [DASHBOARD-PITFALLS](DASHBOARD-PITFALLS.md). Quick index:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
