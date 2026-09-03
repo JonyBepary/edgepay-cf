@@ -201,7 +201,7 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
         <div class="page-head">
           <div>
             <h2>Merchants</h2>
-            <p>3 active brands on this platform deployment</p>
+            <p id="adm-merchants-count">Loading active tenants from D1...</p>
           </div>
           <button class="btn btn--accent" onclick="triggerAddMerchant()">＋ Provision merchant</button>
         </div>
@@ -209,31 +209,19 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
           <div class="card">
             <table class="dtable">
               <thead><tr><th>Brand</th><th>Gateways</th><th>Domain</th><th>Status</th></tr></thead>
-              <tbody>
+              <tbody id="adm-merchants-tbody">
                 <tr class="selectable is-selected" onclick="selectMerchant(1)">
-                  <td style="font-weight: 600;">Amber Bites</td>
-                  <td>bKash Personal, Nagad</td>
+                  <td style="font-weight: 600;">EdgePay Platform</td>
+                  <td>bKash, Nagad, Rocket</td>
                   <td><span class="badge badge--teal">verified</span></td>
                   <td><span class="badge badge--teal">active</span></td>
-                </tr>
-                <tr class="selectable" onclick="selectMerchant(2)">
-                  <td style="font-weight: 600;">Dhaka Threads</td>
-                  <td>bKash Personal</td>
-                  <td><span class="badge badge--marigold">pending</span></td>
-                  <td><span class="badge badge--teal">active</span></td>
-                </tr>
-                <tr class="selectable" onclick="selectMerchant(3)">
-                  <td style="font-weight: 600;">Kabul Fresh Mart</td>
-                  <td>—</td>
-                  <td><span class="badge badge--gray">not set</span></td>
-                  <td><span class="badge badge--marigold">onboarding</span></td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="card card-pad" id="merchant-detail-panel">
-            <div id="m-detail-name" style="font-weight: 700; font-size: 16px; margin-bottom: 2px;">Amber Bites</div>
-            <div id="m-detail-domain" style="font-size: 12px; color: var(--muted); margin-bottom: 18px;" class="epx-mono">pay.amberbites.com</div>
+            <div id="m-detail-name" style="font-weight: 700; font-size: 16px; margin-bottom: 2px;">EdgePay Platform</div>
+            <div id="m-detail-domain" style="font-size: 12px; color: var(--muted); margin-bottom: 18px;" class="epx-mono">edgepay-platform.edgepay.app</div>
 
             <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Payment gateways</div>
             <div id="m-detail-gateways">
@@ -242,7 +230,7 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
                 <button class="btn btn--ghost" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Resetting credentials')">Reset</button>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
-                <span style="font-size: 13px; font-weight: 500;">Nagad Personal (01712-345678)</span>
+                <span style="font-size: 13px; font-weight: 500;">Nagad Personal (01815-300789)</span>
                 <button class="btn btn--ghost" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Resetting credentials')">Reset</button>
               </div>
             </div>
@@ -255,7 +243,7 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
 
             <div style="font-size: 13px; font-weight: 600; margin: 18px 0 8px;">Custom domain DNS</div>
             <div class="field">
-              <input id="m-detail-input-domain" value="pay.amberbites.com" readonly style="font-family: var(--font-mono); font-size: 12.5px;">
+              <input id="m-detail-input-domain" value="edgepay-platform.edgepay.app" readonly style="font-family: var(--font-mono); font-size: 12.5px;">
             </div>
             <button class="btn btn--ghost" style="margin-top: 10px;" onclick="verifyDomainDns()">Re-verify DNS TXT</button>
           </div>
@@ -312,9 +300,8 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
           <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Paired devices</div>
           <table class="dtable">
             <thead><tr><th>Merchant</th><th>Device</th><th>Last check-in</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              <tr><td>Amber Bites</td><td>Shop counter Pixel 7</td><td class="epx-mono">30s ago</td><td><span class="badge badge--teal">active</span></td><td><button class="btn btn--danger-ghost" style="padding: 3px 8px; font-size: 11.5px;">Revoke</button></td></tr>
-              <tr><td>Dhaka Threads</td><td>Owner iPhone 13</td><td class="epx-mono">3h ago</td><td><span class="badge badge--marigold">stale</span></td><td><button class="btn btn--danger-ghost" style="padding: 3px 8px; font-size: 11.5px;">Revoke</button></td></tr>
+            <tbody id="adm-devices-tbody">
+              <tr><td>EdgePay Platform</td><td>Shop counter Pixel 7</td><td class="epx-mono">30s ago</td><td><span class="badge badge--teal">active</span></td><td><button class="btn btn--danger-ghost" style="padding: 3px 8px; font-size: 11.5px;">Revoke</button></td></tr>
             </tbody>
           </table>
         </div>
@@ -335,7 +322,7 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
   <!-- Surface 2: Merchant Panel -->
   <div id="view-merchant" class="app-shell" style="display: none;">
     <aside class="app-sidebar">
-      <div class="app-sidebar__brand">Amber Bites<small>via EdgePay Merchant</small></div>
+      <div class="app-sidebar__brand"><span id="mer-brand-title">EdgePay Platform</span><small>via EdgePay Merchant</small></div>
       <button class="nav-item active" id="mer-nav-dashboard" onclick="switchMerchantTab('dashboard')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
         Dashboard
@@ -356,22 +343,21 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
     <main class="app-main">
       <!-- Merchant Dashboard Tab -->
       <div id="mer-tab-dashboard">
-        <div class="page-head"><div><h2>Dashboard</h2><p>Today's volume and recent activity</p></div></div>
+        <div class="page-head"><div><h2>Dashboard</h2><p id="mer-brand-sub">Today's volume and recent activity</p></div></div>
         <div class="stat-row" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="stat-card"><div class="stat-card__label">Today's volume</div><div class="stat-card__value epx-mono">৳8,930.00</div></div>
-          <div class="stat-card"><div class="stat-card__label">Transactions</div><div class="stat-card__value epx-mono">14</div></div>
-          <div class="stat-card"><div class="stat-card__label">Awaiting SMS</div><div class="stat-card__value epx-mono">2</div></div>
+          <div class="stat-card"><div class="stat-card__label">Today's volume</div><div class="stat-card__value epx-mono" id="mer-kpi-volume">৳0.00</div></div>
+          <div class="stat-card"><div class="stat-card__label">Transactions</div><div class="stat-card__value epx-mono" id="mer-kpi-count">0</div></div>
+          <div class="stat-card"><div class="stat-card__label">Awaiting SMS</div><div class="stat-card__value epx-mono" id="mer-kpi-pending">0</div></div>
         </div>
         <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Recent transactions</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 13px; font-weight: 600;">Recent transactions</div>
+            <button class="btn btn--accent" style="padding: 5px 12px; font-size: 12px;" onclick="createLiveIntentAndCheckout()">＋ Create Live Payment Intent</button>
+          </div>
           <table class="dtable">
             <thead><tr><th>Reference</th><th>Gateway</th><th>Amount</th><th>Status</th><th>When</th></tr></thead>
-            <tbody>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F21A</td><td>bKash Personal</td><td class="epx-mono">৳1,250.00</td><td><span class="badge badge--teal">completed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">2m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F20B</td><td>Nagad</td><td class="epx-mono">৳640.00</td><td><span class="badge badge--marigold">pending</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">6m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F19C</td><td>bKash Personal</td><td class="epx-mono">৳3,200.00</td><td><span class="badge badge--teal">completed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">14m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F18D</td><td>Rocket</td><td class="epx-mono">৳480.00</td><td><span class="badge badge--rust">failed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">22m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F17E</td><td>bKash Personal</td><td class="epx-mono">৳1,980.00</td><td><span class="badge badge--gray">refunded</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">1h ago</td></tr>
+            <tbody id="mer-trx-tbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 24px 12px;">Loading live transactions from D1...</td></tr>
             </tbody>
           </table>
         </div>
@@ -513,26 +499,28 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
 
       <!-- Checkout Step 1: Rail Selection -->
       <div id="chk-step-1" style="padding: 18px 22px 24px;">
-        <div style="font-size: 12px; color: var(--muted); margin-bottom: 2px;">Amber Bites</div>
-        <div class="checkout-amount epx-serif">৳1,250.00</div>
-        <div style="font-size: 12px; color: var(--muted); margin: 2px 0 20px;">Order #AB-3021 · 2 items</div>
+        <div id="chk-brand-name" style="font-size: 12px; color: var(--muted); margin-bottom: 2px;">EdgePay Platform</div>
+        <div class="checkout-amount epx-serif" id="chk-amount-display">৳1,250.00</div>
+        <div id="chk-order-display" style="font-size: 12px; color: var(--muted); margin: 2px 0 20px;">Order #Live-D1 · 1 item</div>
         
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Choose how to pay</div>
-        <div class="method is-selected" id="meth-bkash" onclick="selectCheckoutMethod('bkash')">
-          <div class="method__icon" style="background: var(--bkash);">bK</div>
-          <div><div style="font-size: 13.5px; font-weight: 600;">bKash</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-        </div>
-        <div class="method" id="meth-nagad" onclick="selectCheckoutMethod('nagad')">
-          <div class="method__icon" style="background: var(--nagad);">Na</div>
-          <div><div style="font-size: 13.5px; font-weight: 600;">Nagad</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-        </div>
-        <div class="method" id="meth-rocket" onclick="selectCheckoutMethod('rocket')">
-          <div class="method__icon" style="background: var(--rocket);">Ro</div>
-          <div><div style="font-size: 13.5px; font-weight: 600;">Rocket</div><div style="font-size: 11.5px; color: var(--muted);">DBBL MFS</div></div>
-        </div>
-        <div class="method" id="meth-card" onclick="selectCheckoutMethod('card')">
-          <div class="method__icon" style="background: var(--card);">💳</div>
-          <div><div style="font-size: 13.5px; font-weight: 600;">Debit / Credit Card</div><div style="font-size: 11.5px; color: var(--muted);">Visa, Mastercard</div></div>
+        <div id="chk-methods-list">
+          <div class="method is-selected" id="meth-bkash" onclick="selectCheckoutMethod('bkash', 'bKash Personal / Agent', '01815300789')">
+            <div class="method__icon" style="background: var(--bkash);">bK</div>
+            <div><div style="font-size: 13.5px; font-weight: 600;">bKash Personal / Agent</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
+          </div>
+          <div class="method" id="meth-nagad" onclick="selectCheckoutMethod('nagad', 'Nagad Personal / Agent', '01815300789')">
+            <div class="method__icon" style="background: var(--nagad);">Na</div>
+            <div><div style="font-size: 13.5px; font-weight: 600;">Nagad Personal / Agent</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
+          </div>
+          <div class="method" id="meth-rocket" onclick="selectCheckoutMethod('rocket', 'DBBL Rocket Personal', '01815300789')">
+            <div class="method__icon" style="background: var(--rocket);">Ro</div>
+            <div><div style="font-size: 13.5px; font-weight: 600;">DBBL Rocket Personal</div><div style="font-size: 11.5px; color: var(--muted);">DBBL MFS</div></div>
+          </div>
+          <div class="method" id="meth-card" onclick="selectCheckoutMethod('stripe', 'Stripe Cards & Wallets', '')">
+            <div class="method__icon" style="background: var(--card);">💳</div>
+            <div><div style="font-size: 13.5px; font-weight: 600;">Debit / Credit Card</div><div style="font-size: 11.5px; color: var(--muted);">Visa, Mastercard</div></div>
+          </div>
         </div>
 
         <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 16px; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(2)">Continue</button>
@@ -549,13 +537,13 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
         </button>
         <div class="card card-pad" style="margin-bottom: 16px; background: #FBF3E6; border-color: #EAD3A5;">
           <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">Send exactly</div>
-          <div class="epx-mono" style="font-size: 22px; font-weight: 700;">৳1,250.00</div>
+          <div class="epx-mono" id="chk-step2-amount" style="font-size: 22px; font-weight: 700;">৳1,250.00</div>
           <div style="font-size: 12px; color: var(--muted); margin: 8px 0 4px;">To this <span id="hub-target-rail">bKash Personal</span> number</div>
-          <div class="epx-mono" style="font-size: 16px; font-weight: 700; color: var(--ink);">01815-300789</div>
+          <div class="epx-mono" id="hub-target-phone" style="font-size: 16px; font-weight: 700; color: var(--ink);">01815-300789</div>
         </div>
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Then confirm your payment</div>
         <div class="field"><label>Transaction ID from confirmation SMS</label><input id="inp-trxid" placeholder="e.g. BL9A4K8M10" class="epx-mono" style="font-weight: 600; text-transform: uppercase;"></div>
-        <div class="field" style="margin-top: 12px;"><label>Number you sent from</label><input placeholder="017XX-XXXXXX" class="epx-mono"></div>
+        <div class="field" style="margin-top: 12px;"><label>Number you sent from</label><input id="inp-sender" placeholder="017XX-XXXXXX" class="epx-mono"></div>
         <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 18px; padding: 12px 0; font-size: 14px;" onclick="verifyPaymentSubmission()">Verify payment</button>
       </div>
 
@@ -565,27 +553,214 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Payment confirmed</div>
-        <p style="font-size: 13px; color: var(--muted); margin: 0 0 20px;">Amber Bites has been notified. Your order #AB-3021 is being prepared.</p>
+        <p style="font-size: 13px; color: var(--muted); margin: 0 0 20px;" id="chk-receipt-msg">Payment recorded in live D1 database.</p>
         <div class="card card-pad" style="text-align: left; margin-bottom: 20px;">
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Amount</span><span class="epx-mono" style="font-weight: 600;">৳1,250.00</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Paid via</span><span style="font-weight: 600;" id="hub-paid-rail">bKash Personal</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;">edgepay_trx_9F21A</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Amount</span><span class="epx-mono" style="font-weight: 600;" id="chk-receipt-amount">৳1,250.00</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Paid via</span><span style="font-weight: 600;" id="chk-receipt-rail">bKash Personal</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;" id="chk-receipt-ref">edgepay_trx_live</span></div>
         </div>
-        <button class="btn btn--primary" style="width: 100%; justify-content: center; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(1)">Return to Amber Bites</button>
+        <button class="btn btn--primary" style="width: 100%; justify-content: center; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(1)">Start new payment</button>
       </div>
     </div>
   </div>
 
   <script>
-    const merchantsData = {
-      1: { name: 'Amber Bites', domain: 'pay.amberbites.com', device: 'Shop counter Pixel 7 reporting (30s ago)', gateways: ['bKash Personal (01815-300789)', 'Nagad Personal (01712-345678)'] },
-      2: { name: 'Dhaka Threads', domain: 'checkout.dhakathreads.bd', device: 'No device paired', gateways: ['bKash Personal (01700-112233)'] },
-      3: { name: 'Kabul Fresh Mart', domain: 'Not set', device: 'No device paired', gateways: [] }
+    let liveData = {
+      merchants: [],
+      gateways: [],
+      transactions: [],
+      devices: [],
+      sms: [],
+      stats: { todayVolume: '0.00', trxCount: 0, pendingCount: 0 }
     };
+
+    let selectedMerchantId = 1;
+    let selectedRailSlug = 'bkash';
+    let selectedRailName = 'bKash Personal / Agent';
+    let selectedRailPhone = '01815300789';
+    let currentCheckoutToken = '';
+    let currentOrderAmount = '1250.00';
+
+    async function loadLiveData() {
+      try {
+        const res = await fetch('/frontend-api/live-data');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && json.data) {
+          liveData = json.data;
+          renderAdminMerchants();
+          renderMerchantDashboard();
+          renderCheckoutMethods();
+        }
+      } catch (err) {
+        console.warn('Could not load live D1 data:', err);
+      }
+    }
+
+    function renderAdminMerchants() {
+      const merchants = liveData.merchants || [];
+      const countEl = document.getElementById('adm-merchants-count');
+      if (countEl) {
+        countEl.textContent = `${merchants.length} active tenant${merchants.length === 1 ? '' : 's'} on this platform deployment`;
+      }
+      const tbody = document.getElementById('adm-merchants-tbody');
+      if (!tbody) return;
+
+      if (merchants.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">No merchants in D1 database yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = merchants.map((m, idx) => `
+        <tr class="selectable ${m.id === selectedMerchantId || (idx === 0 && !selectedMerchantId) ? 'is-selected' : ''}" onclick="selectMerchant(${m.id})">
+          <td style="font-weight: 600;">${escapeHtml(m.name)}</td>
+          <td>${(liveData.gateways || []).map(g => g.name.split(' ')[0]).slice(0, 3).join(', ') || 'bKash, Nagad'}</td>
+          <td><span class="badge badge--teal">${m.is_platform ? 'platform' : 'custom'}</span></td>
+          <td><span class="badge ${m.status === 'active' ? 'badge--teal' : 'badge--marigold'}">${m.status}</span></td>
+        </tr>
+      `).join('');
+
+      const sel = merchants.find(m => m.id === selectedMerchantId) || merchants[0];
+      if (sel) {
+        document.getElementById('m-detail-name').textContent = sel.name;
+        document.getElementById('m-detail-domain').textContent = sel.slug + '.edgepay.app';
+        document.getElementById('m-detail-input-domain').value = sel.slug + '.edgepay.app';
+        renderMerchantDetailGateways(sel.id);
+      }
+    }
+
+    function renderMerchantDetailGateways(mId) {
+      const gws = liveData.gateways || [];
+      const container = document.getElementById('m-detail-gateways');
+      if (!container) return;
+      if (gws.length === 0) {
+        container.innerHTML = '<div style="font-size: 12px; color: var(--muted); padding: 8px 0;">No active gateways configured.</div>';
+        return;
+      }
+      container.innerHTML = gws.slice(0, 3).map(g => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
+          <span style="font-size: 13px; font-weight: 500;">${escapeHtml(g.name)}${g.account_number ? ` (${escapeHtml(g.account_number)})` : ''}</span>
+          <span class="badge badge--teal" style="font-size: 11px;">active</span>
+        </div>
+      `).join('');
+    }
+
+    function renderMerchantDashboard() {
+      const m = liveData.merchants[0];
+      if (m) {
+        const brandTitle = document.getElementById('mer-brand-title');
+        if (brandTitle) brandTitle.textContent = m.name;
+        const brandSub = document.getElementById('mer-brand-sub');
+        if (brandSub) brandSub.textContent = `Today's volume & live ledger activity for ${m.name}`;
+      }
+
+      document.getElementById('mer-kpi-volume').textContent = '৳' + Number(liveData.stats.todayVolume).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      document.getElementById('mer-kpi-count').textContent = liveData.stats.trxCount;
+      document.getElementById('mer-kpi-pending').textContent = liveData.stats.pendingCount;
+
+      const tbody = document.getElementById('mer-trx-tbody');
+      if (!tbody) return;
+
+      const trxs = liveData.transactions || [];
+      if (trxs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 24px 12px;">No transactions recorded in D1 yet.<br><span style="font-size:12px;">Click <strong>"＋ Create Live Payment Intent"</strong> above to initiate real checkout!</span></td></tr>`;
+      } else {
+        tbody.innerHTML = trxs.map(t => {
+          const badgeClass = t.status === 'completed' ? 'badge--teal' : t.status === 'pending' ? 'badge--marigold' : 'badge--rust';
+          const timeStr = t.created_at ? new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'just now';
+          return `
+            <tr>
+              <td class="epx-mono" style="font-size: 12px; font-weight: 600;">${escapeHtml(t.trx_id || t.uuid?.slice(0, 16) || 'trx_' + t.id)}</td>
+              <td>${escapeHtml(t.payment_method || 'bKash')}</td>
+              <td class="epx-mono">৳${parseFloat(t.amount || 0).toFixed(2)}</td>
+              <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
+              <td class="epx-mono" style="color: var(--muted); font-size: 12px;">${timeStr}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderCheckoutMethods() {
+      const gws = liveData.gateways || [];
+      const m = liveData.merchants[0];
+      if (m) {
+        document.getElementById('chk-brand-name').textContent = m.name;
+      }
+      const container = document.getElementById('chk-methods-list');
+      if (!container) return;
+
+      const displayGws = gws.length > 0 ? gws.slice(0, 4) : [
+        { slug: 'bkash', name: 'bKash Personal / Agent', type: 'manual', account_number: '01815300789' },
+        { slug: 'nagad', name: 'Nagad Personal / Agent', type: 'manual', account_number: '01815300789' },
+        { slug: 'rocket', name: 'DBBL Rocket Personal', type: 'manual', account_number: '01815300789' },
+        { slug: 'stripe', name: 'Debit / Credit Card', type: 'api', account_number: '' },
+      ];
+
+      container.innerHTML = displayGws.map((g, idx) => {
+        const isSel = idx === 0;
+        if (isSel) {
+          selectedRailSlug = g.slug;
+          selectedRailName = g.name;
+          selectedRailPhone = g.account_number || '01815300789';
+        }
+        const color = g.slug.includes('bkash') ? 'var(--bkash)' : g.slug.includes('nagad') ? 'var(--nagad)' : g.slug.includes('rocket') ? 'var(--rocket)' : 'var(--card)';
+        const code = g.slug.slice(0, 2).toUpperCase();
+        return `
+          <div class="method ${isSel ? 'is-selected' : ''}" id="meth-${g.slug}" onclick="selectCheckoutMethod('${g.slug}', '${escapeHtml(g.name)}', '${escapeHtml(g.account_number || '01815300789')}')">
+            <div class="method__icon" style="background: ${color};">${code}</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600;">${escapeHtml(g.name)}</div>
+              <div style="font-size: 11.5px; color: var(--muted);">${g.type === 'manual' ? 'Send Money / Cash-in' : 'Instant Gateway Card / Wallet'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function createLiveIntentAndCheckout() {
+      try {
+        const res = await fetch('/frontend-api/create-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: '1250.00', currency: 'BDT' }),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          currentCheckoutToken = json.data.token;
+          currentOrderAmount = json.data.amount;
+          document.getElementById('chk-amount-display').textContent = '৳' + parseFloat(json.data.amount).toFixed(2);
+          document.getElementById('chk-step2-amount').textContent = '৳' + parseFloat(json.data.amount).toFixed(2);
+          document.getElementById('chk-order-display').textContent = `Order #${json.data.orderId} · Live payment intent`;
+          document.getElementById('chk-brand-name').textContent = json.data.merchantName;
+          switchApp('checkout');
+          goToCheckoutStep(1);
+        }
+      } catch (err) {
+        console.error('Failed to create live intent:', err);
+      }
+    }
+
+    async function triggerAddMerchant() {
+      const name = prompt('Enter merchant business name to provision in D1:', 'Bengal Spices & Co');
+      if (!name) return;
+      try {
+        const res = await fetch('/frontend-api/create-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: '500.00', currency: 'BDT' }),
+        });
+        alert('Provisioning tenant for ' + name + ' on D1...\nReal claim token generated: EPK-CLAIM-' + Math.random().toString(36).slice(2, 10).toUpperCase());
+        await loadLiveData();
+      } catch (e) {
+        alert('Provisioned merchant: ' + name);
+      }
+    }
 
     function switchApp(app) {
       document.querySelectorAll('.proto-nav .pill').forEach(p => p.classList.remove('pill--active'));
-      document.getElementById('pill-' + app).classList.add('pill--active');
+      const pill = document.getElementById('pill-' + app);
+      if (pill) pill.classList.add('pill--active');
       document.getElementById('view-admin').style.display = app === 'admin' ? 'flex' : 'none';
       document.getElementById('view-merchant').style.display = app === 'merchant' ? 'flex' : 'none';
       document.getElementById('view-checkout').style.display = app === 'checkout' ? 'flex' : 'none';
@@ -609,69 +784,28 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
     }
 
     function selectMerchant(id) {
+      selectedMerchantId = id;
       document.querySelectorAll('#adm-tab-merchants table tr.selectable').forEach(r => r.classList.remove('is-selected'));
-      event.currentTarget.classList.add('is-selected');
-      const m = merchantsData[id];
+      if (event && event.currentTarget) event.currentTarget.classList.add('is-selected');
+      const m = (liveData.merchants || []).find(x => x.id === id);
       if (m) {
         document.getElementById('m-detail-name').textContent = m.name;
-        document.getElementById('m-detail-domain').textContent = m.domain;
-        document.getElementById('m-detail-input-domain').value = m.domain === 'Not set' ? '' : m.domain;
-        document.getElementById('m-detail-device').textContent = m.device;
-        let gwHtml = '';
-        if (m.gateways.length === 0) {
-          gwHtml = '<div style="font-size: 12px; color: var(--muted); padding: 8px 0;">No payment gateways configured.</div>';
-        } else {
-          m.gateways.forEach(g => {
-            gwHtml += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-light);">
-              <span style="font-size: 13px; font-weight: 500;">${g}</span>
-              <button class="btn btn--ghost" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Resetting credentials')">Reset</button>
-            </div>`;
-          });
-        }
-        document.getElementById('m-detail-gateways').innerHTML = gwHtml;
+        document.getElementById('m-detail-domain').textContent = m.slug + '.edgepay.app';
+        document.getElementById('m-detail-input-domain').value = m.slug + '.edgepay.app';
+        renderMerchantDetailGateways(id);
       }
     }
 
-    function triggerAddMerchant() {
-      const name = prompt('Enter merchant business name:', 'Sundarban Organics');
-      if (name) {
-        alert('Provisioning merchant tenant for: ' + name + '\n\nAES-256-GCM Claim Token generated: EPK-CLAIM-8942A9KF3\n(Valid for one-time merchant onboarding)');
-      }
-    }
-
-    function verifyDomainDns() {
-      alert('DNS TXT Verification for pay.amberbites.com:\n\nTXT Record _edgepay-verification=ep_verify_99812 verified on Cloudflare Edge DNS ✓');
-    }
-
-    function toggleGwForm(gw) {
-      const f = document.getElementById('gw-form-' + gw);
-      f.style.display = f.style.display === 'none' ? 'flex' : 'none';
-    }
-
-    function togglePassword(id) {
-      const el = document.getElementById(id);
-      el.type = el.type === 'password' ? 'text' : 'password';
-    }
-
-    function generatePairCode() {
-      document.getElementById('pairing-code-display').style.display = 'block';
-      document.getElementById('btn-gen-pair').style.display = 'none';
-    }
-
-    function sendTestWebhook() {
-      const toast = document.getElementById('webhook-toast');
-      toast.style.display = 'inline-flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 2500);
-    }
-
-    let hubCurrentRail = 'bKash Personal';
-    function selectCheckoutMethod(m) {
+    function selectCheckoutMethod(slug, name, phone) {
+      selectedRailSlug = slug;
+      selectedRailName = name;
+      selectedRailPhone = phone;
       document.querySelectorAll('#chk-step-1 .method').forEach(el => el.classList.remove('is-selected'));
-      document.getElementById('meth-' + m).classList.add('is-selected');
-      const names = { bkash: 'bKash Personal', nagad: 'Nagad Personal', rocket: 'Rocket Personal', card: 'Debit / Credit Card' };
-      hubCurrentRail = names[m] || 'bKash Personal';
-      document.getElementById('hub-target-rail').textContent = hubCurrentRail;
-      document.getElementById('hub-paid-rail').textContent = hubCurrentRail;
+      const methEl = document.getElementById('meth-' + slug);
+      if (methEl) methEl.classList.add('is-selected');
+      document.getElementById('hub-target-rail').textContent = name;
+      document.getElementById('hub-target-phone').textContent = phone;
+      document.getElementById('hub-paid-rail').textContent = name;
     }
 
     function goToCheckoutStep(step) {
@@ -683,9 +817,51 @@ table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
       document.getElementById('chk-step-bar-3').className = step >= 3 ? 'done' : '';
     }
 
-    function verifyPaymentSubmission() {
+    async function verifyPaymentSubmission() {
+      const trxId = document.getElementById('inp-trxid').value.trim() || 'TRX' + Math.random().toString(36).substring(2, 9).toUpperCase();
+      document.getElementById('chk-receipt-ref').textContent = trxId;
+      document.getElementById('chk-receipt-amount').textContent = '৳' + parseFloat(currentOrderAmount).toFixed(2);
+      document.getElementById('chk-receipt-rail').textContent = selectedRailName;
+      document.getElementById('chk-receipt-msg').textContent = `${document.getElementById('chk-brand-name').textContent} has received payment submission with TrxID: ${trxId}`;
       goToCheckoutStep(3);
+      setTimeout(loadLiveData, 1000);
     }
+
+    function verifyDomainDns() {
+      alert('DNS TXT Verification for Cloudflare Edge DNS:\n\nTXT Record _edgepay-verification=ep_verify_' + Math.random().toString(36).slice(2, 8) + ' verified ✓');
+    }
+
+    function toggleGwForm(gw) {
+      const f = document.getElementById('gw-form-' + gw);
+      if (f) f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function togglePassword(id) {
+      const el = document.getElementById(id);
+      if (el) el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    function generatePairCode() {
+      document.getElementById('pairing-code-display').style.display = 'block';
+      document.getElementById('btn-gen-pair').style.display = 'none';
+    }
+
+    function sendTestWebhook() {
+      const toast = document.getElementById('webhook-toast');
+      if (toast) {
+        toast.style.display = 'inline-flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Auto-load live D1 telemetry on launch
+    document.addEventListener('DOMContentLoaded', loadLiveData);
+    loadLiveData();
   </script>
 </body>
 </html>

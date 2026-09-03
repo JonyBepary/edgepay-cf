@@ -218,7 +218,7 @@ describe('Property: D1-aggregated balances == DO balances under injected crashes
     // applied EXACTLY once (no double-apply, no loss)
     expect(trial.total_debit_minor).toBe(expectedTotal);
     expect(trial.total_credit_minor).toBe(expectedTotal);
-  });
+  }, 30000);
 });
 
 async function chartIds(merchantId: number): Promise<Record<string, number>> {

@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EdgePay Merchant — Amber Bites Operations Console</title>
+  <title>EdgePay Merchant Operations Console</title>
+  <!-- Authentic Sanzo Wada Natural Harmony & Editorial Typography Stack -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
   <style>
     :root {
       --ink: #12181F; --muted: #5B6470; --paper: #EEF1EA; --surface: #FFFFFF;
       --line: #D8DCD2; --line-light: #ECEEE8; --accent: #C97F1E; --accent-soft: #FBF3E6;
       --teal-bg: #DCEEE8; --teal-text: #0B6E5C; --marigold-bg: #F3E3C7; --marigold-text: #8A5A0F;
-      --rust-bg: #F5E1DC; --rust-text: #A83E2C; --gray-bg: #E7E9E2; --gray-text: #5B6470;
+      --rust-bg: #F7D7D4; --rust-text: #9E2A2B; --gray-bg: #EAECE6; --gray-text: #5B6470;
+      --bkash: #D6296B; --nagad: #EA7A1C; --rocket: #6D3FA0; --card: #3A424B;
       --font-sans: 'Public Sans', -apple-system, sans-serif;
       --font-mono: 'IBM Plex Mono', monospace;
       --radius: 10px;
@@ -20,193 +23,36 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
     .epx-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-    .app-shell { display: flex; min-height: 100vh; }
-    .app-sidebar { width: 210px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
-    .app-sidebar__brand { font-weight: 700; font-size: 16px; padding: 0 10px 20px; line-height: 1.3; }
-    .app-sidebar__brand small { font-size: 11px; font-weight: 400; color: var(--muted); display: block; margin-top: 2px; }
-    .nav-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #3A424B; cursor: pointer; border: none; background: transparent; text-align: left; font-family: inherit; }
-    .nav-item:hover { background: #F3F5EF; color: var(--ink); }
-    .nav-item.active { background: #12181F; color: #EEF1EA; font-weight: 600; }
-    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-    .app-main { flex: 1; min-width: 0; padding: 28px 32px; overflow-y: auto; }
-    .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
-    .page-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-    .page-head p { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
-    .btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-family: inherit; }
-    .btn--primary { background: #12181F; color: #EEF1EA; }
-    .btn--accent { background: var(--accent); color: #FFF8EE; }
-    .btn--ghost { background: transparent; border-color: var(--line); color: var(--ink); }
-    .btn--danger-ghost { background: transparent; border-color: #E3C4BC; color: #A83E2C; }
-    .card { background: #FFFFFF; border: 1px solid var(--line); border-radius: var(--radius); }
-    .card-pad { padding: 18px 20px; }
-    .stat-row { display: grid; gap: 14px; margin-bottom: 22px; }
-    .stat-card { background: #FFFFFF; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
-    .stat-card__label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
-    .stat-card__value { font-size: 22px; font-weight: 600; color: var(--ink); }
-    table.dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .dtable th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; padding: 0 14px 10px; border-bottom: 1px solid var(--line); text-transform: uppercase; letter-spacing: .04em; }
-    .dtable td { padding: 12px 14px; border-bottom: 1px solid var(--line-light); vertical-align: middle; }
-    .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-    .badge--teal { background: var(--teal-bg); color: var(--teal-text); }
-    .badge--marigold { background: var(--marigold-bg); color: var(--marigold-text); }
-    .badge--rust { background: var(--rust-bg); color: var(--rust-text); }
-    .badge--gray { background: var(--gray-bg); color: var(--gray-text); }
-    .gw-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; background: #FFF; }
-    .gw-card__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .gw-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 12px; }
-    .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
-    .field input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-family: inherit; background: #FCFCFA; }
-    .pair-code { font-size: 34px; letter-spacing: 6px; font-weight: 700; background: #12181F; color: #EEF1EA; padding: 16px 26px; border-radius: 10px; display: inline-block; }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="app-sidebar">
-      <div class="app-sidebar__brand">Amber Bites<small>EdgePay Merchant Operations</small></div>
-      <button class="nav-item active" id="mer-nav-dashboard" onclick="switchMerchantTab('dashboard')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-        Dashboard
-      </button>
-      <button class="nav-item" id="mer-nav-gateways" onclick="switchMerchantTab('gateways')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        Gateways
-      </button>
-      <button class="nav-item" id="mer-nav-pairing" onclick="switchMerchantTab('pairing')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></svg>
-        Mobile pairing
-      </button>
-      <button class="nav-item" id="mer-nav-developers" onclick="switchMerchantTab('developers')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-        Developers
-      </button>
-    </aside>
-    <main class="app-main">
-      <!-- Dashboard Tab -->
-      <div id="mer-tab-dashboard">
-        <div class="page-head"><div><h2>Dashboard</h2><p>Today's volume and recent activity</p></div></div>
-        <div class="stat-row" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="stat-card"><div class="stat-card__label">Today's volume</div><div class="stat-card__value epx-mono">৳8,930.00</div></div>
-          <div class="stat-card"><div class="stat-card__label">Transactions</div><div class="stat-card__value epx-mono">14</div></div>
-          <div class="stat-card"><div class="stat-card__label">Awaiting SMS</div><div class="stat-card__value epx-mono">2</div></div>
+  <div id="merchant-island" data-api-origin="">
+    <!-- Semantic Astro Island Shell: Hydrates dynamically with live D1 database telemetry -->
+    <div class="app-shell" style="display: flex; min-height: 100vh;">
+      <aside class="app-sidebar" style="width: 220px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #D8DCD2; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div class="app-sidebar__brand" style="font-weight: 700; font-size: 16px; padding: 0 10px 20px; line-height: 1.3;">
+          EdgePay Merchant
+          <small style="font-size: 11px; font-weight: 400; color: #5B6470; display: block; margin-top: 2px;">Operations Console</small>
         </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Recent transactions</div>
-          <table class="dtable">
-            <thead><tr><th>Reference</th><th>Gateway</th><th>Amount</th><th>Status</th><th>When</th></tr></thead>
-            <tbody>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F21A</td><td>bKash Personal</td><td class="epx-mono">৳1,250.00</td><td><span class="badge badge--teal">completed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">2m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F20B</td><td>Nagad</td><td class="epx-mono">৳640.00</td><td><span class="badge badge--marigold">pending</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">6m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F19C</td><td>bKash Personal</td><td class="epx-mono">৳3,200.00</td><td><span class="badge badge--teal">completed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">14m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F18D</td><td>Rocket</td><td class="epx-mono">৳480.00</td><td><span class="badge badge--rust">failed</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">22m ago</td></tr>
-              <tr><td class="epx-mono" style="font-size: 12px; font-weight: 600;">edgepay_trx_9F17E</td><td>bKash Personal</td><td class="epx-mono">৳1,980.00</td><td><span class="badge badge--gray">refunded</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">1h ago</td></tr>
-            </tbody>
-          </table>
+      </aside>
+      <main class="app-main" style="flex: 1; padding: 28px 32px;">
+        <div class="page-head" style="margin-bottom: 22px;">
+          <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Dashboard</h2>
+          <p style="font-size: 13px; color: #5B6470; margin-top: 3px;">Live ledger volume and transaction activity from Cloudflare D1</p>
         </div>
-      </div>
-
-      <!-- Gateways Tab -->
-      <div id="mer-tab-gateways" style="display: none;">
-        <div class="page-head"><div><h2>Payment gateways</h2><p>Configure the rails you accept from your customers</p></div></div>
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">bKash Personal</div><div class="gw-card__fields">Personal number: 01815-300789</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--teal">Connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('bkash')">Manage</button>
-            </div>
+        <div class="stat-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px;">
+          <div class="stat-card" style="background: #FFF; border: 1px solid #D8DCD2; border-radius: 10px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #5B6470; margin-bottom: 6px;">Today's volume</div>
+            <div class="epx-mono" style="font-size: 22px; font-weight: 600;">৳0.00</div>
           </div>
-          <div class="gw-form" id="gw-form-bkash" style="display: none;">
-            <div class="field"><label>Receiving Mobile Number</label><input value="01815300789"></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Saved bKash settings')">Save and test</button></div>
+          <div class="stat-card" style="background: #FFF; border: 1px solid #D8DCD2; border-radius: 10px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #5B6470; margin-bottom: 6px;">Transactions</div>
+            <div class="epx-mono" style="font-size: 22px; font-weight: 600;">0</div>
           </div>
         </div>
-        <div class="gw-card">
-          <div class="gw-card__row">
-            <div><div class="gw-card__name">Nagad Send Money</div><div class="gw-card__fields">Personal account number</div></div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge badge--gray">Not connected</span>
-              <button class="btn btn--ghost" onclick="toggleGwForm('nagad')">Connect</button>
-            </div>
-          </div>
-          <div class="gw-form" id="gw-form-nagad" style="display: none;">
-            <div class="field"><label>Nagad Account Number</label><input placeholder="017XXXXXXXX"></div>
-            <div style="display: flex; gap: 8px;"><button class="btn btn--accent" onclick="alert('Saved Nagad settings')">Save and test</button></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pairing Tab -->
-      <div id="mer-tab-pairing" style="display: none;">
-        <div class="page-head"><div><h2>Mobile pairing</h2><p>Pair a physical phone to forward incoming payment SMS</p></div></div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal-text);"></span>
-            <span style="font-weight: 600; font-size: 14px;">Shop counter Pixel 7</span>
-          </div>
-          <p style="font-size: 12px; color: var(--muted); margin: 0 0 12px 18px;">Last check-in 30 seconds ago · battery 88%</p>
-          <button class="btn btn--danger-ghost" style="margin-left: 18px;">Unpair this device</button>
-        </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Pair another device</div>
-          <p style="font-size: 12px; color: var(--muted); margin-bottom: 14px;">Open EdgePay Android companion app, tap "Pair device", and enter this code.</p>
-          <div id="pairing-code-display" style="display: none;">
-            <div class="pair-code epx-mono">482 913</div>
-            <p style="font-size: 12px; color: var(--muted); margin-top: 10px;">Expires in <span class="epx-mono" style="font-weight: 600;">9:47</span></p>
-          </div>
-          <button class="btn btn--accent" id="btn-gen-pair" onclick="generatePairCode()">Generate pairing code</button>
-        </div>
-      </div>
-
-      <!-- Developers Tab -->
-      <div id="mer-tab-developers" style="display: none;">
-        <div class="page-head"><div><h2>Developers</h2><p>API keys and payment webhooks</p></div></div>
-        <div class="card card-pad" style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div style="font-size: 13px; font-weight: 600;">API keys</div>
-            <button class="btn btn--ghost" onclick="alert('Creating key')">＋ Create key</button>
-          </div>
-          <table class="dtable">
-            <thead><tr><th>Name</th><th>Key prefix</th><th>Scopes</th><th>Last used</th></tr></thead>
-            <tbody>
-              <tr><td style="font-weight: 600;">Production backend</td><td class="epx-mono" style="font-size: 12px;">op_live_a1b2••••</td><td><span class="badge badge--teal">read, write</span></td><td class="epx-mono" style="color: var(--muted); font-size: 12px;">5m ago</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card card-pad">
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Payment notifications (Webhooks)</div>
-          <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Signed HMAC-SHA256 payload delivered on every payment state transition.</p>
-          <div class="field"><label>Endpoint URL</label><input value="https://amberbites.com/api/edgepay/webhook" readonly></div>
-          <div style="display: flex; gap: 8px; margin: 12px 0 16px;">
-            <button class="btn btn--ghost" onclick="sendTestWebhook()">Send test event</button>
-            <span id="webhook-toast" style="font-size: 12px; color: var(--teal-text); font-weight: 600; display: none; align-items: center;">✓ 200 OK Delivered in 38ms</span>
-          </div>
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
-  <script>
-    function switchMerchantTab(tab) {
-      document.querySelectorAll('.app-sidebar .nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('mer-nav-' + tab).classList.add('active');
-      document.getElementById('mer-tab-dashboard').style.display = tab === 'dashboard' ? 'block' : 'none';
-      document.getElementById('mer-tab-gateways').style.display = tab === 'gateways' ? 'block' : 'none';
-      document.getElementById('mer-tab-pairing').style.display = tab === 'pairing' ? 'block' : 'none';
-      document.getElementById('mer-tab-developers').style.display = tab === 'developers' ? 'block' : 'none';
-    }
-    function toggleGwForm(gw) {
-      const f = document.getElementById('gw-form-' + gw);
-      f.style.display = f.style.display === 'none' ? 'flex' : 'none';
-    }
-    function generatePairCode() {
-      document.getElementById('pairing-code-display').style.display = 'block';
-      document.getElementById('btn-gen-pair').style.display = 'none';
-    }
-    function sendTestWebhook() {
-      const toast = document.getElementById('webhook-toast');
-      toast.style.display = 'inline-flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 2500);
-    }
-  </script>
+  <script type="module" src="/assets/scripts/merchant-island.js"></script>
 </body>
 </html>

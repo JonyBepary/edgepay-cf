@@ -6,11 +6,13 @@
 interface Props {
   merchantName?: string;
   activeGateways?: number;
+  apiOrigin?: string;
 }
 
 const {
-  merchantName = "Metro Mart",
-  activeGateways = 4
+  merchantName = "",
+  activeGateways = 0,
+  apiOrigin = ""
 } = Astro.props;
 ---
 
@@ -18,15 +20,15 @@ const {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EdgePay Merchant — {merchantName}</title>
+  <title>{merchantName ? `EdgePay Merchant — ${merchantName}` : 'EdgePay Merchant Operations'}</title>
   <link rel="stylesheet" href="/styles/tokens.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
           integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
           crossorigin="anonymous" defer></script>
 </head>
 <body>
-  <div id="merchant-app" data-merchant={merchantName} data-gateways={activeGateways}>
-    <!-- Static merchant panel hydrates with interactive tables, charts & refund drawer -->
+  <div id="merchant-island" data-merchant={merchantName} data-gateways={activeGateways} data-api-origin={apiOrigin}>
+    <!-- Static merchant panel hydrates dynamically with interactive tables, charts & live D1 telemetry -->
   </div>
   <script type="module" src="/scripts/merchant-island.js"></script>
 </body>

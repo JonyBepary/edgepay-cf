@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EdgePay Checkout — Amber Bites</title>
+  <title>EdgePay Secure Checkout</title>
   <!-- Authentic Sanzo Wada Natural Harmony & Editorial Typography Stack -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,100 +43,9 @@
   </style>
 </head>
 <body>
-  <div class="checkout-card">
-    <div class="checkout-steps">
-      <span id="chk-step-bar-1" class="done"></span>
-      <span id="chk-step-bar-2"></span>
-      <span id="chk-step-bar-3"></span>
-    </div>
-
-    <!-- Step 1: Rail Selection -->
-    <div id="chk-step-1" style="padding: 20px 24px 26px;">
-      <div style="font-size: 12px; color: var(--muted); margin-bottom: 2px;">Amber Bites</div>
-      <div class="checkout-amount epx-serif">৳1,250.00</div>
-      <div style="font-size: 12px; color: var(--muted); margin: 2px 0 20px;">Order #AB-3021 · 2 items</div>
-      
-      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Choose how to pay</div>
-      <div class="method is-selected" id="meth-bkash" onclick="selectCheckoutMethod('bkash')">
-        <div class="method__icon" style="background: var(--bkash);">bK</div>
-        <div><div style="font-size: 13.5px; font-weight: 600;">bKash</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-      </div>
-      <div class="method" id="meth-nagad" onclick="selectCheckoutMethod('nagad')">
-        <div class="method__icon" style="background: var(--nagad);">Na</div>
-        <div><div style="font-size: 13.5px; font-weight: 600;">Nagad</div><div style="font-size: 11.5px; color: var(--muted);">Personal Send Money</div></div>
-      </div>
-      <div class="method" id="meth-rocket" onclick="selectCheckoutMethod('rocket')">
-        <div class="method__icon" style="background: var(--rocket);">Ro</div>
-        <div><div style="font-size: 13.5px; font-weight: 600;">Rocket</div><div style="font-size: 11.5px; color: var(--muted);">DBBL MFS</div></div>
-      </div>
-      <div class="method" id="meth-card" onclick="selectCheckoutMethod('card')">
-        <div class="method__icon" style="background: var(--card);">💳</div>
-        <div><div style="font-size: 13.5px; font-weight: 600;">Debit / Credit Card</div><div style="font-size: 11.5px; color: var(--muted);">Visa, Mastercard</div></div>
-      </div>
-
-      <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 16px; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(2)">Continue</button>
-      <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 11.5px; color: var(--muted);">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Secured by EdgePay · Cloudflare Edge
-      </div>
-    </div>
-
-    <!-- Step 2: Send Money & TrxID -->
-    <div id="chk-step-2" style="padding: 20px 24px 26px; display: none;">
-      <button onclick="goToCheckoutStep(1)" style="background: none; border: none; display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; padding: 0; margin-bottom: 14px; font-family: inherit;">
-        ← Back
-      </button>
-      <div class="card card-pad" style="margin-bottom: 16px; background: #FBF3E6; border-color: #EAD3A5;">
-        <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">Send exactly</div>
-        <div class="epx-mono" style="font-size: 22px; font-weight: 700;">৳1,250.00</div>
-        <div style="font-size: 12px; color: var(--muted); margin: 8px 0 4px;">To this <span id="target-rail-name">bKash</span> Personal number</div>
-        <div class="epx-mono" style="font-size: 16px; font-weight: 700; color: var(--ink);">01815-300789</div>
-      </div>
-      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Then confirm your payment</div>
-      <div class="field"><label>Transaction ID from confirmation SMS</label><input id="inp-trxid" placeholder="e.g. BL9A4K8M10" class="epx-mono" style="font-weight: 600; text-transform: uppercase;"></div>
-      <div class="field" style="margin-top: 12px;"><label>Number you sent from</label><input placeholder="017XX-XXXXXX" class="epx-mono"></div>
-      <button class="btn btn--accent" style="width: 100%; justify-content: center; margin-top: 18px; padding: 12px 0; font-size: 14px;" onclick="verifyPaymentSubmission()">Verify payment</button>
-    </div>
-
-    <!-- Step 3: Confirmation Receipt -->
-    <div id="chk-step-3" style="padding: 38px 26px 30px; text-align: center; display: none;">
-      <div style="width: 58px; height: 58px; border-radius: 50%; background: var(--teal-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--teal-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </div>
-      <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Payment confirmed</div>
-      <p style="font-size: 13px; color: var(--muted); margin: 0 0 20px;">Amber Bites has been notified. Your order #AB-3021 is confirmed.</p>
-      <div class="card card-pad" style="text-align: left; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Amount</span><span class="epx-mono" style="font-weight: 600;">৳1,250.00</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Paid via</span><span style="font-weight: 600;" id="res-rail">bKash Personal</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;"><span style="color: var(--muted);">Reference</span><span class="epx-mono" style="font-weight: 600;">edgepay_trx_9F21A</span></div>
-      </div>
-      <button class="btn btn--primary" style="width: 100%; justify-content: center; padding: 12px 0; font-size: 14px;" onclick="goToCheckoutStep(1)">Return to Amber Bites</button>
-    </div>
+  <div id="checkout-island">
+    <!-- Hydrated dynamically from live D1 database session -->
   </div>
-
-  <script>
-    let selectedRail = 'bKash Personal';
-    function selectCheckoutMethod(m) {
-      document.querySelectorAll('#chk-step-1 .method').forEach(el => el.classList.remove('is-selected'));
-      document.getElementById('meth-' + m).classList.add('is-selected');
-      const names = { bkash: 'bKash Personal', nagad: 'Nagad Personal', rocket: 'Rocket Personal', card: 'Debit / Credit Card' };
-      selectedRail = names[m] || 'bKash Personal';
-      document.getElementById('target-rail-name').textContent = selectedRail;
-      document.getElementById('res-rail').textContent = selectedRail;
-    }
-
-    function goToCheckoutStep(step) {
-      document.getElementById('chk-step-1').style.display = step === 1 ? 'block' : 'none';
-      document.getElementById('chk-step-2').style.display = step === 2 ? 'block' : 'none';
-      document.getElementById('chk-step-3').style.display = step === 3 ? 'block' : 'none';
-      document.getElementById('chk-step-bar-1').className = step >= 1 ? 'done' : '';
-      document.getElementById('chk-step-bar-2').className = step >= 2 ? 'done' : '';
-      document.getElementById('chk-step-bar-3').className = step >= 3 ? 'done' : '';
-    }
-
-    function verifyPaymentSubmission() {
-      goToCheckoutStep(3);
-    }
-  </script>
+  <script type="module" src="/assets/scripts/checkout-island.js"></script>
 </body>
 </html>

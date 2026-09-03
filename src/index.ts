@@ -299,6 +299,118 @@ app.get('/frontend/:app', async (c) => {
 });
 
 // ---------------------------------------------------------------
+// Frontend Live Data Adapter (Real Database Telemetry & State)
+// ---------------------------------------------------------------
+app.get('/frontend-api/live-data', async (c) => {
+  try {
+    const merchants = await c.env.DB.prepare(
+      `SELECT id, uuid, name, slug, email, default_currency, status, is_platform, created_at FROM op_merchants ORDER BY id ASC`
+    ).all();
+
+    const gateways = await c.env.DB.prepare(
+      `SELECT g.id, g.merchant_id, g.slug, g.name, g.type, g.status, m.account_number, m.instructions
+       FROM op_gateways g
+       LEFT JOIN op_manual_gateways m ON g.id = m.gateway_id
+       WHERE g.status = 'active'
+       ORDER BY g.priority ASC`
+    ).all();
+
+    const transactions = await c.env.DB.prepare(
+      `SELECT t.id, t.uuid, t.trx_id, t.amount, t.currency, t.status, t.payment_method, t.created_at
+       FROM op_transactions t
+       ORDER BY t.id DESC LIMIT 20`
+    ).all();
+
+    const devices = await c.env.DB.prepare(
+      `SELECT id, device_name, device_model, status, last_seen_at FROM op_devices ORDER BY id DESC`
+    ).all();
+
+    const smsInbox = await c.env.DB.prepare(
+      `SELECT id, sender, raw_body, matched_status, created_at FROM op_sms_inbox ORDER BY id DESC LIMIT 10`
+    ).all();
+
+    let todayVolume = 0;
+    const trxList = (transactions.results || []) as Array<{ amount?: string; status?: string }>;
+    let pendingCount = 0;
+    for (const t of trxList) {
+      if (t.status === 'completed') todayVolume += parseFloat(t.amount || '0');
+      if (t.status === 'pending') pendingCount++;
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        merchants: merchants.results || [],
+        gateways: gateways.results || [],
+        transactions: transactions.results || [],
+        devices: devices.results || [],
+        sms: smsInbox.results || [],
+        stats: {
+          todayVolume: todayVolume.toFixed(2),
+          trxCount: trxList.length,
+          pendingCount,
+        },
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to load live data';
+    return c.json({ success: false, error: { message: msg } }, 500);
+  }
+});
+
+app.post('/frontend-api/create-intent', async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as { amount?: string; currency?: string; order_id?: string };
+    const amount = body.amount || '1250.00';
+    const currency = body.currency || 'BDT';
+    const orderId = body.order_id || 'ORD-' + Date.now().toString().slice(-6);
+
+    const merchant = await c.env.DB.prepare(
+      `SELECT id, name FROM op_merchants WHERE is_platform = 1 OR status = 'active' ORDER BY id ASC LIMIT 1`
+    ).first<{ id: number; name: string }>();
+
+    const merchantId = merchant?.id ?? 1;
+    const paymentUuid = crypto.randomUUID();
+    const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    await c.env.DB.prepare(
+      `INSERT INTO op_payments
+         (merchant_id, uuid, amount, currency, order_id, customer_email, return_url, cancel_url,
+          checkout_token, expires_at, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'customer@example.com', 'https://example.com/success', 'https://example.com/cancel',
+               ?, ?, 'pending', ?, ?)`
+    ).bind(
+      merchantId,
+      paymentUuid,
+      amount,
+      currency,
+      orderId,
+      token,
+      expiresAt,
+      now,
+      now
+    ).run();
+
+    return c.json({
+      success: true,
+      data: {
+        token,
+        amount,
+        currency,
+        orderId,
+        merchantName: merchant?.name ?? 'EdgePay Platform',
+        checkoutUrl: `/checkout/${token}`,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to create payment intent';
+    return c.json({ success: false, error: { message: msg } }, 500);
+  }
+});
+
+// ---------------------------------------------------------------
 // Error handling — must be registered LAST.
 // (Casts bridge lib/error.ts's simpler Context type to this app's
 // Context with Variables — a pre-existing Hono generic variance quirk,

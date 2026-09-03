@@ -101,7 +101,7 @@ app.post('/session/login', async (c) => {
   const sessionId = crypto.randomUUID();
   const sessionData: SessionData = {
     merchantId: 1,
-    merchantName: 'Metro Mart',
+    merchantName: 'EdgePay Merchant',
     apiKey: body.api_key,
     createdAt: new Date().toISOString(),
   };

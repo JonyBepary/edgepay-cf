@@ -6,11 +6,13 @@
 interface Props {
   platformTitle?: string;
   tenantCount?: number;
+  apiOrigin?: string;
 }
 
 const {
   platformTitle = "EdgePay Platform Admin",
-  tenantCount = 8
+  tenantCount = 0,
+  apiOrigin = ""
 } = Astro.props;
 ---
 
@@ -25,8 +27,8 @@ const {
           crossorigin="anonymous" defer></script>
 </head>
 <body>
-  <div id="admin-app" data-tenants={tenantCount}>
-    <!-- Static platform console hydrates with provisioning modals & telemetry -->
+  <div id="admin-island" data-tenants={tenantCount} data-api-origin={apiOrigin}>
+    <!-- Static platform console hydrates dynamically with provisioning modals & live D1 telemetry -->
   </div>
   <script type="module" src="/scripts/admin-island.js"></script>
 </body>
