@@ -25,3 +25,8 @@ scripts/port-gateways/analysis-report.txt
 **/.companion-state.json
 *-state.json
 
+# Archived audit correspondence
+docs/Archive/
+Archive/
+
+
