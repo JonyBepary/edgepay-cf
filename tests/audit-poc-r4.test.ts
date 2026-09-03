@@ -234,6 +234,40 @@ describe('PoC-5: /api/admin/v1/merchants/claim platform gate (V3-010)', () => {
     });
     expect(res2.status).toBe(404);
   });
+
+  it('provisions merchant with AES-256-GCM encrypted claim token and redeems successfully (V10-005)', async () => {
+    const provRes = await SELF.fetch('http://localhost/api/admin/v1/merchants', {
+      method: 'POST',
+      ...withCL(JSON.stringify({
+        name: 'Encrypted Tenant Inc',
+        email: 'encrypted-tenant@example.com',
+        currency: 'BDT',
+      }), { Authorization: `Bearer ${platformKey}` }),
+    });
+    expect(provRes.status).toBe(201);
+    const provData = await provRes.json<{ success: boolean; data: { claim_token: string } }>();
+    const claimToken = provData.data.claim_token;
+    expect(claimToken).toBeDefined();
+
+    // Verify KV payload is encrypted at rest (base64 envelope, does NOT start with '{')
+    const rawKvPayload = await tenv.KV.get(`claim:${claimToken}`);
+    expect(rawKvPayload).not.toBeNull();
+    expect(rawKvPayload!.startsWith('{')).toBe(false);
+
+    // Redeem with platform admin
+    const claimRes = await SELF.fetch('http://localhost/api/admin/v1/merchants/claim', {
+      method: 'POST',
+      ...withCL(JSON.stringify({ claim_token: claimToken }), { Authorization: `Bearer ${platformKey}` }),
+    });
+    expect(claimRes.status).toBe(200);
+    const claimData = await claimRes.json<{ success: boolean; data: { admin_email: string; api_key: string; initial_password: string } }>();
+    expect(claimData.data.admin_email).toBe('encrypted-tenant@example.com');
+    expect(claimData.data.api_key).toMatch(/^op_live_/);
+    expect(claimData.data.initial_password).toBeDefined();
+
+    // Verify one-time consumption: token deleted from KV
+    expect(await tenv.KV.get(`claim:${claimToken}`)).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,9 +1,10 @@
 /**
- * Release Packaging & Integrity Gate Script (V6-001, V7-001, V8-001..V8-005, V9-001..V9-004).
+ * Release Packaging & Integrity Gate Script (V6-001..V10-005).
  * 1. Runs full 5-stage pre-flight verification battery.
  * 2. Creates a clean staging build strictly excluding dev state, hidden dirs, .dev.vars, stray binaries, and audit documents.
- * 3. Generates SHA-256 release-manifest.json.
- * 4. Compresses into dist/edgepay-cf-release.zip and verifies the artifact independently with strict regex matching.
+ * 3. Inverts binary filter to strict allowlist (V10-003).
+ * 4. Generates SHA-256 release-manifest.json.
+ * 5. Compresses into dist/edgepay-cf-release.zip and verifies the artifact independently with strict regex matching.
  */
 import { execSync } from 'node:child_process';
 import {
@@ -43,7 +44,7 @@ try {
 }
 
 // 2. Build Clean Distribution Archive in dist/
-console.log('\n6. Building & Validating Clean Release Distribution Archive (Strict Clean Tree Filter)...');
+console.log('\n6. Building & Validating Clean Release Distribution Archive (Strict Allowlist Filter)...');
 
 const distDir = join(process.cwd(), 'dist');
 const stagingDir = join(distDir, 'edgepay-cf');
@@ -54,13 +55,18 @@ if (existsSync(distDir)) {
 }
 mkdirSync(stagingDir, { recursive: true });
 
+const ALLOWED_CODE_EXTENSIONS = new Set([
+  '.ts', '.js', '.mjs', '.cjs', '.json', '.jsonc', '.sql', '.html', '.css',
+  '.md', '.yml', '.yaml', '.txt', '.example', '.gitignore', '.astro', '.svg'
+]);
+
 function isForbiddenInRelease(relPath, fileName, isDir) {
-  // 1. Hidden directories: exclude all .* directories except .github
+  // 1. Hidden & build directories
   if (isDir) {
     if (fileName.startsWith('.') && fileName !== '.github') {
       return true;
     }
-    if (['node_modules', 'dist', 'coverage', '.system_generated', 'Archive'].includes(fileName)) {
+    if (['node_modules', 'dist', 'coverage', '.system_generated', 'Archive', 'frontend_reference'].includes(fileName)) {
       return true;
     }
     return false;
@@ -85,9 +91,26 @@ function isForbiddenInRelease(relPath, fileName, isDir) {
     return true;
   }
 
-  // 4. Exclude stray images outside designated asset directories (V9-003)
-  const isImage = /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp)$/i.test(fileName);
-  if (isImage && !relPath.startsWith('public/') && !relPath.startsWith('sms-phone-mockup/public/')) {
+  // 4. Strict Binary Allowlist (V10-003):
+  // Asset images permitted ONLY inside public asset directories
+  const isImageOrMedia = /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|mp4|webm|pdf)$/i.test(fileName);
+  if (isImageOrMedia) {
+    if (relPath.startsWith('public/') || relPath.startsWith('sms-phone-mockup/public/')) {
+      return false; // permitted
+    }
+    return true; // forbidden outside designated assets
+  }
+
+  // Deny all arbitrary binaries, archives, and executables anywhere
+  const isForbiddenBinary = /\.(pdf|zip|tar|gz|7z|rar|exe|bin|iso|docx|xlsx|pptx|mp4|avi|mov)$/i.test(fileName);
+  if (isForbiddenBinary) {
+    return true;
+  }
+
+  // Allowlist text and code extensions
+  const extMatch = fileName.match(/\.[0-9a-z_-]+$/i);
+  const ext = extMatch ? extMatch[0].toLowerCase() : '';
+  if (ext && !ALLOWED_CODE_EXTENSIONS.has(ext) && !fileName.endsWith('.example')) {
     return true;
   }
 
@@ -161,7 +184,7 @@ if (scanErrors > 0) {
 // 4. Write release-manifest.json
 const manifest = {
   release: 'edgepay-cf',
-  version: '0.4.4',
+  version: '0.4.5',
   timestamp: new Date().toISOString(),
   staged_file_count: Object.keys(manifestFiles).length,
   manifest_note: 'archive contains staged_file_count + 1 file entries (plus directory path entries in unzip listing)',
@@ -179,7 +202,7 @@ try {
   process.exit(1);
 }
 
-// 6. Strict Comprehensive Post-Build Zip Listing Verification (V8-004, V9-001..V9-004)
+// 6. Strict Comprehensive Post-Build Zip Listing Verification (V8-004, V9-001..V9-004, V10-003)
 const zipStat = statSync(zipFile);
 const zipBuffer = readFileSync(zipFile);
 const zipSha256 = createHash('sha256').update(zipBuffer).digest('hex');
@@ -193,16 +216,28 @@ const FORBIDDEN_ZIP_PATTERNS = [
   /\.opencode\//,
   /\.slim\//,
   /\.sqlite/,
-  /\.log\n/,
+  /\.log$/,
   /node_modules\//,
   /\.git\//,
   /EDGEPAY.*AUDIT.*\.md/i,
+  /\.(pdf|zip|tar|gz|exe|bin|docx|mp4)$/i,
 ];
 
-for (const pattern of FORBIDDEN_ZIP_PATTERNS) {
-  if (pattern.test(zipListing)) {
-    console.error(`[FATAL] Zip verification failed: forbidden pattern '${pattern}' matched in archive listing!`);
-    process.exit(1);
+const lines = zipListing.split('\n');
+for (const line of lines) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith('Archive:') || trimmed.startsWith('Length') || trimmed.startsWith('---') || trimmed.includes('files')) {
+    continue;
+  }
+  const match = line.match(/\d{2}:\d{2}\s+(.+)$/);
+  if (match) {
+    const entryPath = match[1].trim();
+    for (const pattern of FORBIDDEN_ZIP_PATTERNS) {
+      if (pattern.test(entryPath)) {
+        console.error(`[FATAL] Zip verification failed: forbidden pattern '${pattern}' matched entry '${entryPath}'!`);
+        process.exit(1);
+      }
+    }
   }
 }
 

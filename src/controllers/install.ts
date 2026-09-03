@@ -12,7 +12,7 @@
 
 import { Hono } from 'hono';
 import type { Env } from '../types/env';
-import { hashPassword, randomBase64Key, randomUuid, base64ToBytes } from '../lib/crypto';
+import { hashPassword, getPbkdf2Iterations, randomBase64Key, randomUuid, base64ToBytes } from '../lib/crypto';
 import { gatewaySelection } from '../gateways/enabled';
 
 export const installRoutes = new Hono<{ Bindings: Env }>();
@@ -135,8 +135,7 @@ installRoutes.post('/', async (c) => {
   //    PBKDF2 cost is env-configurable (PBKDF2_ITERATIONS): strictly-free-tier
   //    deployments cannot afford 600K iterations inside the 10ms CPU budget.
   const adminUuid = randomUuid();
-  const pbkdf2Cost = Number(c.env.PBKDF2_ITERATIONS ?? '') || undefined;
-  const passwordHash = await hashPassword(body.admin_password, pbkdf2Cost);
+  const passwordHash = await hashPassword(body.admin_password, getPbkdf2Iterations(c.env));
   const emailHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.admin_email)).then(b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''));
 
   await c.env.DB.prepare(

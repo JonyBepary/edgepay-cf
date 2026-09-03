@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EdgePay Frontend Kit — Samples &amp; Design System</title>
+<!-- EdgePay frontend kit hub — pairs with EdgePay_Frontend_Architecture_Report.pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+        integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
+        crossorigin="anonymous" defer></script>
+<style>
+:root{
+  --ink:#0F172A;--ink-2:#1E293B;--muted:#64748B;--faint:#94A3B8;
+  --paper:#F8FAFC;--surface:#FFFFFF;--line:#E2E8F0;--line-2:#CBD5E1;
+  --brand:#1D4ED8;--brand-ink:#1E3A8A;--brand-soft:#EFF6FF;
+  --awaiting:#B45309;--awaiting-bg:#FFF7ED;
+  --success:#065F46;--success-bg:#F0FDF4;
+  --bkash:#E2136E;--nagad:#F6921E;--rocket:#8C3494;
+  --radius:16px;--shadow:0 1px 2px rgba(15,23,42,.05),0 14px 40px -16px rgba(15,23,42,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Inter',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.55;}
+.num{font-variant-numeric:tabular-nums;}
+a{color:inherit;}
+
+.hero{background:linear-gradient(135deg,#0F172A 0%,#1E3A8A 100%);color:#F1F5F9;padding:64px 24px 72px;}
+.hero-in{max-width:1060px;margin:0 auto;}
+.kick{font-size:11px;font-weight:750;letter-spacing:.28em;text-transform:uppercase;color:#7AB8E8;}
+.hero h1{font-size:clamp(30px,5vw,44px);font-weight:800;letter-spacing:-.02em;margin-top:14px;line-height:1.12;}
+.hero p{max-width:640px;margin-top:16px;font-size:14.5px;color:#A9C3DE;line-height:1.65;}
+.hero .facts{display:flex;gap:26px;margin-top:28px;flex-wrap:wrap;}
+.hero .facts div b{display:block;font-size:22px;font-weight:800;color:#fff;}
+.hero .facts div span{font-size:11px;color:#7A9BB8;font-weight:650;}
+
+.wrap{max-width:1060px;margin:-40px auto 0;padding:0 24px 70px;display:flex;flex-direction:column;gap:34px;}
+.sec-t{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+.sec-s{font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+.samples{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.sample{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease;}
+.sample:hover{transform:translateY(-4px);box-shadow:0 18px 50px -18px rgba(15,23,42,.32);}
+.sample .cap{padding:22px 20px 18px;}
+.sample .plane{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;}
+.plane.pub{color:#B45309;background:var(--awaiting-bg);border:1.5px solid #F59E0B;}
+.plane.ten{color:#1D4ED8;background:#EFF6FF;border:1.5px solid #3B82F6;}
+.plane.adm{color:#1E3A8A;background:#DBEAFE;border:1.5px solid #2563EB;}
+.sample h3{font-size:17px;font-weight:800;margin-top:10px;}
+.sample p{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6;}
+.sample .mini{margin-top:auto;border-top:1px solid var(--line);padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap;}
+.mini span{font-size:10.5px;font-weight:700;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 10px;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;}
+.card h3{font-size:14px;font-weight:750;}
+.card .sub{font-size:11.5px;color:var(--muted);margin:2px 0 14px;}
+
+.tok{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.tok div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+.tok b{display:block;font-size:11px;font-weight:750;color:var(--ink-2);}
+.tok code{font-size:12.5px;font-weight:700;color:var(--brand-ink);}
+.sw{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.sw i{width:34px;height:34px;border-radius:9px;border:1px solid var(--line-2);display:inline-block;}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;font-size:10.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:7px 10px;border-bottom:1.5px solid var(--line);}
+td{padding:10px;border-bottom:1px solid var(--line);}
+tr:last-child td{border-bottom:0;}
+code{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:2px 7px;}
+
+.hap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:4px;}
+.hap button{border:1.5px solid var(--line-2);border-radius:10px;padding:12px 8px;font-size:11.5px;font-weight:700;background:var(--surface);transition:transform .1s;}
+.hap button:active{transform:scale(.96);}
+.hap button small{display:block;font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--muted);font-weight:600;margin-top:3px;}
+
+.files{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.file{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:11px 14px;text-decoration:none;transition:background .15s;}
+.file:hover{background:var(--paper);}
+.file .fi{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--brand-ink);background:var(--brand-soft);border:1px solid #BFDBFE;}
+.file b{font-size:12.5px;}
+.file span{font-size:11px;color:var(--muted);display:block;}
+.file .go{margin-left:auto;color:var(--brand);font-size:16px;font-weight:700;}
+
+footer{max-width:1060px;margin:0 auto;padding:0 24px 44px;font-size:11.5px;color:var(--faint);line-height:1.7;}
+footer b{color:var(--muted);}
+@media (max-width:880px){.samples{grid-template-columns:1fr;}.grid-2{grid-template-columns:1fr;}.tok{grid-template-columns:1fr;}.hap{grid-template-columns:1fr 1fr;}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body>
+
+<div class="hero"><div class="hero-in">
+  <div class="kick">EdgePay frontend kit</div>
+  <h1>Three surfaces,<br>three trust planes, one system.</h1>
+  <p>Production-grade interface samples for the multi-worker frontend described in the
+     <b style="color:#DCEAF9;">EdgePay Frontend Architecture &amp; Multi-Worker Blueprint</b> — checkout, merchant panel,
+     and admin console, built in the Astro-island idiom with GSAP motion and haptic response.
+     Open them on a phone: they are designed for it.</p>
+  <div class="facts">
+    <div><b class="num">3</b><span>UI samples</span></div>
+    <div><b class="num">4</b><span>architecture diagrams</span></div>
+    <div><b class="num">0</b><span>framework runtime KB</span></div>
+    <div><b class="num">1</b><span>design token set</span></div>
+  </div>
+</div></div>
+
+<div class="wrap">
+
+  <section id="samples">
+    <div class="sec-t">The samples</div>
+    <div class="sec-s">Each file is self-contained — open directly in any browser. Swap DEMO_MODE in the source to wire the real API.</div>
+    <div class="samples">
+      <a class="sample" href="checkout.html">
+        <div class="cap">
+          <span class="plane pub">public · untrusted</span>
+          <h3>Hosted Checkout</h3>
+          <p>Mobile-first payment page: gateway pills, copy-to-send instructions, TrxID verification,
+             calm awaiting-SMS state, stroke-drawn success — with the full state machine.</p>
+        </div>
+        <div class="mini"><span>GSAP timelines</span><span>haptics</span><span>status polling</span><span>strict CSP</span></div>
+      </a>
+      <a class="sample" href="merchant-dashboard.html">
+        <div class="cap">
+          <span class="plane ten">authenticated · tenant</span>
+          <h3>Merchant Panel</h3>
+          <p>BFF-pattern dashboard: transactions, payment links, webhook config with delivery log,
+             gateway cards with honest operator-assisted badges, pairing status.</p>
+        </div>
+        <div class="mini"><span>scroll reveals</span><span>count-ups</span><span>SVG chart</span><span>webhook docs</span></div>
+      </a>
+      <a class="sample" href="admin-dashboard.html">
+        <div class="cap">
+          <span class="plane adm">authenticated · platform</span>
+          <h3>Admin Console</h3>
+          <p>Access-gated platform surface: merchant provisioning with one-time encrypted claim
+             token flow, trial balance + consistency, devices, SMS center, refunds, reconcile.</p>
+        </div>
+        <div class="mini"><span>claim-token modal</span><span>revoke flows</span><span>sidebar nav</span><span>Access badge</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section id="system">
+    <div class="sec-t">Shared design system</div>
+    <div class="sec-s">One token set and one motion language span all three surfaces (report §8)</div>
+    <div class="grid-2" style="margin-top:14px;">
+      <div class="card">
+        <h3>Tokens</h3>
+        <div class="sub">CSS custom properties — copy into packages/ui</div>
+        <div class="tok">
+          <div><b>--ink / --paper</b><code>#0F172A / #F8FAFC</code></div>
+          <div><b>--brand / --brand-ink</b><code>#1D4ED8 / #1E3A8A</code></div>
+          <div><b>--surface / --line</b><code>#FFFFFF / #E2E8F0</code></div>
+          <div><b>--awaiting (amber)</b><code>#B45309 on #FFF7ED</code></div>
+          <div><b>--success</b><code>#065F46 on #F0FDF4</code></div>
+          <div><b>--error</b><code>#B31212 on #FEF2F2</code></div>
+        </div>
+        <div class="sw">
+          <i style="background:#0F172A"></i><i style="background:#1D4ED8"></i><i style="background:#F8FAFC;border-color:#CBD5E1"></i>
+          <i style="background:#FFF7ED"></i><i style="background:#F0FDF4"></i><i style="background:#E2136E"></i>
+          <i style="background:#F6921E"></i><i style="background:#8C3494"></i>
+        </div>
+        <div class="sub" style="margin:10px 0 0;">Gateway colors (bKash · Nagad · Rocket) are functional identity, not decoration.</div>
+      </div>
+      <div class="card">
+        <h3>Try the haptics</h3>
+        <div class="sub">navigator.vibrate behind feature detection — needs a phone</div>
+        <div class="hap">
+          <button onclick="navigator.vibrate&&navigator.vibrate(8)">tap<small>vibrate(8)</small></button>
+          <button onclick="navigator.vibrate&&navigator.vibrate([0,10,30,10])">select<small>[0,10,30,10]</small></button>
+          <button onclick="navigator.vibrate&&navigator.vibrate([10,40,20])">success<small>[10,40,20]</small></button>
+          <button onclick="navigator.vibrate&&navigator.vibrate([60,40,60])">error<small>[60,40,60]</small></button>
+        </div>
+        <table style="margin-top:16px;">
+          <thead><tr><th>Motion pattern</th><th>Spec</th></tr></thead>
+          <tbody>
+            <tr><td>Entrance stagger</td><td><code>y12→0 · 220ms · expo-out · 45ms step</code></td></tr>
+            <tr><td>State transition</td><td><code>timeline 260–300ms</code></td></tr>
+            <tr><td>Count-up</td><td><code>500ms · tabular-nums</code></td></tr>
+            <tr><td>Success draw</td><td><code>strokeDashoffset 420ms</code></td></tr>
+            <tr><td>Reduced motion</td><td><code>prefers-reduced-motion honored everywhere</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="diagrams">
+    <div class="sec-t">Architecture diagrams</div>
+    <div class="sec-s">Presentation-resolution PNGs — the PDF embeds simplified versions; these carry the full detail</div>
+    <div class="card">
+      <div class="files">
+        <a class="file" href="diagrams/01-multi-worker-topology.png"><div class="fi">PNG</div><div><b>01 · Multi-worker deployment topology</b><span>three frontend workers, trust planes, edge, API core, state, external parties</span></div><span class="go">→</span></a>
+        <a class="file" href="diagrams/02-auth-trust-planes.png"><div class="fi">PNG</div><div><b>02 · Authentication &amp; request chains</b><span>what each surface proves to the core — and why Service Bindings can't carry Access</span></div><span class="go">→</span></a>
+        <a class="file" href="diagrams/03-checkout-state-machine.png"><div class="fi">PNG</div><div><b>03 · Checkout state machine</b><span>API-gateway path, personal-MFS path, awaiting_sms, inline rejections</span></div><span class="go">→</span></a>
+        <a class="file" href="diagrams/04-after-payment-flow.png"><div class="fi">PNG</div><div><b>04 · After-payment flow</b><span>three ingestion doors, completion guard, ledger posting, webhook fan-out</span></div><span class="go">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="sec-t">Wiring these to the real backend</div>
+    <div class="grid-2" style="margin-top:14px;">
+      <div class="card">
+        <h3>Checkout worker</h3>
+        <div class="sub">token-scoped only</div>
+        <table>
+          <tbody>
+            <tr><td>Render page</td><td><code>GET /checkout/{token}</code></td></tr>
+            <tr><td>Start payment</td><td><code>POST /checkout/{token}/initiate</code></td></tr>
+            <tr><td>Verify TrxID</td><td><code>POST /checkout/{token}/verify</code></td></tr>
+            <tr><td>Poll status</td><td><code>GET /checkout/{token}/status</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Next steps</h3>
+        <div class="sub">from the report's roadmap</div>
+        <table>
+          <tbody>
+            <tr><td>Phase 0</td><td>regenerate OpenAPI + JSON intent endpoint</td></tr>
+            <tr><td>Phase 1</td><td>ship checkout worker + custom domains</td></tr>
+            <tr><td>Phase 2</td><td>merchant panel on Path B (BFF)</td></tr>
+            <tr><td>Phase 3</td><td>admin console + provisioning</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  EdgePay frontend kit · companion to <b>EdgePay_Frontend_Architecture_Report.pdf</b> (25 pages)<br>
+  All data is demo data. Every screen maps to verified endpoints of the edgepay-cf API core (v0.3.0 baseline, commit 14c6690).
+</footer>
+
+<script defer>
+(() => {
+  const G = window.gsap || null;
+  const rm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!G || rm) return;
+    G.from(".hero-in > *", { y: 16, opacity: 0, duration: .5, ease: "power3.out", stagger: .09 });
+    G.from(".sample", { y: 18, opacity: 0, duration: .42, ease: "power3.out", stagger: .09, delay: .15, clearProps: "all" });
+    G.from(".hero .facts div", { y: 10, opacity: 0, duration: .4, stagger: .06, delay: .45 });
+  });
+})();
+</script>
+</body>
+</html>

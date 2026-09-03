@@ -4,9 +4,9 @@ This document tracks all security findings, remediations, and verification test 
 
 ## Status Summary
 - **Verified Money-Path P0s**: 100% Fixed & Tested
-- **Test Automation Battery**: 30 test suites, 260 tests, 0 skips, 100% green
+- **Test Automation Battery**: 30 test suites, 263 tests, 0 skips, 100% green
 - **Static Analysis & Typecheck**: ESLint 9 (0 warnings), TypeScript (0 errors), zero `as any` in `src/`
-- **Hygiene & Verification Gate**: Direct filesystem tree scan + JSONC config parser + release archive builder & verifier (`npm run package`)
+- **Hygiene & Verification Gate**: Direct filesystem tree scan + JSONC config parser + release archive builder (`npm run package`) + clean distribution hand-off builder (`npm run package:handoff`)
 
 ---
 
@@ -29,7 +29,7 @@ This document tracks all security findings, remediations, and verification test 
 | **EDGE-P1-006** | P1 | State Machine Regression | PARTIAL | `src/services/payment.ts` | `tests/payment-edgecases.test.ts` |
 | **EDGE-P1-007** | P1 | Intent Creation Race | OPEN | `src/services/payment.ts` | (30-day roadmap: UNIQUE constraint) |
 | **EDGE-P1-008** | P1 | Write Scope Enforcement | FIXED | `src/controllers/api.ts` | `tests/api-middleware.test.ts` |
-| **EDGE-P1-009** | P1 | Test Suite Integrity | FIXED | `tests/` | 30 test suites green (259 tests) |
+| **EDGE-P1-009** | P1 | Test Suite Integrity | FIXED | `tests/` | 30 test suites green (263 tests) |
 | **EDGE-P1-010** | P1 | KV Rate Limiter Grouping | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
 | **EDGE-P2-001** | P2 | CSRF Middleware Mounting | OPEN | `src/middleware/csrf.ts` | (30-day roadmap) |
 | **EDGE-P2-005** | P2 | Rate Limiter Fail-Open | PARTIAL | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
@@ -51,7 +51,7 @@ This document tracks all security findings, remediations, and verification test 
 | **V3-001** | P3 | False Claim Remediation | FIXED | `src/controllers/mobile.ts`, `src/middleware/auth.ts` | `tests/mobile-notifications.test.ts` |
 | **V3-002** | P2 | sendTest SSRF Enforcement | FIXED | `src/services/webhook-dispatcher.ts`, `src/controllers/api.ts` | `tests/ssrf-webhook-test.test.ts` |
 | **V3-003** | P1 | Refund Ghost-Call Ordering | FIXED | `src/services/refund.ts` | `tests/refund-ordering.test.ts` |
-| **V3-004** | P2 | Claim Token Plaintext KV Staging | FIXED | `src/controllers/admin-api.ts` | AES-256-GCM encrypted in KV |
+| **V3-004** | P2 | Claim Token Plaintext KV Staging | FIXED | `src/controllers/admin-api.ts` | AES-256-GCM encrypted in KV (`tests/audit-poc-r4.test.ts`) |
 | **V3-005** | P2 | Bounded Payload Cap | FIXED | `src/index.ts` | `tests/payload-cap.test.ts` |
 | **V3-006** | P2 | CF-Connecting-IP & Route Keying | FIXED | `src/middleware/rate-limit.ts` | `tests/api-middleware.test.ts` |
 | **V3-007** | P2 | SSRF Opt-In Flag | FIXED | `src/types/env.ts`, `src/controllers/api.ts`, `src/queues/webhook-consumer.ts` | `tests/ssrf-webhook-test.test.ts` |
@@ -75,28 +75,33 @@ This document tracks all security findings, remediations, and verification test 
 | **V5-006** | P3 | Discriminating Heartbeat Test | FIXED | `tests/mobile-heartbeat.test.ts` | Sentinel change & cross-tenant negative |
 | **V5-007** | P3 | Gateway Registry Seam Instrumentation | FIXED | `tests/refund-ordering.test.ts` | `gatewayRegistry.resolve` spied |
 | **V5-008** | P4 | Unhedged Asset Assertion | FIXED | `tests/assets-serving.test.ts` | Strict 200 + text/css assertions |
-| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts (259 tests) |
+| **V5-009** | P4 | Synchronized Documentation Metrics | FIXED | `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Counts exact across artifacts (263 tests) |
 | **V5-010** | P4 | Test Environment Isolation | FIXED | `vitest.config.ts`, `.dev.vars.example` | Verified in test harness |
 | **V5-011** | P4 | Bodyless DELETE 411 Contract | FIXED | `src/index.ts` | Documented for API consumers |
 | **V6-001** | P1 | Packaging Gate & Release Script | FIXED | `scripts/package-release.mjs`, `package.json` | Automated pre-packaging gate |
 | **V6-002** | P3 | Dev Secret Rotation | FIXED | `.dev.vars` | Rotated with fresh 256-bit CSPRNG keys |
 | **V6-003** | P3 | Package Tree Hygiene Gate | FIXED | `scripts/package-release.mjs`, `scripts/verify-config.mjs` | Release packaging verifies clean tree |
-| **V6-004** | P4 | Documentation Metrics Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | 259 tests synchronized |
-| **V6-005** | P4 | PoC Count Normalization | FIXED | `tests/audit-poc-r4.test.ts` | 14 test cases covering 15 scenarios |
+| **V6-004** | P4 | Documentation Metrics Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | 263 tests synchronized |
+| **V6-005** | P4 | PoC Count Normalization | FIXED | `tests/audit-poc-r4.test.ts` | 15 test cases covering all PoC scenarios |
 | **V6-006** | P3 | Citation Relevance Verification | FIXED | `scripts/verify-remediations.mjs`, `tests/smoke.test.ts` | All citations strictly verified |
 | **R-3** | P4 | Simulator Localhost Default | FIXED | `sms-phone-mockup/public/index.html` | Default target set to localhost:8787 |
 | **R-4** | P4 | State File Single Match | FIXED | `scripts/verify-config.mjs` | Single boolean matcher eliminates duplicate error |
 | **V7-001** | P1 | Release Archive & Clean Tree Builder | FIXED | `scripts/package-release.mjs` | Builds dist/edgepay-cf-release.zip strictly excluding .dev.vars |
 | **V7-002** | P2 | JSONC Config Parser | FIXED | `scripts/verify-config.mjs` | Strips comments to verify active bindings |
 | **V7-003** | P3 | Discriminating Telemetry Test | FIXED | `tests/smoke.test.ts` | Explicit writeDataPoint argument assertions |
-| **V7-004** | P3 | Ledger Metrics & Provenance Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | Synchronized 259 tests across all documentation |
+| **V7-004** | P3 | Ledger Metrics & Provenance Sync | FIXED | `docs/REMEDIATIONS.md`, `TEST_RESULTS.md` | Synchronized 263 tests across all documentation |
 | **V7-005** | P4 | Forwarding Relay URL Validation | FIXED | `sms-phone-mockup/server.js` | Protocol validation (http/https only) |
 | **V8-001** | P2 | Release Packaging Allowlist & State Cleanse | FIXED | `scripts/package-release.mjs` | Strict hidden-dir & allowlist filter strictly excludes .wrangler, .opencode, .slim, sqlite |
 | **V8-002** | P2 | Unexempted Production Analytics Binding Gate | FIXED | `wrangler.jsonc`, `scripts/verify-config.mjs` | Active analytics binding declared and verified across all 3 configs |
 | **V8-003** | P3 | Standalone Release Distribution Standard | FIXED | `scripts/package-release.mjs` | Release artifact packaged as self-contained verified archive |
 | **V8-004** | P4 | Strict Post-Zip Comprehensive Regex Verification | FIXED | `scripts/package-release.mjs` | Enforces regex screening on full unzip -l listing |
 | **V8-005** | P4 | Manifest & Archive Entry Accounting | FIXED | `scripts/package-release.mjs` | Explicit documentation of staged count vs archive entry count |
-| **V9-001** | P3 | Distribution Archive Secret Purity | FIXED | `scripts/package-release.mjs` | Comprehensive exclusion of .dev.vars across all archive packaging |
+| **V9-001** | P3 | Release Archive Secret Purity | FIXED | `scripts/package-release.mjs` | Comprehensive exclusion of .dev.vars across all release archive packaging |
 | **V9-002** | P3 | Comprehensive Audit Correspondence Exclusion | FIXED | `scripts/package-release.mjs` | Broadened regex and Archive directory exclusion |
 | **V9-003** | P3 | Binary & Image Allowlist Filter | FIXED | `scripts/package-release.mjs` | Restricts images to designated asset directories |
 | **V9-004** | P4 | Packaging Observability & Config Comment Cleanup | FIXED | `wrangler.jsonc`, `scripts/package-release.mjs` | Itemized exclusion logging and active binding documentation |
+| **V10-001** | P3 | Dedicated Clean Hand-Off Packaging Pipeline | FIXED | `scripts/package-handoff.mjs`, `package.json` | Automated script creates untainted external distribution archive |
+| **V10-002** | P4 | Synchronized Multi-Artifact Metrics & Versioning | FIXED | `package.json`, `TEST_RESULTS.md`, `docs/REMEDIATIONS.md` | Reconciled version 0.4.5 and 263 tests |
+| **V10-003** | P4 | Comprehensive Binary Allowlist Inversion | FIXED | `scripts/package-release.mjs` | Strict allowlist denies all non-code/non-text binaries |
+| **V10-004** | P4 | OWASP 600K Constant & Cost Pinning | FIXED | `src/lib/crypto.ts`, `tests/crypto-security.test.ts` | Pinned 600,000 cost and universal getPbkdf2Iterations wiring |
+| **V10-005** | P3 | Fail-Closed AES-256-GCM Claim Encryption & Test | FIXED | `src/controllers/admin-api.ts`, `tests/audit-poc-r4.test.ts` | Fail-closed provisioning & redemption with end-to-end integration test |

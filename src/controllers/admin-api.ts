@@ -281,16 +281,25 @@ adminApiRoutes.post('/merchants/claim', requireScope('admin'), requirePlatformAd
   await c.env.KV.delete(key);
 
   let payloadStr = creds;
-  if (c.env.ENCRYPTION_KEY && !creds.startsWith('{')) {
+  if (!creds.startsWith('{')) {
+    if (!c.env.ENCRYPTION_KEY) {
+      return c.json({ success: false, error: { code: 'CONFIG_ERROR', message: 'ENCRYPTION_KEY required to decrypt claim payload' } }, 500);
+    }
     const { decrypt } = await import('../lib/crypto');
     try {
       payloadStr = await decrypt(creds, c.env.ENCRYPTION_KEY);
-    } catch {
-      payloadStr = creds;
+    } catch (decErr) {
+      console.error('Failed to decrypt claim credentials payload:', decErr);
+      return c.json({ success: false, error: { code: 'DECRYPTION_FAILED', message: 'Failed to decrypt claim credentials' } }, 400);
     }
   }
 
-  return c.json({ success: true, data: JSON.parse(payloadStr) });
+  try {
+    const data = JSON.parse(payloadStr);
+    return c.json({ success: true, data });
+  } catch {
+    return c.json({ success: false, error: { code: 'CORRUPT_CLAIM_PAYLOAD', message: 'Claim payload is invalid or corrupt' } }, 400);
+  }
 });
 
 // Create / Provision a new merchant tenant (Platform Admin only)
@@ -339,9 +348,9 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     const adminUserUuid = crypto.randomUUID();
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
-    const { hashPassword, randomNumericOtp, randomBase64Key, sha256 } = await import('../lib/crypto');
+    const { hashPassword, getPbkdf2Iterations, randomNumericOtp, randomBase64Key, sha256 } = await import('../lib/crypto');
     const initialPassword = crypto.randomUUID() + '!Aa1';
-    const passwordHash = await hashPassword(initialPassword);
+    const passwordHash = await hashPassword(initialPassword, getPbkdf2Iterations(c.env));
 
     await c.env.DB.prepare(
       `INSERT INTO op_merchant_users
@@ -425,14 +434,16 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
       webhook_secret: webhookSecret,
     });
 
-    let storedClaimPayload = rawClaimPayload;
-    if (c.env.ENCRYPTION_KEY) {
-      const { encrypt } = await import('../lib/crypto');
-      try {
-        storedClaimPayload = await encrypt(rawClaimPayload, c.env.ENCRYPTION_KEY);
-      } catch {
-        storedClaimPayload = rawClaimPayload;
-      }
+    if (!c.env.ENCRYPTION_KEY) {
+      return c.json({ success: false, error: { code: 'SECURITY_ERROR', message: 'ENCRYPTION_KEY required for secure merchant provisioning' } }, 500);
+    }
+    const { encrypt } = await import('../lib/crypto');
+    let storedClaimPayload: string;
+    try {
+      storedClaimPayload = await encrypt(rawClaimPayload, c.env.ENCRYPTION_KEY);
+    } catch (encErr) {
+      console.error('Failed to encrypt claim payload:', encErr);
+      return c.json({ success: false, error: { code: 'ENCRYPTION_FAILED', message: 'Failed to encrypt merchant claim credentials' } }, 500);
     }
 
     await c.env.KV.put(

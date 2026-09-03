@@ -11,10 +11,24 @@ import {
   randomNumericOtp,
   randomBase64Key,
   sha256,
+  PBKDF2_ITERATIONS,
+  PBKDF2_ITERATIONS_MIN,
+  PBKDF2_ITERATIONS_MAX,
+  getPbkdf2Iterations,
 } from '../src/lib/crypto';
 import { parseEnabledGateways, isGatewayEnabled } from '../src/gateways/enabled';
 
-describe('PBKDF2 Password Hashing & OWASP 600K Compliance (EDGE-P2-017)', () => {
+describe('PBKDF2 Password Hashing & OWASP 600K Compliance (EDGE-P2-017, V10-004)', () => {
+  it('pins default PBKDF2 iterations to OWASP 600,000 standard (V10-004)', () => {
+    expect(PBKDF2_ITERATIONS).toBe(600_000);
+    expect(PBKDF2_ITERATIONS_MIN).toBe(10_000);
+    expect(PBKDF2_ITERATIONS_MAX).toBe(2_000_000);
+    expect(getPbkdf2Iterations()).toBe(600_000);
+    expect(getPbkdf2Iterations({ PBKDF2_ITERATIONS: '25000' })).toBe(25_000);
+    // Out of bounds fallback
+    expect(getPbkdf2Iterations({ PBKDF2_ITERATIONS: '5000' })).toBe(600_000);
+  });
+
   it('hashes and verifies passwords with PBKDF2-HMAC-SHA256', async () => {
     // Test with standard 10,000 cost for fast unit test execution
     const password = 'SuperSecurePassword!2026';
@@ -31,6 +45,11 @@ describe('PBKDF2 Password Hashing & OWASP 600K Compliance (EDGE-P2-017)', () => 
 
   it('rejects iterations below security threshold PBKDF2_ITERATIONS_MIN', async () => {
     await expect(hashPassword('test', 5_000)).rejects.toThrow(/out of range/i);
+  });
+
+  it('verifyPassword rejects hashes with out-of-range iterations', async () => {
+    const malformedHash = 'pbkdf2-sha256$500$c2FsdA==$aGFzaA==';
+    expect(await verifyPassword('test', malformedHash)).toBe(false);
   });
 });
 

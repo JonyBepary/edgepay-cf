@@ -68,9 +68,9 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     const adminUserUuid = randomUuid();
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(adminEmail))))
       .map(x => x.toString(16).padStart(2, '0')).join('');
-    const { hashPassword } = await import('../lib/crypto');
+    const { hashPassword, getPbkdf2Iterations } = await import('../lib/crypto');
     const initialAdminPass = cfg.admin.password ?? (cfg.app.environment === 'production' ? randomUuid() + '!Aa1' : 'AdminPass123456!');
-    const passwordHash = await hashPassword(initialAdminPass);
+    const passwordHash = await hashPassword(initialAdminPass, getPbkdf2Iterations(env));
 
     await env.DB.prepare(
       `INSERT INTO op_merchant_users

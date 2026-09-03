@@ -1,6 +1,6 @@
 {
   "name": "edgepay-cf",
-  "version": "0.3.0",
+  "version": "0.4.5",
   "private": true,
   "description": "EdgePay — self-hosted payment gateway rebuilt on HonoJS + Cloudflare Workers edge runtime",
   "main": "src/index.ts",
@@ -24,7 +24,8 @@
     "db:backup": "wrangler d1 export DB --remote --output=backup.sql",
     "lint": "eslint src tests",
     "format": "prettier --write 'src/**/*.ts'",
-    "package": "node scripts/package-release.mjs"
+    "package": "node scripts/package-release.mjs",
+    "package:handoff": "node scripts/package-handoff.mjs"
   },
   "cloudflare": {
     "label": "EdgePay — Self-hosted Payment Gateway",

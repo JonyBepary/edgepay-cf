@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EdgePay Merchant — Metro Mart (UI Sample)</title>
+<!-- ═══════════════════════════════════════════════════════════════════════
+  EdgePay Merchant Panel — UI/UX design sample (Astro-island idiom)
+  BFF model: every data block maps to a real /api/v1 endpoint (demo data here).
+  Honest-gap UX: gateway-credential & pairing writes carry an "operator-assisted"
+  badge until merchant-scoped write endpoints ship (report §6, Path A/B).
+════════════════════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+        integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
+        crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"
+        integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d"
+        crossorigin="anonymous" defer></script>
+<style>
+:root {
+  --ink:#0F172A; --ink-2:#1E293B; --muted:#64748B; --faint:#94A3B8;
+  --paper:#F8FAFC; --surface:#FFFFFF; --line:#E2E8F0; --line-2:#CBD5E1;
+  --brand:#1D4ED8; --brand-ink:#1E3A8A; --brand-soft:#EFF6FF;
+  --awaiting:#B45309; --awaiting-bg:#FFF7ED; --awaiting-line:#F59E0B;
+  --success:#065F46; --success-bg:#F0FDF4; --success-line:#10B981;
+  --error:#B31212; --error-bg:#FEF2F2;
+  --bkash:#E2136E; --nagad:#F6921E; --rocket:#8C3494;
+  --radius:14px; --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px -14px rgba(15,23,42,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Inter',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;}
+.num{font-variant-numeric:tabular-nums;}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:6px;}
+
+/* topbar */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+.topbar-in{max-width:1080px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px;}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;color:var(--ink);}
+.logo .lm{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand-ink),var(--brand));color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;}
+.logo small{font-weight:600;color:var(--faint);font-size:11px;}
+.nav{margin-left:auto;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.nav a{font-size:12.5px;font-weight:650;color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:8px;white-space:nowrap;transition:background .15s,color .15s;}
+.nav a:hover{background:var(--paper);color:var(--ink);}
+.nav a.on{background:var(--brand-soft);color:var(--brand-ink);}
+.who{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.who .avatar{width:30px;height:30px;border-radius:50%;background:var(--awaiting-bg);color:var(--awaiting);border:1.5px solid #FDE4C4;display:grid;place-items:center;font-size:11px;font-weight:800;}
+.session-chip{font-size:10px;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);border:1px solid #BFDBFE;border-radius:999px;padding:3px 9px;}
+
+main{max-width:1080px;margin:0 auto;padding:26px 22px 60px;display:flex;flex-direction:column;gap:26px;}
+section[id]{scroll-margin-top:70px;}
+
+.pg-title{font-size:20px;font-weight:800;letter-spacing:-.01em;}
+.pg-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+.kpi .k-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+.kpi .k-v{font-size:25px;font-weight:800;margin-top:5px;letter-spacing:-.01em;}
+.kpi .k-d{font-size:11.5px;margin-top:4px;font-weight:650;}
+.up{color:var(--success);} .down{color:var(--error);} .am{color:var(--awaiting);}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;}
+.card h3{font-size:14px;font-weight:750;display:flex;align-items:center;gap:8px;}
+.card h3 .cnt{font-size:11px;color:var(--muted);font-weight:600;}
+.card .sub{font-size:11.5px;color:var(--muted);margin-top:2px;margin-bottom:14px;}
+.grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;}
+
+/* chart */
+.chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding:8px 4px 0;}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bar .b{width:100%;max-width:42px;border-radius:6px 6px 2px 2px;background:var(--line-2);transform-origin:bottom;}
+.bar.hl .b{background:var(--brand);}
+.bar .d{font-size:10px;color:var(--faint);font-weight:650;}
+.bar .v{font-size:10px;color:var(--muted);font-weight:700;}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;font-size:10.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1.5px solid var(--line);}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:0;}
+tbody tr{transition:background .12s;}
+tbody tr:hover{background:var(--paper);}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.st.ok{color:var(--success);background:var(--success-bg);}
+.st.aw{color:var(--awaiting);background:var(--awaiting-bg);}
+.st.pd{color:var(--brand-ink);background:var(--brand-soft);}
+.st.fl{color:var(--error);background:var(--error-bg);}
+.gw-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px;}
+
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:10px;transition:transform .12s,background .15s;}
+.btn:active{transform:scale(.97);}
+.btn.primary{background:var(--brand);color:#fff;box-shadow:0 6px 16px -8px rgba(29,78,216,.6);}
+.btn.ghost{background:var(--surface);border:1.5px solid var(--line-2);color:var(--ink-2);}
+.btn.ghost:hover{background:var(--paper);}
+.btn.sm{font-size:11.5px;padding:6px 11px;}
+
+/* operator-assisted badge (the honest gap UX) */
+.op-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:750;color:var(--awaiting);background:var(--awaiting-bg);border:1px solid #FDE4C4;border-radius:999px;padding:4px 10px;}
+.op-badge svg{width:11px;height:11px;}
+
+/* gateway cards */
+.gw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.gw-card{border:1.5px solid var(--line);border-radius:12px;padding:15px 16px;background:var(--surface);}
+.gw-card .head{display:flex;align-items:center;justify-content:space-between;}
+.gw-card .name{font-size:13.5px;font-weight:750;display:flex;align-items:center;}
+.gw-card .numb{font-size:15px;font-weight:800;margin-top:8px;letter-spacing:.03em;}
+.gw-card .lbl{font-size:10.5px;color:var(--muted);font-weight:650;margin-top:2px;}
+.gw-card .acts{margin-top:12px;display:flex;gap:8px;}
+
+/* pairing steps */
+.pair{display:flex;flex-direction:column;gap:0;}
+.p-step{display:flex;gap:12px;}
+.p-step .rail{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0;}
+.p-step .dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;border:2.5px solid var(--line-2);background:var(--surface);color:var(--muted);}
+.p-step .stem{width:2px;flex:1;background:var(--line);min-height:14px;}
+.p-step:last-child .stem{display:none;}
+.p-step.done .dot{border-color:var(--success-line);color:var(--success);background:var(--success-bg);}
+.p-step.now .dot{border-color:var(--brand);color:var(--brand-ink);background:var(--brand-soft);}
+.p-step .body{padding-bottom:14px;}
+.p-step .body b{font-size:12.5px;}
+.p-step .body span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45;}
+
+/* webhook log */
+.log{background:var(--ink);border-radius:10px;padding:12px 14px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;line-height:1.7;color:#A5F3C6;min-height:110px;}
+.log .t{color:#94A3B8;}
+.log .err{color:#FCA5A5;}
+
+footer{max-width:1080px;margin:0 auto;padding:0 22px 40px;font-size:11px;color:var(--faint);}
+footer b{color:var(--muted);}
+@media (max-width:840px){.kpis{grid-template-columns:1fr 1fr;}.grid-2{grid-template-columns:1fr;}.gw-grid{grid-template-columns:1fr;}.nav{order:3;width:100%;}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="logo"><div class="lm">EP</div>EdgePay<small>Merchant</small></div>
+  <nav class="nav" aria-label="Sections">
+    <a href="#overview" class="on">Overview</a>
+    <a href="#transactions">Transactions</a>
+    <a href="#links">Payment Links</a>
+    <a href="#gateways">Gateways</a>
+    <a href="#pairing">Pairing</a>
+    <a href="#webhooks">Webhooks</a>
+    <a href="#keys">API Keys</a>
+  </nav>
+  <div class="who"><span class="session-chip">session · BFF</span><div class="avatar">MM</div></div>
+</div></header>
+
+<main>
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <section id="overview">
+    <div class="pg-title">Good afternoon, Metro Mart</div>
+    <div class="pg-sub">Thursday, 3 September · Asia/Dhaka · <span class="num">12</span> payments today</div>
+  </section>
+
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="k-l">Today's volume</div><div class="k-v num" data-amt="86450">৳0</div><div class="k-d up">▲ 18% vs yesterday</div></div>
+    <div class="kpi"><div class="k-l">Success rate</div><div class="k-v num" data-amt="94.2" data-suffix="%">0%</div><div class="k-d up">▲ 1.4 pts this week</div></div>
+    <div class="kpi"><div class="k-l">Awaiting SMS</div><div class="k-v num" data-amt="2">0</div><div class="k-d am">typically settles &lt; 60 s</div></div>
+    <div class="kpi"><div class="k-l">Paired device</div><div class="k-v num" data-amt="1">0</div><div class="k-d up">heartbeat 2 min ago</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Payments — last 7 days <span class="cnt">(client-side aggregation until /analytics/summary)</span></h3>
+      <div class="sub">Completed transactions per day, all gateways</div>
+      <div class="chart" id="chart">
+        <div class="bar"><span class="v num">41</span><div class="b" data-h="61"></div><span class="d">Thu</span></div>
+        <div class="bar"><span class="v num">55</span><div class="b" data-h="82"></div><span class="d">Fri</span></div>
+        <div class="bar"><span class="v num">72</span><div class="b" data-h="100"></div><span class="d">Sat</span></div>
+        <div class="bar"><span class="v num">63</span><div class="b" data-h="88"></div><span class="d">Sun</span></div>
+        <div class="bar"><span class="v num">48</span><div class="b" data-h="70"></div><span class="d">Mon</span></div>
+        <div class="bar"><span class="v num">35</span><div class="b" data-h="52"></div><span class="d">Tue</span></div>
+        <div class="bar hl"><span class="v num">44</span><div class="b" data-h="65"></div><span class="d">Today</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Needs your attention</h3>
+      <div class="sub">From GET /api/v1/transactions</div>
+      <table>
+        <tbody>
+          <tr><td><b>EP-8841</b> · bKash<span class="gw-dot" style="background:var(--bkash)"></span></td><td class="num">৳1,250</td><td><span class="st aw">awaiting</span></td></tr>
+          <tr><td><b>EP-8836</b> · Nagad<span class="gw-dot" style="background:var(--nagad)"></span></td><td class="num">৳640</td><td><span class="st aw">awaiting</span></td></tr>
+          <tr><td><b>EP-8830</b> · bKash<span class="gw-dot" style="background:var(--bkash)"></span></td><td class="num">৳2,480</td><td><span class="st fl">failed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ TRANSACTIONS ═══ -->
+  <section id="transactions"><div class="pg-title">Transactions</div>
+  <div class="pg-sub">GET /api/v1/transactions · click a row for the detail drawer (GET /transactions/{trx_id})</div></section>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>Reference</th><th>Customer</th><th>Gateway</th><th style="text-align:right">Amount</th><th>Status</th><th>When</th></tr></thead>
+      <tbody id="trx-body">
+        <tr><td><b>EP-8842</b></td><td>Rafiq H.</td><td>bKash<span class="gw-dot" style="background:var(--bkash)"></span>Personal</td><td style="text-align:right" class="num">৳2,480.00</td><td><span class="st ok">completed</span></td><td class="num">12 min ago</td></tr>
+        <tr><td><b>EP-8841</b></td><td>Nusrat J.</td><td>bKash<span class="gw-dot" style="background:var(--bkash)"></span>Personal</td><td style="text-align:right" class="num">৳1,250.00</td><td><span class="st aw">awaiting_sms</span></td><td class="num">18 min ago</td></tr>
+        <tr><td><b>EP-8840</b></td><td>Tanvir A.</td><td>bKash API<span class="gw-dot" style="background:var(--brand)"></span></td><td style="text-align:right" class="num">৳3,600.00</td><td><span class="st ok">completed</span></td><td class="num">41 min ago</td></tr>
+        <tr><td><b>EP-8839</b></td><td>Sadia M.</td><td>Nagad<span class="gw-dot" style="background:var(--nagad)"></span>Personal</td><td style="text-align:right" class="num">৳540.00</td><td><span class="st ok">completed</span></td><td class="num">1 h ago</td></tr>
+        <tr><td><b>EP-8838</b></td><td>Imran K.</td><td>Rocket<span class="gw-dot" style="background:var(--rocket)"></span>Personal</td><td style="text-align:right" class="num">৳990.00</td><td><span class="st pd">processing</span></td><td class="num">1 h ago</td></tr>
+        <tr><td><b>EP-8836</b></td><td>Fahim R.</td><td>Nagad<span class="gw-dot" style="background:var(--nagad)"></span>Personal</td><td style="text-align:right" class="num">৳640.00</td><td><span class="st aw">awaiting_sms</span></td><td class="num">2 h ago</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ PAYMENT LINKS ═══ -->
+  <section id="links"><div class="pg-title">Payment Links</div>
+  <div class="pg-sub">POST /api/v1/payments returns a hosted checkout URL — share it anywhere</div></section>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <h3>Active links <span class="cnt">· 3 open</span></h3>
+      <button class="btn primary" id="new-link">＋ New payment link</button>
+    </div>
+    <table style="margin-top:12px;">
+      <thead><tr><th>Link</th><th style="text-align:right">Amount</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><b>pay.edgepay.co/tk_9fA2…</b></td><td style="text-align:right" class="num">৳2,480.00</td><td class="num">in 28 min</td><td><span class="st pd">pending</span></td><td><button class="btn ghost sm copy">Copy</button></td></tr>
+        <tr><td><b>pay.edgepay.co/tk_7xQ1…</b></td><td style="text-align:right" class="num">৳1,250.00</td><td class="num">in 2 h</td><td><span class="st aw">awaiting</span></td><td><button class="btn ghost sm copy">Copy</button></td></tr>
+        <tr><td><b>pay.edgepay.co/tk_4mZ8…</b></td><td style="text-align:right" class="num">৳540.00</td><td class="num">in 5 h</td><td><span class="st ok">paid</span></td><td><button class="btn ghost sm copy">Copy</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ GATEWAYS ═══ -->
+  <section id="gateways"><div class="pg-title">Payment Gateways</div>
+  <div class="pg-sub">GET /api/v1/gateways returns labels only — credential writes are operator-assisted today</div></section>
+  <div class="gw-grid">
+    <div class="gw-card">
+      <div class="head"><span class="name"><span class="gw-dot" style="background:var(--bkash)"></span>bKash Personal</span><span class="st ok">active</span></div>
+      <div class="numb num">01812-•••-78</div>
+      <div class="lbl">Send Money number · SMS-verified</div>
+      <div class="acts">
+        <button class="btn ghost sm op-req" data-gw="bKash Personal">Update number</button>
+        <span class="op-badge" title="Merchant-scoped write endpoints land in Path A (report §6)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          operator-assisted
+        </span>
+      </div>
+    </div>
+    <div class="gw-card">
+      <div class="head"><span class="name"><span class="gw-dot" style="background:var(--nagad)"></span>Nagad Personal</span><span class="st ok">active</span></div>
+      <div class="numb num">01711-•••-04</div>
+      <div class="lbl">Send Money number · SMS-verified</div>
+      <div class="acts">
+        <button class="btn ghost sm op-req" data-gw="Nagad Personal">Update number</button>
+        <span class="op-badge">operator-assisted</span>
+      </div>
+    </div>
+    <div class="gw-card">
+      <div class="head"><span class="name"><span class="gw-dot" style="background:var(--brand)"></span>bKash API</span><span class="st ok">active</span></div>
+      <div class="numb num">sk_live_•••••3f9a</div>
+      <div class="lbl">API secret · encrypted at rest (AES-256-GCM)</div>
+      <div class="acts">
+        <button class="btn ghost sm op-req" data-gw="bKash API">Update secret</button>
+        <span class="op-badge">operator-assisted</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAIRING ═══ -->
+  <section id="pairing"><div class="pg-title">Mobile Companion</div>
+  <div class="pg-sub">Your paired phone forwards carrier SMS so personal payments verify themselves</div></section>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Pairing status <span class="cnt">· device JWT active</span></h3>
+      <div class="sub">POST /api/mobile/v1/devices pairs with a 6-digit OTP; heartbeats prove liveness</div>
+      <div class="pair">
+        <div class="p-step done"><div class="rail"><div class="dot">1</div><div class="stem"></div></div>
+          <div class="body"><b>Operator issued a pairing OTP</b><span>Generated at provisioning · 30-day validity</span></div></div>
+        <div class="p-step done"><div class="rail"><div class="dot">2</div><div class="stem"></div></div>
+          <div class="body"><b>Phone paired with OTP</b><span>Android SMS Companion · device JWT issued</span></div></div>
+        <div class="p-step now"><div class="rail"><div class="dot">3</div></div>
+          <div class="body"><b>Forwarding SMS confirmations</b><span>Last heartbeat 2 minutes ago · 214 SMS parsed</span></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Need a fresh OTP?</h3>
+      <div class="sub">OTP expiry: <b class="num">18 days left</b></div>
+      <p style="font-size:12px;color:var(--ink-2);line-height:1.6;">
+        When this OTP expires, a platform operator issues a new one from the Admin console —
+        merchant-initiated OTP generation arrives with the Path A endpoints.
+      </p>
+      <button class="btn ghost" id="req-otp" style="margin-top:12px;">Request operator assistance</button>
+      <div id="otp-note" hidden style="margin-top:10px;font-size:11.5px;color:var(--awaiting);background:var(--awaiting-bg);border:1px solid #FDE4C4;border-radius:9px;padding:9px 12px;">
+        Request noted — an operator will see it on their console's landing screen and contact you.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ WEBHOOKS ═══ -->
+  <section id="webhooks"><div class="pg-title">Webhooks</div>
+  <div class="pg-sub">GET/POST/DELETE /api/v1/webhooks · deliveries · POST /webhooks/tests</div></section>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Endpoint</h3>
+      <div class="sub">payment.completed events are HMAC-SHA256 signed over the raw body</div>
+      <div class="field" style="margin-bottom:10px;"><input style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;" value="https://shop.metromart.bd/hooks/edgepay" readonly></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--muted);font-weight:650;">Secret</span>
+        <code style="font-size:11.5px;background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-family:ui-monospace,Menlo,monospace;">whsec_••••••••••••••e2</code>
+        <button class="btn ghost sm" id="test-hook">Send test event</button>
+      </div>
+      <div class="log" id="hook-log" style="margin-top:12px;">
+        <span class="t">-- delivery log (GET /api/v1/webhooks/deliveries) --</span><br>
+        <span class="t">10:12</span> payment.completed EP-8842 → 200 OK (48 ms)<br>
+        <span class="t">09:41</span> payment.completed EP-8840 → 200 OK (61 ms)<br>
+        <span class="t">08:03</span> payment.completed EP-8831 → 3× retry <span class="err">→ DLQ + alert</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Verify signatures — copy this into your handler</h3>
+      <div class="sub">X-EdgePay-Signature + X-EdgePay-Timestamp · constant-time compare</div>
+      <div class="log" style="color:#BAE6FD;">
+<span class="t">// Node/edge handler</span>
+const raw = await req.text();
+const sig = req.headers.get('X-EdgePay-Signature');
+const mac = await hmacSHA256(raw, WEBHOOK_SECRET);
+if (!timingSafeEqual(sig, mac)) return 401;
+const evt = JSON.parse(raw);   <span class="t">// payment.completed</span>
+upsertByTrxId(evt.data.trx_id); <span class="t">// idempotent</span>
+return 200;                     <span class="t">// fast, then process</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ KEYS ═══ -->
+  <section id="keys"><div class="pg-title">API Keys</div>
+  <div class="pg-sub">GET /api/v1/api-keys · creating a key needs an admin-scope key, by design</div></section>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>Key</th><th>Scope</th><th>Created</th><th>Last used</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><b>epk_live_••••7c21</b></td><td>write</td><td class="num">12 Aug</td><td class="num">2 min ago</td><td><span class="st ok">active</span></td></tr>
+        <tr><td><b>epk_live_••••9a44</b></td><td>read</td><td class="num">12 Aug</td><td class="num">1 h ago</td><td><span class="st ok">active</span></td></tr>
+        <tr><td><b>epk_live_••••b0f7</b></td><td>admin</td><td class="num">12 Aug</td><td class="num">—</td><td><span class="st pd">stored</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>
+  EdgePay Merchant UI sample · BFF pattern — your API key never reaches this browser (report §4.2)<br>
+  <b>demo data only</b> — every block maps to a live /api/v1 endpoint
+</footer>
+
+<script defer>
+(() => {
+  "use strict";
+  const canVibrate = "vibrate" in navigator && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const haptic = { tap(){canVibrate&&navigator.vibrate(8);}, success(){canVibrate&&navigator.vibrate([10,40,20]);} };
+  const G = window.gsap || null;
+  const rm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fmt = (n) => n.toLocaleString("en-BD", { maximumFractionDigits: 0 });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    /* KPI count-ups */
+    document.querySelectorAll(".k-v").forEach((el) => {
+      const target = parseFloat(el.dataset.amt), suf = el.dataset.suffix || "";
+      const isMoney = el.textContent.startsWith("৳");
+      if (G && !rm) {
+        const o = { v: 0 };
+        G.to(o, { v: target, duration: .8, ease: "power2.out", onUpdate: () => {
+          el.textContent = (isMoney ? "৳" : "") + (suf === "%" ? o.v.toFixed(1) : fmt(Math.round(o.v))) + suf;
+        }});
+      } else el.textContent = (isMoney ? "৳" : "") + (suf === "%" ? target.toFixed(1) : fmt(target)) + suf;
+    });
+    /* bar chart grow-in */
+    if (G && !rm) {
+      document.querySelectorAll(".bar .b").forEach((b, i) => {
+        const h = b.dataset.h;
+        G.set(b, { height: 0 });
+        G.to(b, { height: `${h}%`, duration: .55, ease: "power3.out", delay: .15 + i * .06 });
+      });
+    }
+    /* scroll reveals */
+    if (G && !rm && window.ScrollTrigger) {
+      G.registerPlugin(window.ScrollTrigger);
+      document.querySelectorAll(".card, .gw-grid").forEach((el) => {
+        G.from(el, { scrollTrigger: { trigger: el, start: "top 94%" },
+                     y: 12, opacity: 0, duration: .32, ease: "power2.out", once: true });
+      });
+    }
+  });
+
+  /* interactions */
+  document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
+    haptic.tap();
+    const old = b.textContent; b.textContent = "Copied"; setTimeout(() => b.textContent = old, 1500);
+    try { await navigator.clipboard.writeText("https://pay.edgepay.co/tk_demo"); } catch {}
+  }));
+  document.querySelectorAll(".op-req").forEach((b) => b.addEventListener("click", () => {
+    haptic.tap();
+    alert(`Request drafted for ${b.dataset.gw}.\n\nIn the real panel this queues a credential-change request an operator finalizes in the Admin console (Path B). With Path A endpoints it becomes a direct merchant-scoped write.`);
+  }));
+  document.getElementById("req-otp").addEventListener("click", () => {
+    haptic.tap();
+    document.getElementById("otp-note").hidden = false;
+    if (G && !rm) G.from("#otp-note", { y: 8, opacity: 0, duration: .3, ease: "power2.out" });
+  });
+  document.getElementById("new-link").addEventListener("click", () => {
+    haptic.tap();
+    alert("New payment link drawer:\n\namount · description · customer · gateway (optional) · expiry\n→ POST /api/v1/payments\n→ live preview of the hosted checkout page\n\n(Drawer omitted from this sample for focus.)");
+  });
+  document.getElementById("test-hook").addEventListener("click", () => {
+    haptic.tap();
+    const log = document.getElementById("hook-log");
+    const t = new Date().toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" });
+    log.innerHTML += `<span class="t">${t}</span> webhook.test → 200 OK (37 ms) <b>signed ✓</b><br>`;
+    if (G && !rm) G.from(log.lastElementChild, { opacity: 0, x: -6, duration: .25 });
+  });
+  /* nav highlight on scroll */
+  const links = document.querySelectorAll(".nav a");
+  const obs = new IntersectionObserver((es) => {
+    es.forEach((e) => { if (e.isIntersecting) {
+      links.forEach((l) => l.classList.toggle("on", l.hash === "#" + e.target.id));
+    }});
+  }, { rootMargin: "-30% 0px -60% 0px" });
+  document.querySelectorAll("section[id]").forEach((s) => obs.observe(s));
+})();
+</script>
+</body>
+</html>

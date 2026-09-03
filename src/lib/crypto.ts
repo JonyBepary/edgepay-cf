@@ -22,13 +22,27 @@
  * All AES-256-GCM operations use a 96-bit IV (12 bytes) per Web Crypto spec.
  */
 
-const AES_KEY_LENGTH = 256;       // bits
-const AES_IV_LENGTH = 12;         // bytes (96 bits — GCM standard)
-const AES_TAG_LENGTH = 128;       // bits
-const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 standard for PBKDF2-HMAC-SHA256
-const PBKDF2_ITERATIONS_MIN = 10_000;  // below this, refuse (better to fail than silently weak)
-const PBKDF2_ITERATIONS_MAX = 2_000_000; // above this, CPU-limit territory even on Paid
-const PBKDF2_SALT_LENGTH = 16;    // bytes (128 bits)
+export const AES_KEY_LENGTH = 256;       // bits
+export const AES_IV_LENGTH = 12;         // bytes (96 bits — GCM standard)
+export const AES_TAG_LENGTH = 128;       // bits
+export const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 standard for PBKDF2-HMAC-SHA256
+export const PBKDF2_ITERATIONS_MIN = 10_000;  // below this, refuse (better to fail than silently weak)
+export const PBKDF2_ITERATIONS_MAX = 2_000_000; // above this, CPU-limit territory even on Paid
+export const PBKDF2_SALT_LENGTH = 16;    // bytes (128 bits)
+
+/**
+ * Returns the effective PBKDF2 iteration count, checking for an optional deployment
+ * override via env.PBKDF2_ITERATIONS (e.g. for free-tier 10ms CPU budget).
+ */
+export function getPbkdf2Iterations(env?: { PBKDF2_ITERATIONS?: string }): number {
+  if (env?.PBKDF2_ITERATIONS) {
+    const parsed = parseInt(env.PBKDF2_ITERATIONS, 10);
+    if (Number.isInteger(parsed) && parsed >= PBKDF2_ITERATIONS_MIN && parsed <= PBKDF2_ITERATIONS_MAX) {
+      return parsed;
+    }
+  }
+  return PBKDF2_ITERATIONS;
+}
 
 // ---------------------------------------------------------------
 // AES-256-GCM encryption / decryption
@@ -84,10 +98,20 @@ export async function encrypt(
 }
 
 async function importAesKey(keyBase64: string): Promise<CryptoKey> {
-  const rawKey = base64ToBytes(keyBase64);
+  let rawKey: Uint8Array;
+  try {
+    rawKey = base64ToBytes(keyBase64);
+  } catch {
+    rawKey = new TextEncoder().encode(keyBase64);
+  }
+  if (rawKey.byteLength !== 32 && rawKey.byteLength !== 16 && rawKey.byteLength !== 24) {
+    // Deterministically derive 32 bytes (256 bits) via SHA-256 if key material differs in length
+    const digest = await crypto.subtle.digest('SHA-256', rawKey as unknown as ArrayBufferView);
+    rawKey = new Uint8Array(digest);
+  }
   return crypto.subtle.importKey(
     'raw',
-    rawKey,
+    rawKey as unknown as ArrayBufferView,
     { name: 'AES-GCM', length: AES_KEY_LENGTH },
     false,
     ['encrypt', 'decrypt'],
@@ -215,7 +239,9 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   }
 
   const iterations = parseInt(parts[1], 10);
-  if (!Number.isFinite(iterations) || iterations < 1) return false;
+  if (!Number.isFinite(iterations) || iterations < PBKDF2_ITERATIONS_MIN || iterations > PBKDF2_ITERATIONS_MAX) {
+    return false;
+  }
 
   const salt = base64ToBytes(parts[2]);
   const expectedHash = base64ToBytes(parts[3]);
