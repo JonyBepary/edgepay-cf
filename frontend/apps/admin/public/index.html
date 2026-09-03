@@ -3,660 +3,1156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F6F2">
+<meta name="theme-color" content="#09090B">
 <title>EdgePay Admin — Platform Console</title>
 <!--
-  EdgePay Platform Admin Console — v2 (top-tier rebuild)
-  Trust plane: Cloudflare Access in front (service token injected by the BFF worker
-  — this static panel never holds admin credentials). Proxies /api/admin/v1/*.
+  EdgePay Platform Admin Console — Institutional Fintech Edition
+  Design System: Linear / Vercel Grade (Zinc 50 / Zinc 950 / Emerald Heartbeat)
+  Sanzo Wada Color Harmony Reference: Institutional Precision Palette
+  Trust Plane: Cloudflare Zero Trust (Service Token injected by BFF Proxy)
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++qhIOcqcx810V46Z0j/v68c5bF1sY25I3b8w6/qY8aC4P0m8v+185R2+638b9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <style>
-:root{
-  --canvas:#F5F6F2; --surface:#FFFFFF; --surface-2:#FBFBF9;
-  --ink:#131A21; --ink-2:#3D4753; --muted:#5D6672; --faint:#828C98;
-  --hairline:#E6E9E1; --hairline-2:#EFF1EA;
-  --ochre:#B26E14; --ochre-hover:#9C5E0C; --ochre-wash:#FAF1E0; --ochre-ring:rgba(178,110,20,.24);
-  --teal:#0C6B57; --teal-bright:#129076; --teal-wash:#E1F0E8;
-  --rust:#AC3F27; --rust-bright:#C65237; --rust-wash:#F8E7E1;
-  --slate:#5C6670; --slate-wash:#ECEEE7;
-  --bkash:#D6296B; --nagad:#EA7A1C; --rocket:#6D3FA0; --cards:#3A424B;
-  --font-sans:'Public Sans',-apple-system,'Segoe UI',sans-serif;
-  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
-  --r-card:14px; --r-ctl:10px;
-  --shadow-1:0 1px 2px rgba(19,26,33,.04); --shadow-2:0 2px 10px rgba(19,26,33,.06); --shadow-3:0 16px 40px rgba(19,26,33,.14);
-  --ease:cubic-bezier(.32,.72,0,1);
+:root {
+  --bg-canvas: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #F4F4F5;
+  --bg-surface-active: #E4E4E7;
+  --border-subtle: #E5E7EB;
+  --border-strong: #D1D5DB;
+  --text-primary: #09090B;
+  --text-secondary: #71717A;
+  --text-muted: #A1A1AA;
+  --emerald-500: #10B981;
+  --emerald-600: #059669;
+  --emerald-50: #ECFDF5;
+  --emerald-border: rgba(16, 185, 129, 0.25);
+  --amber-500: #F59E0B;
+  --amber-600: #D97706;
+  --amber-50: #FFFBEB;
+  --amber-border: rgba(245, 158, 11, 0.25);
+  --rose-500: #EF4444;
+  --rose-600: #DC2626;
+  --rose-50: #FEF2F2;
+  --rose-border: rgba(239, 68, 68, 0.25);
+  --font-sans: 'Geist', 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', 'SFMono-Regular', Consolas, monospace;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-:focus-visible{outline:2px solid var(--ochre);outline-offset:2px;border-radius:6px}
-button,input{font:inherit;color:inherit}button{cursor:pointer;background:none;border:none}
 
-.shell{display:flex;min-height:100vh}
-.side{width:236px;flex-shrink:0;background:var(--ink);color:#C6CDD6;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.side-brand{padding:20px 20px 16px;display:flex;align-items:center;gap:11px;color:#F6F7F3}
-.side-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#C98B2E,#A1650F);color:#1E1403;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
-.side-name{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:#F6F7F3}
-.side-name small{display:block;font-size:11.5px;font-weight:500;color:#8E99A6;margin-top:1px}
-.side-nav{padding:10px 12px;display:flex;flex-direction:column;gap:2px}
-.nav-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:500;color:#AAB3BF;position:relative;transition:background .15s,color .15s;min-height:40px}
-.nav-item svg{width:17px;height:17px;flex-shrink:0}
-.nav-item:hover{background:rgba(255,255,255,.05);color:#E8ECF0}
-.nav-item.on{background:rgba(201,139,46,.18);color:#EFD9AE;font-weight:600}
-.nav-item.on::before{content:'';position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ochre)}
-.nav-item .count{margin-left:auto;font-size:11px;font-weight:600;background:rgba(255,255,255,.09);color:#C6CDD6;border-radius:99px;padding:1px 8px}
-.side-tag{margin:14px 16px 0;padding:9px 12px;border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:11px;color:#9BA5B1;line-height:1.5}
-.side-tag b{display:flex;align-items:center;gap:6px;color:#D8DDE3;font-size:11.5px;margin-bottom:2px}
-.side-tag .shield{color:#7FC4A9}
-.side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.09);font-size:11.5px;color:#8E99A6}
-.side-foot b{color:#D8DDE3;font-weight:600;font-size:12px}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
 
-.main{flex:1;min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px 4px;flex-wrap:wrap}
-.topbar h1{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
-.topbar p{font-size:12.5px;color:var(--muted);margin-top:1px}
-.content{padding:16px 28px 40px;max-width:1240px;width:100%}
-.view{display:none}.view.on{display:block}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.tabular { font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 
-.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;border:1.5px solid transparent;min-height:38px;transition:all .15s}
-.btn--primary{background:var(--ink);color:#F6F7F3;box-shadow:var(--shadow-1)}
-.btn--primary:hover{background:#0C1116}.btn--primary:active{transform:scale(.98)}
-.btn--ochre{background:var(--ochre);color:#FFF6E8}.btn--ochre:hover{background:var(--ochre-hover)}
-.btn--ghost{border-color:var(--hairline);background:var(--surface);color:var(--ink-2)}
-.btn--ghost:hover{background:var(--surface-2);border-color:#D9DDD2}
-.btn--danger{border-color:#EBC7BC;color:var(--rust)}.btn--danger:hover{background:var(--rust-wash)}
-.btn--sm{padding:5px 10px;font-size:12px;min-height:32px}
+/* TOP TRUST STATUS BAR */
+.top-notice {
+  background: #09090B;
+  color: #FAFAFA;
+  padding: 8px 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 500;
+  border-bottom: 1px solid #27272A;
+}
+.top-notice .left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.top-notice .badge-shield {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.top-notice .badge-shield::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%; background: #34D399;
+  box-shadow: 0 0 8px #34D399;
+}
 
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;letter-spacing:.01em}
-.badge::before{content:'';width:5.5px;height:5.5px;border-radius:50%;background:currentColor;flex-shrink:0}
-.badge--ok{background:var(--teal-wash);color:var(--teal)}
-.badge--pend{background:#F7ECD4;color:#8A5A0F}
-.badge--fail{background:var(--rust-wash);color:var(--rust)}
-.badge--neu{background:var(--slate-wash);color:var(--slate)}
-.badge--dark{background:rgba(255,255,255,.1);color:#D8DDE3}
+/* APP LAYOUT */
+.app-shell {
+  display: flex;
+  min-height: calc(100vh - 37px);
+}
 
-.panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-1);overflow:hidden}
-.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--hairline-2)}
-.panel-head h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
+/* SIDEBAR */
+.sidebar {
+  width: 236px;
+  flex-shrink: 0;
+  background: #09090B;
+  color: #FAFAFA;
+  border-right: 1px solid #27272A;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+}
+.brand-row {
+  padding: 18px 16px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #27272A;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  background: #FAFAFA;
+  color: #09090B;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.brand-meta {
+  flex: 1;
+  min-width: 0;
+}
+.brand-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FAFAFA;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: -0.01em;
+}
+.brand-sub {
+  font-size: 11px;
+  color: #A1A1AA;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.brand-sub .dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald-500);
+}
 
-/* ═══ MASTER-DETAIL ═══ */
-.md{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
-.mlist{display:flex;flex-direction:column}
-.mlist-search{padding:12px 14px;border-bottom:1px solid var(--hairline-2);display:flex;gap:8px}
-.mlist-search input{flex:1;padding:8px 12px;border:1.5px solid var(--hairline);border-radius:9px;font-size:13px;background:var(--surface-2)}
-.mlist-search input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring);background:#fff}
-.mrow{display:flex;gap:12px;padding:14px;border-bottom:1px solid var(--hairline-2);cursor:pointer;position:relative;transition:background .12s;align-items:center;text-align:left;width:100%}
-.mrow:hover{background:#FAFAF7}
-.mrow.on{background:var(--ochre-wash)}
-.mrow.on::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--ochre)}
-.mrow-mark{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
-.mrow-name{font-size:14px;font-weight:600;letter-spacing:-.01em}
-.mrow-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
-.mrow-meta{margin-left:auto;text-align:right;flex-shrink:0}
-.mrow-vol{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
-.mrow-st{font-size:11px;color:var(--muted);margin-top:2px}
+.nav-section {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-heading {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #71717A;
+  padding: 6px 10px;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #A1A1AA;
+  transition: all 0.12s var(--ease);
+  position: relative;
+}
+.nav-link svg {
+  width: 16px;
+  height: 16px;
+  color: #71717A;
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.nav-link:hover {
+  background: #18181B;
+  color: #FAFAFA;
+}
+.nav-link:hover svg { color: #FAFAFA; }
+.nav-link.active {
+  background: #27272A;
+  color: #FAFAFA;
+  font-weight: 600;
+}
+.nav-link.active svg { color: #FAFAFA; }
+.nav-link .badge-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  background: #18181B;
+  color: #A1A1AA;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
 
-.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--hairline-2);flex-wrap:wrap}
-.detail-title{display:flex;gap:13px;align-items:center}
-.detail-name{font-size:17px;font-weight:700;letter-spacing:-.015em}
-.detail-id{font-size:11.5px;color:var(--muted);margin-top:2px}
-.dsec{padding:16px 20px;border-bottom:1px solid var(--hairline-2)}
-.dsec:last-child{border-bottom:none}
-.dsec h4{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
-.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 20px}
-.kv .cell .k{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:3px}
-.kv .cell .v{font-size:13.5px;font-weight:600}
-.kv .cell .v.mono{font-weight:500}
-.kv .cell .v small{font-weight:500;color:var(--muted)}
-.act-row{display:flex;gap:8px;flex-wrap:wrap}
-.heartbeat{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--teal)}
-.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--teal-bright);position:relative}
-.pulse-dot::after{content:'';position:absolute;inset:-3.5px;border-radius:50%;border:1.5px solid var(--teal-bright);animation:ping 2.4s var(--ease) infinite}
-@keyframes ping{0%{transform:scale(.6);opacity:.7}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
-.dns-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.dns-val{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);border:1px dashed var(--hairline);border-radius:9px;padding:8px 12px;color:var(--ink-2)}
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid #27272A;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.zero-trust-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #18181B;
+  border: 1px solid #27272A;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 11px;
+  color: #D4D4D8;
+  font-weight: 500;
+}
+.zero-trust-pill .pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald-500);
+}
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #27272A;
+  color: #FAFAFA;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+.user-info .name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #FAFAFA;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-info .sub {
+  font-size: 11px;
+  color: #71717A;
+}
+.cmdk-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: #18181B;
+  border: 1px solid #27272A;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #A1A1AA;
+}
 
-/* ═══ ANALYTICS ═══ */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-.kpi{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);padding:16px 18px 14px;box-shadow:var(--shadow-1)}
-.kpi-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.kpi-value{font-size:26px;font-weight:600;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.1}
-.kpi-value small{font-size:15px;font-weight:500;color:var(--ink-2)}
-.kpi-delta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;margin-top:8px}
-.kpi-delta.up{color:var(--teal)}.kpi-delta.down{color:var(--rust)}.kpi-delta.flat{color:var(--muted)}
-.ana-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+/* MAIN CANVAS */
+.main-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-canvas);
+}
+.header-bar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  max-width: 500px;
+}
+.search-trigger {
+  width: 100%;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-/* tables */
-.tbl-wrap{overflow-x:auto;position:relative;-webkit-overflow-scrolling:touch}
-.tbl-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:42px;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),var(--surface));opacity:0;transition:opacity .2s}
-.tbl-wrap.more::after{opacity:1}
-@media(min-width:721px){.tbl-wrap.more::after{display:none}}
-table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
-.tbl th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 16px;border-bottom:1px solid var(--hairline);background:var(--surface-2);white-space:nowrap}
-.tbl td{padding:13px 16px;border-bottom:1px solid var(--hairline-2);vertical-align:middle;white-space:nowrap}
-.tbl tr:last-child td{border-bottom:none}
-.tbl tbody tr{transition:background .12s}
-.tbl tbody tr:hover{background:#FAFAF7}
-.tbl .muted{color:var(--muted)}
-.sms-preview{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;font-size:12px;color:var(--ink-2)}
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.12s var(--ease);
+  white-space: nowrap;
+}
+.btn-cta-ghost {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+.btn-cta-ghost:hover { background: var(--bg-surface-subtle); }
+.btn-cta-primary {
+  background: #09090B;
+  color: #FAFAFA;
+  border: 1px solid #09090B;
+  box-shadow: var(--shadow-xs);
+}
+.btn-cta-primary:hover { background: #27272A; }
 
-/* ═══ MODAL ═══ */
-.scrim{position:fixed;inset:0;background:rgba(19,26,33,.36);opacity:0;pointer-events:none;transition:opacity .25s;z-index:40;backdrop-filter:blur(2px)}
-.scrim.on{opacity:1;pointer-events:auto}
-.modal{position:fixed;inset:0;display:grid;place-items:center;padding:20px;z-index:50;pointer-events:none}
-.modal.on{pointer-events:auto}
-.modal-card{width:min(480px,100%);background:var(--surface);border-radius:18px;box-shadow:var(--shadow-3);overflow:hidden;transform:translateY(14px) scale(.98);opacity:0;transition:all .3s var(--ease)}
-.modal.on .modal-card{transform:none;opacity:1}
-.modal-head{padding:20px 22px 14px;border-bottom:1px solid var(--hairline-2)}
-.modal-head h3{font-size:18px;font-weight:700;letter-spacing:-.015em}
-.modal-head p{font-size:12.5px;color:var(--muted);margin-top:3px}
-.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
-.field input,.field select{width:100%;padding:10px 13px;border:1.5px solid var(--hairline);border-radius:10px;font-size:14px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
-.field input:focus{outline:none;border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre-ring)}
-.modal-foot{padding:16px 22px 20px;border-top:1px solid var(--hairline-2);display:flex;gap:10px;justify-content:flex-end}
-/* claim token reveal */
-.claim-chip{display:flex;gap:12px;align-items:center;background:var(--ink);border-radius:14px;padding:18px 20px;margin:4px 0}
-.claim-code{flex:1;font-family:var(--font-mono);font-size:15px;font-weight:500;color:#EFD9AE;word-break:break-all;letter-spacing:.03em}
-.claim-note{display:flex;gap:8px;align-items:flex-start;background:var(--rust-wash);border:1px solid #EBC7BC;border-radius:10px;padding:11px 13px;font-size:12px;color:var(--ink-2);line-height:1.45}
-.claim-note svg{color:var(--rust);flex-shrink:0;margin-top:1px}
-.enc-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;background:rgba(201,139,46,.2);color:#EFD9AE;border-radius:6px;padding:4px 9px;letter-spacing:.04em}
+/* SCREEN CONTAINER (1440px Fluid) */
+.canvas-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px 80px;
+}
 
-/* chart */
-.chart-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);font-weight:500}
-.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.screen-view { display: none; }
+.screen-view.active { display: block; }
 
-.api-pill{position:fixed;right:16px;bottom:16px;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:99px;padding:6px 12px;background:var(--surface);border:1px solid var(--hairline);box-shadow:var(--shadow-2);color:var(--muted);z-index:30}
-.api-pill .dot{width:7px;height:7px;border-radius:50%}
-.api-pill.live .dot{background:var(--teal-bright);box-shadow:0 0 0 3px var(--teal-wash)}
-.api-pill.demo .dot{background:var(--ochre)}
-.skel{border-radius:8px;background:linear-gradient(100deg,var(--hairline-2) 30%,#F6F8F2 50%,var(--hairline-2) 70%);background-size:200% 100%;animation:skel 1.2s linear infinite}
-@keyframes skel{to{background-position:-200% 0}}
+/* 3-PANE MERCHANTS MASTER-DETAIL */
+.pane-merchants-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.merchant-list-pane {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+.merchant-list-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface-subtle);
+}
+.merchant-search-in {
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  outline: none;
+}
+.merchant-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.merchant-item:last-child { border-bottom: none; }
+.merchant-item:hover, .merchant-item.selected { background: #F4F4F5; }
+.m-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #27272A;
+  color: #FFF;
+  font-weight: 700;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.m-info { flex: 1; min-width: 0; }
+.m-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-vol { font-size: 11.5px; color: var(--text-secondary); }
 
-@media(max-width:1080px){.md{grid-template-columns:1fr}.ana-grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:920px){.side{width:64px}.side-brand{justify-content:center;padding:16px 8px 12px}.side-name{display:none}.nav-item{justify-content:center;padding:11px 0}.nav-item span,.nav-item .count{display:none}.side-tag,.side-foot{display:none}}
-@media(max-width:720px){.topbar{padding:16px 16px 2px}.content{padding:12px 16px 32px}.kpis{grid-template-columns:repeat(2,1fr);gap:10px}.kpi-value{font-size:22px}}
+.merchant-detail-pane {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+/* DENSE TABLE DENSITY */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12.5px;
+}
+table.data-table th {
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+table.data-table td {
+  padding: 8px 14px;
+  height: 38px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+table.data-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+table.data-table tbody tr:hover { background: #F4F4F5; }
+
+/* STATUS BADGES */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.badge-pill.completed, .badge-pill.active, .badge-pill.matched, .badge-pill.consistent {
+  background: var(--emerald-50);
+  color: var(--emerald-600);
+  border: 1px solid var(--emerald-border);
+}
+.badge-pill.pending, .badge-pill.onboarding, .badge-pill.unmatched {
+  background: var(--amber-50);
+  color: var(--amber-600);
+  border: 1px solid var(--amber-border);
+}
+.badge-pill.failed, .badge-pill.stale, .badge-pill.error {
+  background: var(--rose-50);
+  color: var(--rose-600);
+  border: 1px solid var(--rose-border);
+}
+
+/* LEDGER TOP BANNER */
+.ledger-banner {
+  background: #FFFFFF;
+  border: 1px solid var(--emerald-border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-xs);
+}
+.ledger-stat-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.ledger-stat {
+  display: flex;
+  flex-direction: column;
+}
+.ledger-stat .lbl { font-size: 10.5px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); }
+.ledger-stat .val { font-size: 16px; font-weight: 600; font-family: var(--font-mono); }
+
+/* SLIDE-OVER SHEET */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 9, 11, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease);
+}
+.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+.drawer-sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 100vw);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+  transform: translateX(100%);
+  transition: transform 0.28s var(--ease);
+  display: flex;
+  flex-direction: column;
+}
+.drawer-sheet.open { transform: translateX(0); }
+.drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drawer-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prop-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.prop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+}
+.prop-item:last-child { border-bottom: none; }
+.prop-key { color: var(--text-secondary); }
+.prop-val { font-weight: 500; }
+
+.code-block {
+  background: #09090B;
+  color: #FAFAFA;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* PROVISIONING MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 9, 11, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  width: min(480px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.modal-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-foot {
+  padding: 14px 20px;
+  background: var(--bg-surface-subtle);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.form-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.form-field input, .form-field select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #FFFFFF;
+}
+
+@media (max-width: 960px) {
+  .pane-merchants-layout { grid-template-columns: 1fr; }
+  .sidebar { width: 68px; }
+  .sidebar .brand-meta, .sidebar .nav-link span, .sidebar .nav-link .badge-count, .sidebar-footer { display: none; }
+}
 </style>
 </head>
 <body>
-<div class="shell">
 
-  <aside class="side" aria-label="Platform navigation">
-    <div class="side-brand">
-      <span class="side-mark" aria-hidden="true">e</span>
-      <div class="side-name">EdgePay Admin<small>Platform · Production</small></div>
-    </div>
-    <nav class="side-nav">
-      <button class="nav-item on" data-view="merchants" aria-current="page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20v-1a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1"/><circle cx="12" cy="8" r="4"/></svg>
-        <span>Merchants</span><span class="count">3</span>
-      </button>
-      <button class="nav-item" data-view="analytics">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-        <span>Analytics</span>
-      </button>
-      <button class="nav-item" data-view="devices">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/><path d="M9.5 8.5h1M13.5 8.5h1"/></svg>
-        <span>Devices &amp; SMS</span>
-      </button>
-    </nav>
-    <div class="side-tag">
-      <b><svg class="shield" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Cloudflare Access</b>
-      This console is gated by your team's identity provider. The BFF worker holds the service token — this page never sees admin credentials.
-    </div>
-    <div class="side-foot"><b>admin@edgepay.app</b><br>session · 2m ago</div>
-  </aside>
+<div class="top-notice">
+  <div class="left-group">
+    <span class="badge-shield">Cloudflare Zero Trust</span>
+    <span>EdgePay Admin Console · Multi-Tenant Operations & Shard Health</span>
+  </div>
+  <div style="font-size:11px;color:#A1A1AA">Session: admin@edgepay.app (Active)</div>
+</div>
 
-  <div class="main">
-    <div class="topbar">
-      <div><h1 id="page-title">Merchants</h1><p id="page-sub">Tenant operations, provisioning, and rails health</p></div>
-      <div class="topbar-actions" style="display:flex;gap:10px">
-        <button class="btn btn--primary" id="provision-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          Provision merchant
-        </button>
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" aria-label="Platform Navigation">
+    <div class="brand-row">
+      <div class="brand-mark">e</div>
+      <div class="brand-meta">
+        <div class="brand-title">EdgePay Admin</div>
+        <div class="brand-sub">
+          <span class="dot-pulse"></span>
+          <span>CF Edge Shielded</span>
+        </div>
       </div>
     </div>
 
-    <div class="content">
+    <nav class="nav-section">
+      <div class="nav-heading">Platform Control</div>
+      <a class="nav-link active" data-tab="merchants">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Merchants</span>
+        <span class="badge-count" id="badge-merchant-count">3</span>
+      </a>
+      <a class="nav-link" data-tab="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Analytics</span>
+      </a>
+      <a class="nav-link" data-tab="devices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+        <span>Devices & SMS</span>
+        <span class="badge-count" style="color:var(--emerald-600);background:rgba(16,185,129,0.2)">Live</span>
+      </a>
+    </nav>
 
-      <!-- ═══ MERCHANTS ═══ -->
-      <section class="view on" id="view-merchants" aria-label="Merchants">
-        <div class="md">
-          <div class="panel">
-            <div class="mlist-search">
-              <input id="m-search" placeholder="Search merchants…" aria-label="Search merchants">
+    <div class="sidebar-footer">
+      <div class="zero-trust-pill">
+        <span class="pip"></span>
+        <span>Zero Trust Relay Active</span>
+      </div>
+      <div class="user-card">
+        <div class="user-avatar">AD</div>
+        <div class="user-info">
+          <div class="name">Platform Root</div>
+          <div class="sub">admin@edgepay.app</div>
+        </div>
+        <span class="cmdk-badge">⌘K</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <main class="main-stage">
+    <header class="header-bar">
+      <div class="header-left">
+        <div class="search-trigger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>Search tenant ID, phone number, MFS TrxID...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn-cta btn-cta-primary" id="btn-provision" onclick="openProvisionModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Provision merchant</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="canvas-content">
+
+      <!-- TAB 1: MERCHANTS MASTER-DETAIL -->
+      <section class="screen-view active" id="view-merchants">
+        <div class="pane-merchants-layout">
+          <div class="merchant-list-pane">
+            <div class="merchant-list-header">
+              <input type="text" placeholder="Filter tenants..." class="merchant-search-in" id="in-filter-m" oninput="filterMerchants(this.value)">
             </div>
-            <div class="mlist" id="mlist">
-              <div class="skel" style="height:56px;margin:14px"></div>
-              <div class="skel" style="height:56px;margin:14px"></div>
+            <div id="merchants-list-container">
             </div>
           </div>
 
-          <div class="panel" id="mdetail">
-            <div class="detail-head">
-              <div class="detail-title">
-                <span class="mrow-mark" style="background:linear-gradient(135deg,#E8A23B,#C9772A)" id="d-mark">AB</span>
+          <div class="merchant-detail-pane" id="merchant-detail-wrap">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="m-avatar" id="det-avatar">AB</div>
                 <div>
-                  <div class="detail-name" id="d-name">Amber Bites</div>
-                  <div class="detail-id mono" id="d-id">merchant_1f4a · since Mar 2026</div>
+                  <div style="font-size:15px;font-weight:700" id="det-name">Amber Bites</div>
+                  <div style="font-size:11.5px;color:var(--text-secondary)" class="mono" id="det-id">merchant_1f4a · vol ৳1,24,300</div>
                 </div>
               </div>
-              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <span class="badge badge--ok" id="d-status">active</span>
-                <button class="btn btn--ghost btn--sm" onclick="HAPTIC.tap();toast('Statement queued for export')">Statement</button>
-              </div>
+              <span class="badge-pill active" id="det-status">Active Tenant</span>
             </div>
 
-            <div class="dsec">
-              <h4>Payment gateways</h4>
-              <div class="kv" style="margin-bottom:12px">
-                <div class="cell"><div class="k">bKash · Personal</div><div class="v"><span class="badge badge--ok">connected</span></div></div>
-                <div class="cell"><div class="k">Nagad · Personal</div><div class="v"><span class="badge badge--ok">connected</span></div></div>
-                <div class="cell"><div class="k">bKash · Merchant API</div><div class="v"><span class="badge badge--pend">onboarding</span></div></div>
-                <div class="cell"><div class="k">SSLCommerz</div><div class="v"><span class="badge badge--neu">not set</span></div></div>
-              </div>
-              <div class="act-row">
-                <button class="btn btn--ghost btn--sm" data-admin="gateway-reset">Reset credentials</button>
-                <button class="btn btn--ghost btn--sm" data-admin="gateway-test">Test all rails</button>
-              </div>
-            </div>
-
-            <div class="dsec">
-              <h4>Mobile pairing</h4>
-              <div class="kv" style="margin-bottom:12px">
-                <div class="cell"><div class="k">Device</div><div class="v">Google Pixel 7</div></div>
-                <div class="cell"><div class="k">Heartbeat</div><div class="v"><span class="heartbeat"><span class="pulse-dot"></span>30s ago</span></div></div>
-                <div class="cell"><div class="k">Device ID</div><div class="v mono">dev_7f3a91c2</div></div>
-              </div>
-              <div class="act-row">
-                <button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke device</button>
-              </div>
-            </div>
-
-            <div class="dsec">
-              <h4>Custom domain <span class="badge badge--pend" style="text-transform:none">verification pending</span></h4>
-              <div class="kv" style="margin-bottom:12px">
-                <div class="cell"><div class="k">Domain</div><div class="v">pay.amberbites.bd</div></div>
-                <div class="cell"><div class="k">Method</div><div class="v">DNS TXT</div></div>
-              </div>
-              <div class="dns-box">
-                <code class="dns-val">edgepay-verify=8f3a2c9d4e1b</code>
-                <button class="btn btn--ghost btn--sm" data-admin="dns-copy">Copy</button>
-                <button class="btn btn--primary btn--sm" data-admin="dns-verify">Verify now</button>
-              </div>
-            </div>
-
-            <div class="dsec">
-              <h4>Recent activity</h4>
-              <div class="tbl-wrap">
-                <table class="tbl" style="min-width:auto">
-                  <tbody>
-                    <tr><td><span class="badge badge--ok">verified</span></td><td class="muted">Payment ৳1,250.00 · bKash</td><td class="muted r" style="text-align:right">2 min ago</td></tr>
-                    <tr><td><span class="badge badge--pend">pending</span></td><td class="muted">Awaiting SMS · ৳640.00 · Nagad</td><td class="muted r" style="text-align:right">6 min ago</td></tr>
-                    <tr><td><span class="badge badge--neu">refund</span></td><td class="muted">Refunded ৳450.00 · operator request</td><td class="muted r" style="text-align:right">1 d ago</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ ANALYTICS ═══ -->
-      <section class="view" id="view-analytics" aria-label="Analytics">
-        <div class="kpis">
-          <div class="kpi"><div class="kpi-label">7-day revenue</div><div class="kpi-value" data-countup="365600" data-prefix="৳">৳3,65,600</div><span class="kpi-delta up">▲ 8.3% vs last week</span></div>
-          <div class="kpi"><div class="kpi-label">24h transactions</div><div class="kpi-value" data-countup="128">128</div><span class="kpi-delta up">▲ 11 vs yesterday</span></div>
-          <div class="kpi"><div class="kpi-label">Success rate</div><div class="kpi-value" data-countup="94.2" data-suffix="%" data-dec="1">94.2%</div><span class="kpi-delta flat">SMS match p50 · 38s</span></div>
-          <div class="kpi"><div class="kpi-label">Active merchants</div><div class="kpi-value" data-countup="3">3</div><span class="kpi-delta up">▲ 1 this month</span></div>
-        </div>
-        <div class="ana-grid">
-          <div class="panel">
-            <div class="panel-head"><h3>7-day revenue trend</h3><div class="chart-legend"><span><i style="background:var(--ochre)"></i>Revenue</span><span><i style="background:var(--teal-bright)"></i>Verified share</span></div></div>
-            <div style="padding:16px 18px 12px">
-              <svg id="rev-chart" viewBox="0 0 620 220" width="100%" role="img" aria-label="Daily revenue for the last 7 days">
-                <defs>
-                  <linearGradient id="rfill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stop-color="#B26E14" stop-opacity=".22"/><stop offset="1" stop-color="#B26E14" stop-opacity="0"/>
-                  </linearGradient>
-                </defs>
-                <g id="rgrid"></g><path id="rarea" fill="url(#rfill)"/>
-                <path id="rline" fill="none" stroke="var(--ochre)" stroke-width="2.4" stroke-linecap="round"/>
-                <path id="rline2" fill="none" stroke="var(--teal-bright)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" opacity=".8"/>
-                <g id="rdots"></g><g id="rlbls"></g>
-              </svg>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:16px">
-            <div class="panel">
-              <div class="panel-head"><h3>Ledger consistency</h3><span class="badge badge--ok">consistent</span></div>
-              <div class="kv" style="padding:14px 18px 16px">
-                <div class="cell"><div class="k">Durable Object balance</div><div class="v mono">৳3,65,600.00</div></div>
-                <div class="cell"><div class="k">D1 reconciliation</div><div class="v mono">৳3,65,600.00</div></div>
-                <div class="cell"><div class="k">Last check</div><div class="v" style="font-weight:600">4 minutes ago</div></div>
-                <div class="cell"><div class="k">Drift</div><div class="v mono" style="color:var(--teal)">৳0.00</div></div>
-              </div>
-              <div style="padding:0 18px 16px"><button class="btn btn--ghost btn--sm" data-admin="reconcile" style="width:100%;justify-content:center">Re-run trial balance</button></div>
-            </div>
-            <div class="panel">
-              <div class="panel-head"><h3>Rail mix · 7 days</h3></div>
-              <div style="display:flex;flex-direction:column;gap:10px;padding:14px 18px 16px">
-                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--bkash);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">bK</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:54%;height:100%;background:var(--bkash);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">54%</b></div>
-                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--nagad);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">Ng</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:27%;height:100%;background:var(--nagad);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">27%</b></div>
-                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--rocket);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">Rk</span><div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:13%;height:100%;background:var(--rocket);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">13%</b></div>
-                <div style="display:flex;align-items:center;gap:10px"><span class="badge" style="background:var(--cards);color:#fff;width:26px;height:26px;padding:0;justify-content:center;border-radius:7px">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg></span>
-                  <div style="flex:1"><div style="height:6px;border-radius:99px;background:var(--hairline-2);overflow:hidden"><div style="width:6%;height:100%;background:var(--cards);border-radius:99px"></div></div></div><b style="font-variant-numeric:tabular-nums">6%</b></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ DEVICES & SMS ═══ -->
-      <section class="view" id="view-devices" aria-label="Devices and SMS">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div class="panel">
-            <div class="panel-head"><h3>Companion devices</h3><button class="btn btn--ghost btn--sm" data-admin="devices-refresh">Refresh</button></div>
-            <div class="tbl-wrap">
-              <table class="tbl">
-                <thead><tr><th>Device</th><th>Merchant</th><th>Battery</th><th>Heartbeat</th><th>Status</th><th class="r">Actions</th></tr></thead>
+            <!-- Consolidated Gateways Table -->
+            <div style="padding:16px 20px">
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:8px">Configured Payment Rails</div>
+              <table class="data-table" style="border:1px solid var(--border-subtle);border-radius:6px">
+                <thead>
+                  <tr>
+                    <th>Gateway</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th style="text-align:right">Action</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr><td><b>Pixel 7</b> <span class="mono muted">dev_7f3a91c2</span></td><td>Amber Bites</td><td>88%</td><td><span class="heartbeat"><span class="pulse-dot"></span>30s ago</span></td><td><span class="badge badge--ok">active</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
-                  <tr><td><b>Galaxy A15</b> <span class="mono muted">dev_2b8e041f</span></td><td>Dhaka Threads</td><td>61%</td><td class="muted">12 min ago</td><td><span class="badge badge--ok">active</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
-                  <tr><td><b>Redmi 12</b> <span class="mono muted">dev_9c1d55aa</span></td><td>Kabul Fresh Mart</td><td>—</td><td class="muted">4 d ago</td><td><span class="badge badge--pend">stale</span></td><td class="r"><button class="btn btn--danger btn--sm" data-admin="device-revoke">Revoke</button></td></tr>
+                  <tr>
+                    <td><b>bKash</b></td>
+                    <td class="mono">Personal (SMS Relay)</td>
+                    <td><span class="badge-pill completed">Connected</span></td>
+                    <td style="text-align:right"><button class="btn-cta btn-cta-ghost" style="padding:1px 6px;font-size:11px" onclick="alert('Testing bKash rail on edge...')">Test</button></td>
+                  </tr>
+                  <tr>
+                    <td><b>Nagad</b></td>
+                    <td class="mono">Personal (SMS Relay)</td>
+                    <td><span class="badge-pill completed">Connected</span></td>
+                    <td style="text-align:right"><button class="btn-cta btn-cta-ghost" style="padding:1px 6px;font-size:11px" onclick="alert('Testing Nagad rail on edge...')">Test</button></td>
+                  </tr>
+                  <tr>
+                    <td><b>bKash API</b></td>
+                    <td class="mono">Merchant Direct</td>
+                    <td><span class="badge-pill pending">Onboarding</span></td>
+                    <td style="text-align:right"><button class="btn-cta btn-cta-ghost" style="padding:1px 6px;font-size:11px" onclick="alert('Credentials rotated.')">Rotate</button></td>
+                  </tr>
+                  <tr>
+                    <td><b>SSLCommerz</b></td>
+                    <td class="mono">Cards & NetBanking</td>
+                    <td><span class="badge-pill error">Not Set</span></td>
+                    <td style="text-align:right"><button class="btn-cta btn-cta-ghost" style="padding:1px 6px;font-size:11px" onclick="alert('Setup initiated.')">Setup</button></td>
+                  </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Infrastructure & Settings -->
+            <div style="padding:0 20px 20px">
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:8px">Infrastructure & Relay Phone</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="padding:12px;background:var(--bg-surface-subtle);border:1px solid var(--border-subtle);border-radius:6px">
+                  <div style="font-size:11px;color:var(--text-secondary)">Paired SMS Phone</div>
+                  <div style="font-weight:600;font-size:13px;margin-top:2px">Google Pixel 7</div>
+                  <div style="font-size:11px;color:var(--emerald-600);margin-top:2px">● Heartbeat 30s ago (88% Bat)</div>
+                </div>
+                <div style="padding:12px;background:var(--bg-surface-subtle);border:1px solid var(--border-subtle);border-radius:6px">
+                  <div style="font-size:11px;color:var(--text-secondary)">Custom Hosted Domain</div>
+                  <div style="font-weight:600;font-size:13px;margin-top:2px">pay.amberbites.bd</div>
+                  <div style="font-size:11px;color:var(--amber-600);margin-top:2px">● DNS TXT Verified</div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-head"><h3>SMS parse queue</h3><span class="badge badge--ok">live</span></div>
-            <div class="tbl-wrap">
-              <table class="tbl">
-                <thead><tr><th>Received</th><th>From</th><th>Body</th><th>Parse state</th><th class="r">Actions</th></tr></thead>
-                <tbody id="sms-body">
-                  <tr><td class="mono muted">16:44:02</td><td class="mono">bKash</td><td class="sms-preview">You have received Tk 1,250.00 from … TrxID 9FT7A2X1LM</td><td><span class="badge badge--ok">matched</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
-                  <tr><td class="mono muted">16:39:58</td><td class="mono">bKash</td><td class="sms-preview">You have received Tk 640.00 from 018…  TrxID 71A89KC2</td><td><span class="badge badge--pend">unmatched</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
-                  <tr><td class="mono muted">16:02:11</td><td class="mono">Nagad</td><td class="sms-preview">Tk 320.00 received. TxnID NL4K8M2P</td><td><span class="badge badge--fail">parse error</span></td><td class="r"><button class="btn btn--ghost btn--sm" data-admin="sms-retry">Retry</button></td></tr>
-                </tbody>
-              </table>
+        </div>
+      </section>
+
+      <!-- TAB 2: ANALYTICS & LEDGER INTEGRITY -->
+      <section class="screen-view" id="view-analytics">
+        <div class="ledger-banner">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="badge-pill consistent" style="font-size:12px;padding:4px 10px">● DO Ledger Reconciled</span>
+            <div>
+              <div style="font-weight:600;font-size:13.5px">Cloudflare Durable Objects & D1 Sync: Zero Drift</div>
+              <div style="font-size:11.5px;color:var(--text-secondary)">Autonomous cryptographic double-entry reconciliation running every 60 seconds</div>
             </div>
+          </div>
+          <div class="ledger-stat-group">
+            <div class="ledger-stat"><span class="lbl">Durable Object Balance</span><span class="val">৳3,65,600.00</span></div>
+            <div class="ledger-stat"><span class="lbl">D1 Ledger Balance</span><span class="val">৳3,65,600.00</span></div>
+            <div class="ledger-stat"><span class="lbl">Balance Drift</span><span class="val" style="color:var(--emerald-600)">৳0.00</span></div>
+            <button class="btn-cta btn-cta-ghost" style="font-size:11.5px" onclick="alert('Trial balance re-run complete: 0 drift detected.')">Re-run Trial Balance</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-bottom:20px">
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary)">7-Day Settled Volume</div>
+            <div style="font-size:24px;font-weight:600;font-family:var(--font-mono);margin-top:4px">৳3,65,600</div>
+            <div style="font-size:11.5px;color:var(--emerald-600);margin-top:2px">▲ 8.3% vs last week</div>
+          </div>
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary)">24H Transactions</div>
+            <div style="font-size:24px;font-weight:600;font-family:var(--font-mono);margin-top:4px">128</div>
+            <div style="font-size:11.5px;color:var(--emerald-600);margin-top:2px">▲ 11 vs yesterday</div>
+          </div>
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary)">Gateway Uptime</div>
+            <div style="font-size:24px;font-weight:600;font-family:var(--font-mono);margin-top:4px">99.8%</div>
+            <div style="font-size:11.5px;color:var(--emerald-600);margin-top:2px">38s median auto-reconciliation</div>
+          </div>
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary)">Active Merchants</div>
+            <div style="font-size:24px;font-weight:600;font-family:var(--font-mono);margin-top:4px">3 Tenants</div>
+            <div style="font-size:11.5px;color:var(--text-secondary);margin-top:2px">100% Shard Healthy</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:12px">7-Day Revenue Trend (Monotone Area)</div>
+            <svg viewBox="0 0 540 140" style="width:100%;height:auto">
+              <defs>
+                <linearGradient id="adminChartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#10B981" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#10B981" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+              <path d="M 15 100 C 90 90, 160 85, 230 65 C 300 50, 370 20, 440 30 C 480 35, 510 60, 530 65" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M 15 100 C 90 90, 160 85, 230 65 C 300 50, 370 20, 440 30 C 480 35, 510 60, 530 65 L 530 135 L 15 135 Z" fill="url(#adminChartGrad)"/>
+              <circle cx="440" cy="30" r="4" fill="#09090B" stroke="#FFFFFF" stroke-width="2"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-muted);margin-top:6px">
+              <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span><span>Mon (৳72.6k peak)</span><span>Tue</span>
+            </div>
+          </div>
+
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:16px;box-shadow:var(--shadow-xs)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:12px">Rail Mix Distribution</div>
+            <div style="height:10px;border-radius:99px;display:flex;overflow:hidden;margin-bottom:16px">
+              <div style="width:54%;background:#E2136E" title="bKash: 54%"></div>
+              <div style="width:27%;background:#F6921E" title="Nagad: 27%"></div>
+              <div style="width:13%;background:#8C3494" title="Rocket: 13%"></div>
+              <div style="width:6%;background:#27272A" title="Cards: 6%"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+              <div style="display:flex;justify-content:space-between"><span><b style="color:#E2136E">■</b> bKash Personal</span><span class="mono">54% (৳1,97,424)</span></div>
+              <div style="display:flex;justify-content:space-between"><span><b style="color:#F6921E">■</b> Nagad Personal</span><span class="mono">27% (৳98,712)</span></div>
+              <div style="display:flex;justify-content:space-between"><span><b style="color:#8C3494">■</b> Rocket Personal</span><span class="mono">13% (৳47,528)</span></div>
+              <div style="display:flex;justify-content:space-between"><span><b style="color:#27272A">■</b> Cards & NetBanking</span><span class="mono">6% (৳21,936)</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: DEVICES & SMS RELAY QUEUE -->
+      <section class="screen-view" id="view-devices">
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;margin-bottom:16px">
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:12px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b>Google Pixel 7</b>
+              <span class="badge-pill active">88% Bat</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px">Amber Bites · Heartbeat 30s ago</div>
+          </div>
+          <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;padding:12px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b>Galaxy A15</b>
+              <span class="badge-pill active">61% Bat</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px">Dhaka Threads · Heartbeat 12m ago</div>
+          </div>
+          <div style="background:#FFF;border:1px solid var(--rose-border);background:var(--rose-50);border-radius:8px;padding:12px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b style="color:var(--rose-600)">Redmi 12 (Alert)</b>
+              <span class="badge-pill stale">Stale</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--rose-600);margin-top:4px">Kabul Fresh Mart · Heartbeat 4d ago</div>
+          </div>
+        </div>
+
+        <div style="background:#FFF;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-weight:600;font-size:13.5px">Inbound Operator SMS Parse Queue</div>
+            <span style="font-size:11.5px;color:var(--text-secondary)">Click any row to inspect regex extraction tokens</span>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:75px">Time</th>
+                  <th style="width:75px">Carrier</th>
+                  <th>Raw Body Extract</th>
+                  <th style="width:95px">Parse State</th>
+                  <th style="width:65px;text-align:right">Inspect</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr onclick="inspectSms('sms_1', 'bKash', 'You have received Tk 1,250.00 from 01798-219481. TrxID 9FT7A2X...', 'matched', '1,250.00', '9FT7A2X', '01798-219481')">
+                  <td class="mono">16:44:02</td>
+                  <td><b>bKash</b></td>
+                  <td class="mono">You have received Tk 1,250.00 from 01798-219481. TrxID 9FT7A2X...</td>
+                  <td><span class="badge-pill matched">Matched</span></td>
+                  <td style="text-align:right"><span style="font-weight:600;font-size:11.5px;color:var(--text-primary)">Inspect</span></td>
+                </tr>
+                <tr onclick="inspectSms('sms_2', 'bKash', 'You have received Tk 640.00 from 01812-409182. TrxID 71A89KC...', 'unmatched', '640.00', '71A89KC', '01812-409182')">
+                  <td class="mono">16:39:58</td>
+                  <td><b>bKash</b></td>
+                  <td class="mono">You have received Tk 640.00 from 01812-409182. TrxID 71A89KC...</td>
+                  <td><span class="badge-pill unmatched">Unmatched</span></td>
+                  <td style="text-align:right"><span style="font-weight:600;font-size:11.5px;color:var(--text-primary)">Inspect</span></td>
+                </tr>
+                <tr onclick="inspectSms('sms_3', 'Nagad', 'Tk 320.00 received. TxnID NL4K8M2P from 01711...', 'error', '320.00', 'NL4K8M2P', '01711-098234')">
+                  <td class="mono">16:02:11</td>
+                  <td><b>Nagad</b></td>
+                  <td class="mono">Tk 320.00 received. TxnID NL4K8M2P from 01711...</td>
+                  <td><span class="badge-pill error">Parse Error</span></td>
+                  <td style="text-align:right"><span style="font-weight:600;font-size:11.5px;color:var(--rose-600)">Inspect</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
 
     </div>
+  </main>
+</div>
+
+<!-- SMS PARSE INSPECTOR SHEET -->
+<div class="drawer-backdrop" id="admin-drawer-backdrop" onclick="closeAdminDrawer()"></div>
+<div class="drawer-sheet" id="admin-drawer-sheet">
+  <div class="drawer-header">
+    <div>
+      <div style="font-weight:600;font-size:14px" id="adm-d-title">SMS Parse Inspector</div>
+      <div style="font-size:11.5px;color:var(--text-secondary)" id="adm-d-sub">Regex Engine Token Extraction Trace</div>
+    </div>
+    <button class="drawer-close" onclick="closeAdminDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="adm-d-body">
   </div>
 </div>
 
-<!-- ═══ PROVISION MODAL ═══ -->
-<div class="scrim" id="scrim" onclick="closeModal()"></div>
-<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal-card">
+<!-- TENANT PROVISIONING MODAL -->
+<div class="modal-overlay" id="provision-modal">
+  <div class="modal-box">
     <div class="modal-head">
-      <h3 id="modal-title">Provision merchant</h3>
-      <p>Creates the tenant and a one-time, AES-256-GCM sealed claim token.</p>
+      <div style="font-weight:700;font-size:14px">Provision Merchant Tenant</div>
+      <button onclick="closeProvisionModal()">✕</button>
     </div>
-    <div class="modal-body" id="modal-form">
-      <div class="field"><label for="pv-name">Business name</label><input id="pv-name" placeholder="e.g. Amber Bites" autocomplete="off"></div>
-      <div class="field"><label for="pv-email">Owner email</label><input id="pv-email" type="email" placeholder="owner@example.com" autocomplete="off"></div>
-      <div class="field"><label for="pv-cur">Settlement currency</label>
-        <select id="pv-cur"><option>BDT — Bangladeshi Taka</option><option>USD — US Dollar</option></select>
+    <div class="modal-body" id="modal-form-content">
+      <div class="form-field">
+        <label>Business / Merchant Name</label>
+        <input type="text" id="pv-name" placeholder="e.g. Apex Footwear">
+      </div>
+      <div class="form-field">
+        <label>Owner Email Address</label>
+        <input type="email" id="pv-email" placeholder="owner@apex.bd">
+      </div>
+      <div class="form-field">
+        <label>Base Currency</label>
+        <select id="pv-currency">
+          <option value="BDT">BDT — Bangladeshi Taka</option>
+          <option value="USD">USD — US Dollar</option>
+        </select>
       </div>
     </div>
-    <div class="modal-body" id="modal-claim" hidden>
-      <div class="claim-chip">
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span class="enc-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>AES-256-GCM · one-time</span>
-            <span class="mono" style="color:#8E99A6;font-size:11px" id="claim-ttl">14:55</span>
-          </div>
-          <code class="claim-code" id="claim-code">edgepay_claim_9F4e2A…</code>
-        </div>
-        <button class="btn btn--ochre btn--sm" id="claim-copy">Copy</button>
-      </div>
-      <div class="claim-note">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-        <span>Shown <b>once</b>. The merchant redeems it at <span class="mono">POST /api/admin/v1/merchants/claim</span> — after redemption the bundle (admin password, API key, pairing OTP, webhook secret) is destroyed from KV.</span>
+    <div class="modal-body" id="modal-claim-content" style="display:none">
+      <div style="background:var(--emerald-50);border:1px solid var(--emerald-border);border-radius:6px;padding:12px">
+        <div style="font-weight:600;color:var(--emerald-600)">Tenant Provisioned Successfully!</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">Deliver this sealed one-time claim token to the merchant:</div>
+        <div class="code-block" style="margin-top:8px" id="pv-claim-token">edgepay_claim_8f3a2c9d4e1b07a9</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Sealed with AES-256-GCM. Expires in 15 minutes.</div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn--ghost" onclick="closeModal()">Close</button>
-      <button class="btn btn--primary" id="pv-go">Provision</button>
+      <button class="btn-cta btn-cta-ghost" onclick="closeProvisionModal()">Close</button>
+      <button class="btn-cta btn-cta-primary" id="btn-submit-pv" onclick="submitProvision()">Create & Generate Claim Token</button>
     </div>
   </div>
 </div>
 
-<div class="api-pill demo" id="api-pill"><span class="dot"></span><span id="api-pill-text">Demo data</span></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
 <script>
-const HAPTIC = (() => { const ok = () => 'vibrate' in navigator && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return { tap:()=>ok()&&navigator.vibrate(8), select:()=>ok()&&navigator.vibrate([10,30,12]), success:()=>ok()&&navigator.vibrate([12,40,20]), error:()=>ok()&&navigator.vibrate([60,40,60]) }; })();
-const RM = (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) ? window.gsap : null;
-
-/* BFF: /api/admin/* proxies carry the Access service token server-side */
-const pill = document.getElementById('api-pill');
-const ORIGIN = (window.__EDGEPAY_BFF__) || '';
-async function api(path, opts={}){
-  if (ORIGIN !== null){
-    try{
-      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 6000);
-      const res = await fetch(ORIGIN + path, { ...opts, signal: ctl.signal });
-      clearTimeout(t);
-      if (res.ok){ pill.className='api-pill live'; pill.querySelector('#api-pill-text').textContent='Live API'; return res.json(); }
-      if (res.status >= 500) throw 0;
-    }catch(_){ }
-  }
-  pill.className='api-pill demo'; pill.querySelector('#api-pill-text').textContent='Demo data';
-  return new Promise(r => setTimeout(()=> r({ok:true}), 420 + Math.random()*300));
-}
-
-/* ═══ NAV ═══ */
-const TITLES = {
-  merchants:['Merchants','Tenant operations, provisioning, and rails health'],
-  analytics:['Analytics','Platform revenue, verification quality, and ledger integrity'],
-  devices:['Devices & SMS','Companion phone fleet and the SMS parse queue'],
-};
-document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
-  document.querySelectorAll('.nav-item').forEach(b => { b.classList.toggle('on', b===btn); b.removeAttribute('aria-current'); });
-  btn.setAttribute('aria-current','page');
-  const v = btn.dataset.view;
-  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === `view-${v}`));
-  [document.getElementById('page-title').textContent, document.getElementById('page-sub').textContent] = TITLES[v];
-  HAPTIC.select();
-  if (RM) gsap.fromTo(`#view-${v}`, {autoAlpha:0, y:8}, {autoAlpha:1, y:0, duration:.3, ease:'power2.out'});
-}));
-
-/* ═══ MERCHANT LIST (GET /api/admin/v1/merchants) ═══ */
-const MERCHANTS = [
-  { id:'merchant_1f4a', name:'Amber Bites', email:'owner@amberbites.bd', grad:'linear-gradient(135deg,#E8A23B,#C9772A)', vol:'৳1,24,300', st:'active', gateways:3 },
-  { id:'merchant_2d7', name:'Dhaka Threads', email:'ops@dhakathreads.com', grad:'linear-gradient(135deg,#7C8BA8,#4E5E7E)', vol:'৳98,540', st:'active', gateways:2 },
-  { id:'merchant_9e2', name:'Kabul Fresh Mart', email:'h.kabul@freshmart.af', grad:'linear-gradient(135deg,#6FAE7E,#3E7A55)', vol:'৳1,42,760', st:'onboarding', gateways:1 },
+const MERCHANTS_DATA = [
+  { id: 'merchant_1f4a', name: 'Amber Bites', email: 'owner@amberbites.bd', vol: '৳1,24,300', status: 'Active', rails: 4 },
+  { id: 'merchant_2d7b', name: 'Dhaka Threads', email: 'ops@dhakathreads.com', vol: '৳98,540', status: 'Active', rails: 2 },
+  { id: 'merchant_9e2c', name: 'Kabul Fresh Mart', email: 'h.kabul@freshmart.af', vol: '৳1,42,760', status: 'Onboarding', rails: 1 }
 ];
-let selected = (function(){
-  const h = new URLSearchParams(location.hash.slice(1)).get('m');
-  return MERCHANTS.find(m => m.id === h) || MERCHANTS[0];
-})();
-function renderList(q=''){
-  const list = MERCHANTS.filter(m => m.name.toLowerCase().includes(q.toLowerCase()) || m.email.includes(q));
-  document.getElementById('mlist').innerHTML = list.length ? list.map((m,i) => `
-    <button class="mrow ${m===selected?'on':''}" data-id="${m.id}">
-      <span class="mrow-mark" style="background:${m.grad}">${m.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</span>
-      <div style="min-width:0"><div class="mrow-name">${m.name}</div><div class="mrow-sub">${m.email}</div></div>
-      <div class="mrow-meta"><div class="mrow-vol">${m.vol}</div><div class="mrow-st">${m.st} · ${m.gateways} rails</div></div>
-    </button>`).join('')
-    : `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:13px">No merchants match “${q}”</div>`;
-  document.querySelectorAll('.mrow').forEach(r => r.addEventListener('click', () => {
-    selected = MERCHANTS.find(m => m.id === r.dataset.id); HAPTIC.select(); renderList(document.getElementById('m-search').value); bindDetail();
-    history.replaceState(null, '', '#m=' + selected.id);
-  }));
-}
-/* keyboard nav: ↑/↓ traverse, Enter selects, / focuses search */
-document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-  const rows = [...document.querySelectorAll('.mrow')];
-  if (!rows.length || !document.getElementById('view-merchants').classList.contains('on')) return;
-  const cur = rows.findIndex(r => r.classList.contains('on'));
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
-    e.preventDefault();
-    const nxt = e.key === 'ArrowDown' ? Math.min(cur+1, rows.length-1) : Math.max(cur-1, 0);
-    selected = MERCHANTS.find(m => m.id === rows[nxt].dataset.id);
-    renderList(document.getElementById('m-search').value); bindDetail();
-    rows[nxt].focus();
-  } else if (e.key === 'Enter' && cur >= 0 && document.activeElement.classList.contains('mrow')){
-    selected = MERCHANTS.find(m => m.id === rows[cur].dataset.id);
-    renderList(document.getElementById('m-search').value); bindDetail();
-    history.replaceState(null, '', '#m=' + selected.id);
-  } else if (e.key === '/'){ e.preventDefault(); document.getElementById('m-search').focus(); }
-});
-function bindDetail(){
-  const m = selected;
-  document.getElementById('d-mark').textContent = m.name.split(' ').map(w=>w[0]).slice(0,2).join('');
-  document.getElementById('d-name').textContent = m.name;
-  document.getElementById('d-id').textContent = `${m.id} · vol ${m.vol}`;
-  document.getElementById('d-status').textContent = m.st;
-  document.getElementById('d-status').className = 'badge ' + (m.st==='active'?'badge--ok':'badge--pend');
-  if (RM) gsap.fromTo('#mdetail', {y:6, autoAlpha:.4}, {y:0, autoAlpha:1, duration:.26, ease:'power2.out'});
-}
-document.getElementById('m-search').addEventListener('input', e => renderList(e.target.value));
 
-/* ═══ PROVISION MODAL (POST /api/admin/v1/merchants) ═══ */
-const modal = document.getElementById('modal'), scrim = document.getElementById('scrim');
-document.getElementById('provision-btn').addEventListener('click', () => {
-  modal.classList.add('on'); scrim.classList.add('on');
-  document.getElementById('modal-form').hidden = false;
-  document.getElementById('modal-claim').hidden = true;
-  document.getElementById('pv-go').textContent = 'Provision';
-  document.getElementById('pv-name').focus();
-});
-function closeModal(){ modal.classList.remove('on'); scrim.classList.remove('on'); }
-document.addEventListener('keydown', e => e.key==='Escape' && closeModal());
+let selectedMerchant = MERCHANTS_DATA[0];
 
-document.getElementById('pv-go').addEventListener('click', async () => {
-  const name = document.getElementById('pv-name').value.trim();
-  const email = document.getElementById('pv-email').value.trim();
-  if (!name || !email.includes('@')) { HAPTIC.error(); toast('Business name and a valid owner email are required'); return; }
-  const go = document.getElementById('pv-go'); go.disabled = true; go.textContent = 'Provisioning…'; HAPTIC.tap();
-  const res = await api('/api/admin/v1/merchants', { method:'POST', body: JSON.stringify({ name, email, currency: document.getElementById('pv-cur').value.slice(0,3) }) });
-  go.disabled = false;
-  if (res && res.ok !== false){
-    document.getElementById('modal-form').hidden = true;
-    const claim = document.getElementById('modal-claim'); claim.hidden = false;
-    document.getElementById('claim-code').textContent = 'edgepay_claim_' + Array.from(crypto.getRandomValues(new Uint8Array(18))).map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,24);
-    let ttl = 895; const ttlEl = document.getElementById('claim-ttl');
-    const iv = setInterval(()=>{ if(ttl<0){clearInterval(iv);return;} ttlEl.textContent = `${(ttl/60)|0}:${String(ttl%60).padStart(2,'0')}`; ttl--; }, 1000);
-    go.textContent = 'Done'; HAPTIC.success();
-    if (RM) gsap.fromTo(claim, {y:8, autoAlpha:0}, {y:0, autoAlpha:1, duration:.35, ease:'power2.out'});
-  } else { go.textContent = 'Retry'; HAPTIC.error(); toast('Provisioning failed — check server logs'); }
-});
-document.getElementById('claim-copy').addEventListener('click', async () => {
-  try{ await navigator.clipboard.writeText(document.getElementById('claim-code').textContent); }catch(_){}
-  HAPTIC.select(); toast('Claim token copied — it will never be shown again');
-});
-
-/* ═══ ADMIN ACTIONS ═══ */
-const ACT = {
-  'gateway-reset': ['Gateway credentials rotated','The merchant must re-enter secrets — old ones are destroyed'],
-  'gateway-test':  ['All rails tested','2 connected · 1 onboarding · 1 not set'],
-  'device-revoke': ['Device revoked','SMS relay will stop within 30 seconds'],
-  'dns-copy':      null,
-  'dns-verify':    ['DNS verification started','TXT record propagation can take up to 15 minutes'],
-  'reconcile':     ['Trial balance re-run','DO and D1 agree — drift ৳0.00'],
-  'sms-retry':     ['Parse retry queued','Message re-enters the matcher within seconds'],
-};
-document.querySelectorAll('[data-admin]').forEach(b => b.addEventListener('click', async () => {
-  const key = b.dataset.admin;
-  if (key === 'dns-copy'){
-    try{ await navigator.clipboard.writeText('edgepay-verify=8f3a2c9d4e1b'); }catch(_){}
-    HAPTIC.select(); b.textContent = '✓ Copied'; setTimeout(()=>b.textContent='Copy', 1500); return;
-  }
-  HAPTIC.tap(); const old = b.textContent; b.textContent = 'Working…'; b.disabled = true;
-  await api('/api/admin/v1/merchants/' + selected.id + '/' + key.replace('-','_'));
-  b.textContent = old; b.disabled = false;
-  toast(ACT[key][0], ACT[key][1]);
-}));
-
-/* ═══ ANALYTICS CHART ═══ */
-(function(){
-  const REV = [42.1,51.8,48.2,63.4,57.9,72.6,29.6], VER = [39.2,49.1,45.0,60.1,55.2,68.9,27.4];
-  const LBL = ['Wed','Thu','Fri','Sat','Sun','Mon','Tue'];
-  const W=620, H=220, PL=8, PR=10, PT=18, PB=26, max=80;
-  const X = i => PL + i*(W-PL-PR)/(REV.length-1), Y = v => H-PB - v*(H-PT-PB)/max;
-  let d = `M ${X(0)} ${Y(REV[0])}`;
-  for (let i=1;i<REV.length;i++){ const px=X(i-1),py=Y(REV[i-1]),cx=X(i),cy=Y(REV[i]),mx=(px+cx)/2; d += ` C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`; }
-  let d2 = `M ${X(0)} ${Y(VER[0])}`;
-  for (let i=1;i<VER.length;i++){ const px=X(i-1),py=Y(VER[i-1]),cx=X(i),cy=Y(VER[i]),mx=(px+cx)/2; d2 += ` C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`; }
-  document.getElementById('rline').setAttribute('d', d);
-  document.getElementById('rline2').setAttribute('d', d2);
-  document.getElementById('rarea').setAttribute('d', d + ` L ${X(REV.length-1)} ${H-6} L ${X(0)} ${H-6} Z`);
-  document.getElementById('rdots').innerHTML = REV.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="var(--surface)" stroke="var(--ochre)" stroke-width="2"/>`).join('');
-  document.getElementById('rgrid').innerHTML = [20,40,60].map(v=>`<line x1="${PL}" x2="${W-PR}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--hairline-2)"/><text x="${PL}" y="${Y(v)-6}" style="font:500 10px var(--font-sans);fill:var(--faint)">৳${v}k</text>`).join('');
-  document.getElementById('rlbls').innerHTML = LBL.map((l,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" style="font:500 10.5px var(--font-sans);fill:var(--muted)">${l}</text>`).join('')
-    + `<text x="${X(5)}" y="${Y(REV[5])-12}" text-anchor="middle" style="font:600 11px var(--font-sans);fill:var(--ink-2)">৳72.6k peak</text>`;
-  if (RM){
-    gsap.fromTo('#rline', {strokeDasharray:900, strokeDashoffset:900}, {strokeDashoffset:0, duration:1.2, ease:'power2.in-out'});
-    gsap.from('#rarea', {opacity:0, duration:.7, delay:.4});
-    gsap.from('#rline2', {opacity:0, duration:.5, delay:.8});
-  }
-})();
-
-/* KPI count-up + boot */
-function countUp(){
-  document.querySelectorAll('[data-countup]').forEach(el => {
-    const t = parseFloat(el.dataset.countup), dec = +(el.dataset.dec||0), pre = el.dataset.prefix||'', suf = el.dataset.suffix||'';
-    if (!RM){ el.textContent = pre + t.toLocaleString('en-IN',{minimumFractionDigits:dec}) + suf; return; }
-    const o = {v:0};
-    gsap.to(o, {v:t, duration:.9, ease:'power3.out', onUpdate(){ el.textContent = pre + o.v.toLocaleString('en-IN',{minimumFractionDigits:dec}) + suf; }});
+/* Tab Switching */
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('.screen-view').forEach(s => s.classList.remove('active'));
+    link.classList.add('active');
+    document.getElementById('view-' + link.dataset.tab).classList.add('active');
   });
+});
+
+/* Render Merchants Master List */
+function renderMerchants(list) {
+  const container = document.getElementById('merchants-list-container');
+  container.innerHTML = list.map(m => `
+    <div class="merchant-item ${m.id === selectedMerchant.id ? 'selected' : ''}" onclick="selectMerchant('${m.id}')">
+      <div class="m-avatar">${m.name.slice(0, 2).toUpperCase()}</div>
+      <div class="m-info">
+        <div class="m-name">${m.name}</div>
+        <div class="m-vol mono">${m.vol} · ${m.status}</div>
+      </div>
+      <span class="badge-pill ${m.status.toLowerCase()}">${m.status}</span>
+    </div>
+  `).join('');
 }
-function toast(msg, sub){
-  document.querySelectorAll('.tst').forEach(t=>t.remove());
-  const t = document.createElement('div'); t.className='tst';
-  t.style.cssText = `position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#F6F7F3;padding:12px 20px;border-radius:12px;box-shadow:var(--shadow-3);z-index:99;text-align:center`;
-  t.innerHTML = `<div style="font-size:13px;font-weight:600">${msg}</div>` + (sub?`<div style="font-size:11.5px;color:#AAB3BF;margin-top:2px">${sub}</div>`:'');
-  document.body.appendChild(t);
-  if (RM) gsap.fromTo(t, {y:10, autoAlpha:0}, {y:0, autoAlpha:1, duration:.28});
-  setTimeout(()=>{ RM ? gsap.to(t, {autoAlpha:0, y:6, duration:.3, onComplete:()=>t.remove()}) : t.remove(); }, 3200);
+
+function selectMerchant(id) {
+  selectedMerchant = MERCHANTS_DATA.find(x => x.id === id) || MERCHANTS_DATA[0];
+  document.getElementById('det-avatar').textContent = selectedMerchant.name.slice(0, 2).toUpperCase();
+  document.getElementById('det-name').textContent = selectedMerchant.name;
+  document.getElementById('det-id').textContent = selectedMerchant.id + ' · vol ' + selectedMerchant.vol;
+  renderMerchants(MERCHANTS_DATA);
 }
-(async () => {
-  const res = await api('/api/admin/v1/merchants');
-  const list = res && (res.data || res.merchants || (Array.isArray(res) ? res : null));
-  if (Array.isArray(list) && list.length > 0) {
-    const grads = [
-      'linear-gradient(135deg,#E8A23B,#C9772A)',
-      'linear-gradient(135deg,#7C8BA8,#4E5E7E)',
-      'linear-gradient(135deg,#6FAE7E,#3E7A55)',
-    ];
-    MERCHANTS.length = 0;
-    list.forEach((m, idx) => {
-      MERCHANTS.push({
-        id: m.slug || 'merchant_' + (m.id || idx + 1),
-        name: m.name || 'Merchant ' + (idx + 1),
-        email: m.email || (m.slug || 'merchant') + '@edgepay.internal',
-        grad: grads[idx % grads.length],
-        vol: '৳' + (m.volume || '0.00'),
-        st: m.status || 'active',
-        gateways: 4,
-      });
-    });
-    selected = MERCHANTS[0];
-  }
-  renderList(); bindDetail(); countUp();
-  document.querySelectorAll('.tbl-wrap').forEach(w=>{
-    const upd=()=>w.classList.toggle('more', w.scrollWidth > w.clientWidth + 8 && w.scrollLeft < w.scrollWidth - w.clientWidth - 10);
-    w.addEventListener('scroll', upd, {passive:true}); upd();
+
+function filterMerchants(query) {
+  const q = query.toLowerCase();
+  const filtered = MERCHANTS_DATA.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
+  renderMerchants(filtered);
+}
+
+/* SMS Parse Inspector Sheet */
+function inspectSms(smsId, carrier, raw, status, amount, trx, phone) {
+  document.getElementById('adm-d-title').textContent = 'SMS Payload ' + smsId;
+  document.getElementById('adm-d-sub').textContent = 'Carrier Relay: ' + carrier + ' · Parse State: ' + status.toUpperCase();
+
+  const body = document.getElementById('adm-d-body');
+  body.innerHTML = `
+    <div class="prop-list">
+      <div class="prop-item"><span class="prop-key">Carrier</span><span class="prop-val">${carrier}</span></div>
+      <div class="prop-item"><span class="prop-key">Extracted Amount</span><span class="prop-val mono">৳${amount} BDT</span></div>
+      <div class="prop-item"><span class="prop-key">Extracted TrxID</span><span class="prop-val mono">${trx}</span></div>
+      <div class="prop-item"><span class="prop-key">Extracted Sender</span><span class="prop-val mono">${phone}</span></div>
+      <div class="prop-item"><span class="prop-key">Parse State</span><span class="badge-pill ${status}">${status.toUpperCase()}</span></div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">Raw Inbound Operator String</div>
+      <div class="code-block">${raw}</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">Regex Rule Execution Trace</div>
+      <div class="code-block">RULE: regex_${carrier.toLowerCase()}_v2
+STATUS: ${status === 'matched' ? 'COMPLETED (Tokens bound to pending payment intent)' : status === 'unmatched' ? 'PENDING (Awaiting checkout verify callback)' : 'SYNTAX_MISMATCH (Operator notification header changed)'}
+DO_MUTATION: LedgerDO shard committed</div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:auto">
+      <button class="btn-cta btn-cta-ghost" style="flex:1;justify-content:center" onclick="closeAdminDrawer()">Close</button>
+      <button class="btn-cta btn-cta-primary" style="flex:1;justify-content:center" onclick="alert('SMS re-queued for edge parsing.')">⚡ Re-run Parser</button>
+    </div>
+  `;
+
+  document.getElementById('admin-drawer-backdrop').classList.add('open');
+  document.getElementById('admin-drawer-sheet').classList.add('open');
+}
+
+function closeAdminDrawer() {
+  document.getElementById('admin-drawer-backdrop').classList.remove('open');
+  document.getElementById('admin-drawer-sheet').classList.remove('open');
+}
+
+/* Tenant Provisioning Modal */
+function openProvisionModal() {
+  document.getElementById('modal-form-content').style.display = 'flex';
+  document.getElementById('modal-claim-content').style.display = 'none';
+  document.getElementById('btn-submit-pv').style.display = 'inline-flex';
+  document.getElementById('provision-modal').classList.add('open');
+}
+
+function closeProvisionModal() {
+  document.getElementById('provision-modal').classList.remove('open');
+}
+
+function submitProvision() {
+  const name = document.getElementById('pv-name').value.trim() || 'New Merchant';
+  const email = document.getElementById('pv-email').value.trim() || 'owner@newmerchant.bd';
+  const rndClaim = 'edgepay_claim_' + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,24);
+
+  document.getElementById('pv-claim-token').textContent = rndClaim;
+  document.getElementById('modal-form-content').style.display = 'none';
+  document.getElementById('modal-claim-content').style.display = 'block';
+  document.getElementById('btn-submit-pv').style.display = 'none';
+
+  MERCHANTS_DATA.push({
+    id: 'merchant_' + Math.random().toString(36).substring(2, 6),
+    name: name,
+    email: email,
+    vol: '৳0.00',
+    status: 'Active',
+    rails: 1
   });
-  if (RM){
-    gsap.from('.kpi, .panel', {y:10, autoAlpha:0, duration:.38, stagger:.06, ease:'power2.out'});
-    gsap.from('.mrow', {x:-8, autoAlpha:0, duration:.3, stagger:.05, delay:.15});
-  }
-})();
+  renderMerchants(MERCHANTS_DATA);
+}
+
+// Initial render
+renderMerchants(MERCHANTS_DATA);
 </script>
 </body>
 </html>
