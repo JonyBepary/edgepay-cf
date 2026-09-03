@@ -84,13 +84,13 @@ describe('Frontend Architecture: Sanzo Wada Tokens & Asset Serving', () => {
     const apiData = await apiRes.json() as { success: boolean; trx_id: string; status: string };
     expect(apiData.success).toBe(true);
     expect(apiData.trx_id).toBe('TRX_CALLBACK_99');
-    expect(apiData.status).toBe('completed');
+    expect(apiData.status).toBe('pending');
 
     // 2. Browser GET return callback
     const browserRes = await SELF.fetch('http://localhost/callback?trx_id=TRX_WEB_01&status=completed');
     expect(browserRes.status).toBe(200);
     const browserHtml = await browserRes.text();
-    expect(browserHtml).toContain('Payment Callback Handled');
+    expect(browserHtml).toContain('Payment Callback Received');
     expect(browserHtml).toContain('TRX_WEB_01');
   });
 });

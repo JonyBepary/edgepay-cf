@@ -15,6 +15,7 @@ import m1 from '../../migrations/0001_initial_schema.sql?raw';
 import m2 from '../../migrations/0002_cf_native_v2.sql?raw';
 import m3 from '../../migrations/0003_ledger_posting_protocol.sql?raw';
 import m4 from '../../migrations/0004_payment_integrity.sql?raw';
+import m5 from '../../migrations/0005_otp_hardening.sql?raw';
 
 function splitStatements(sql: string): string[] {
   return sql
@@ -34,7 +35,7 @@ beforeAll(async () => {
 
   if (marker) return; // already migrated by an earlier test file
 
-  const statements = [m1, m2, m3, m4]
+  const statements = [m1, m2, m3, m4, m5]
     .flatMap(sql => splitStatements(sql))
     .map(sql => db.prepare(sql));
 

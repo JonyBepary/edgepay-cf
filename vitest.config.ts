@@ -41,6 +41,7 @@ export default defineConfig({
         // (https://allowed.example) and the fail-closed path (everything
         // else). Production ships ALLOWED_ORIGINS="" (fail closed).
         bindings: {
+          ENVIRONMENT: 'test',
           ALLOWED_ORIGINS: 'https://allowed.example',
           JWT_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           APP_KEY: 'dGVzdC1hcHAta2V5LTAxMjM0NTY3ODlhYmNkZWYxMjM=',

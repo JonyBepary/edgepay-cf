@@ -98,10 +98,10 @@ describe('Timing-Safe Comparison & Entropy Helpers', () => {
 });
 
 describe('Gateway Enablement Fail-Closed Default (EDGE-P2-016)', () => {
-  it('enables all adapters when ENABLED_GATEWAYS is empty or all', () => {
+  it('enables P0-7 default ceiling when empty, and all adapters when all', () => {
     const empty = parseEnabledGateways('');
-    expect(empty.allEnabled).toBe(true);
-    expect(empty.enabled.length).toBeGreaterThan(10);
+    expect(empty.allEnabled).toBe(false);
+    expect(empty.enabled.length).toBe(7);
 
     const all = parseEnabledGateways('all');
     expect(all.allEnabled).toBe(true);

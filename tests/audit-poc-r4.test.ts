@@ -297,7 +297,7 @@ describe('PoC-6: refund reserve-then-call with the CORRECT gateway spy (bkash fi
     let resolveCalls = 0;
     let refundCalls = 0;
     const fakeAdapter = {
-      refund: async () => { refundCalls++; return { success: false, error: 'poc' }; },
+      refund: async () => { refundCalls++; return { success: true }; },
     };
     const registrySpy = vi.spyOn(gatewayRegistry, 'resolve').mockImplementation((() => {
       resolveCalls++;
@@ -320,7 +320,11 @@ describe('PoC-6: refund reserve-then-call with the CORRECT gateway spy (bkash fi
     let resolveCalls = 0;
     let refundCalls = 0;
     const fakeAdapter = {
-      refund: async () => { refundCalls++; return { success: false, error: 'poc-env-no-credentials' }; },
+      // Fail-closed contract (refund.ts:182-190): success:false throws
+      // RefundNotSupportedError. The ordering proof needs the
+      // success-without-refund_id branch: reservation locked, gateway
+      // called, row stays pending, workflow triggered.
+      refund: async () => { refundCalls++; return { success: true }; },
     };
     const registrySpy = vi.spyOn(gatewayRegistry, 'resolve').mockImplementation((() => {
       resolveCalls++;
