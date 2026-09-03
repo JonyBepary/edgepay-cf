@@ -258,6 +258,31 @@ app.get('/assets/*', async (c) => {
   return new Response(res.body, res);
 });
 
+async function serveAssetDirect(assets: { fetch: typeof fetch }, path: string): Promise<Response> {
+  let res = await assets.fetch(new Request(`http://localhost${path}`));
+  if ((res.status === 307 || res.status === 308) && res.headers.has('location')) {
+    const loc = res.headers.get('location')!;
+    res = await assets.fetch(new Request(new URL(loc, 'http://localhost').toString()));
+  }
+  return new Response(res.body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+    },
+  });
+}
+
+app.get('/frontend', async (c) => {
+  return serveAssetDirect(c.env.ASSETS, '/design-system/index.html');
+});
+
+app.get('/frontend/:app', async (c) => {
+  const appName = c.req.param('app');
+  return serveAssetDirect(c.env.ASSETS, `/${appName}/index.html`);
+});
+
 // ---------------------------------------------------------------
 // Error handling — must be registered LAST.
 // (Casts bridge lib/error.ts's simpler Context type to this app's

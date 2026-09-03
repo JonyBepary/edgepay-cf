@@ -1,0 +1,17 @@
+{
+  "name": "edgepay-frontend-workspace",
+  "version": "0.4.5",
+  "private": true,
+  "description": "EdgePay multi-worker frontend architecture: checkout, merchant operations, and platform admin",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

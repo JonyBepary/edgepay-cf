@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "edgepay-merchant",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "kv_namespaces": [
+    { "binding": "MERCHANT_SESSIONS", "id": "merchant_sessions_kv" }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "API_ORIGIN": "https://api.edgepay.example"
+  }
+}

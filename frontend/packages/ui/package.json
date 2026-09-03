@@ -1,0 +1,13 @@
+{
+  "name": "@edgepay/ui",
+  "version": "0.4.5",
+  "private": true,
+  "main": "./motion.ts",
+  "exports": {
+    "./tokens.css": "./tokens.css",
+    "./haptics": "./haptics.ts",
+    "./motion": "./motion.ts",
+    "./icons": "./icons.ts"
+  },
+  "dependencies": {}
+}

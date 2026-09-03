@@ -1,0 +1,100 @@
+/**
+ * EdgePay Design System — Sanzo Wada Colorblind-Friendly Harmony Palette
+ * Inspired by Sanzo Wada's 1930s "Dictionary of Color Combinations" (配色事典)
+ * Optimized for high-contrast accessibility (WCAG AAA), financial trust, and cross-platform clarity.
+ */
+
+:root {
+  /* ── 1. Sanzo Wada Core Neutrals (墨・和紙) ────────────────────────── */
+  --ink: #0F172A;              /* Sumi (墨) — Deep carbon ink for primary typography */
+  --ink-2: #1E293B;            /* Usu-sumi (薄墨) — Secondary structural text */
+  --muted: #475569;            /* Hai-iro (灰色) — High-contrast metadata & subtitles (4.5:1+) */
+  --faint: #94A3B8;            /* Gin-nezu (銀鼠) — Subtle captions and disabled states */
+  --paper: #F8FAFC;            /* Washi (和紙) — Warm unbleached tactile canvas */
+  --surface: #FFFFFF;          /* Shiro (白) — Elevated cards and dialog surfaces */
+  --line: #E2E8F0;             /* Hairline structural separators */
+  --line-2: #CBD5E1;           /* Interactive control borders */
+
+  /* ── 2. Sanzo Wada Brand & Interactive Accents (紺・茜) ──────────── */
+  --brand: #1D4ED8;            /* Kon-i (紺色) — Traditional Japanese indigo for primary actions */
+  --brand-ink: #1E3A8A;        /* Fukai-kon (深紺) — Deep navy for headers and high-contrast text */
+  --brand-soft: #EFF6FF;       /* Awa-ai (淡藍) — Soft tinted highlight background */
+  --accent-akane: #DF6D43;     /* Akane (茜色) — Warm madder red / persimmon for intentional accents */
+
+  /* ── 3. Colorblind-Friendly Semantic States (山吹・鶯・弁柄) ───────── */
+  /* Awaiting / Pending State (Yamabuki Ochre) — Distinct in luminance and chroma */
+  --awaiting: #B45309;         /* Yamabuki (山吹色) — High-contrast golden amber */
+  --awaiting-bg: #FFF7ED;      /* Soft parchment tint */
+  --awaiting-line: #F59E0B;    /* Focused amber hairline */
+
+  /* Confirmed / Success State (Uguisu Sage) — Luminance calibrated against red */
+  --success: #065F46;          /* Uguisu (鶯色) — Deep bush warbler green (WCAG AAA on white) */
+  --success-bg: #F0FDF4;       /* Celadon pale wash */
+  --success-line: #10B981;     /* Vivid confirm line */
+
+  /* Error State (Benigara) — High-visibility crimson with accompanying icon */
+  --error: #991B1B;            /* Benigara (弁柄) — Earthy deep crimson */
+  --error-bg: #FEF2F2;         /* Pale crimson wash */
+  --error-line: #EF4444;       /* Alert boundary */
+
+  /* ── 4. Functional Gateway Identity Colors (Rail Specific) ────────── */
+  --bkash: #E2136E;            /* bKash Magenta */
+  --nagad: #F6921E;            /* Nagad Vibrant Orange */
+  --rocket: #8C3494;           /* Rocket Royal Violet */
+  --upay: #005696;             /* Upay Deep Marine */
+
+  /* ── 5. Spatial Rhythm, Radii & Depth ──────────────────────────────── */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Sophisticated layered drop shadows without heavy dark spreads */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 12px 32px -12px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 18px 48px -16px rgba(15, 23, 42, 0.22);
+}
+
+/* ── Typography & Global Reset ────────────────────────────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.55;
+}
+
+/* Financial tabular figures */
+.num, .tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Accessible focus outlines */
+:focus-visible {
+  outline: 2.5px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

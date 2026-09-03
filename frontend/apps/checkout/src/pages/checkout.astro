@@ -1,0 +1,38 @@
+---
+/**
+ * EdgePay Customer-Facing Checkout Page (Astro Island Component)
+ * Designed with Sanzo Wada Colorblind-Friendly Theme and GSAP Motion
+ */
+interface Props {
+  merchantName?: string;
+  amount?: string;
+  currency?: string;
+  intentToken?: string;
+}
+
+const {
+  merchantName = "Metro Mart",
+  amount = "1,450.00",
+  currency = "BDT",
+  intentToken = "tok_live_demo89324"
+} = Astro.props;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F172A" />
+  <title>Secure Checkout — {merchantName} (EdgePay)</title>
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+          integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
+          crossorigin="anonymous" defer></script>
+</head>
+<body>
+  <div id="app" data-token={intentToken} data-amount={amount} data-currency={currency}>
+    <!-- Static island shell hydrates with interactive GSAP & haptics -->
+  </div>
+  <script type="module" src="/scripts/checkout-island.js"></script>
+</body>
+</html>

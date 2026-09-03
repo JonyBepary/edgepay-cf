@@ -1,0 +1,15 @@
+{
+  "name": "@edgepay/checkout",
+  "version": "0.4.5",
+  "private": true,
+  "description": "EdgePay Customer-Facing Hosted Checkout Worker",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  }
+}

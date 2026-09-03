@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F172A">
+<title>Secure Checkout — Metro Mart (EdgePay Sample)</title>
+<!-- ═══════════════════════════════════════════════════════════════════════
+  EdgePay Checkout — UI/UX design sample (Astro-island idiom, single file)
+  • Zero framework runtime: static shell + one hydrated island script
+  • GSAP deferred from CDN with SRI; every animation is an enhancement
+  • prefers-reduced-motion respected; haptics behind feature detection
+  • Swap DEMO_MODE=false and fill API_BASE/TOKEN to hit the real core:
+      GET  {API_BASE}/checkout/{token}            → intent metadata (Phase 0 JSON)
+      POST {API_BASE}/checkout/{token}/initiate   → { gateway_id }
+      POST {API_BASE}/checkout/{token}/verify     → { trx_id, sender_phone }
+      GET  {API_BASE}/checkout/{token}/status     → { status, trx_id }
+  • Status machine mirrors Figure 3 of the architecture report.
+════════════════════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+        integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
+        crossorigin="anonymous" defer></script>
+<style>
+/* ── Design tokens: Sanzo Wada Colorblind-Friendly Theme (shared across all EdgePay surfaces) ── */
+:root {
+  --ink: #0F172A; --ink-2: #1E293B; --muted: #64748B; --faint: #94A3B8;
+  --paper: #F8FAFC; --surface: #FFFFFF; --line: #E2E8F0;
+  --brand: #1D4ED8; --brand-ink: #1E3A8A; --brand-soft: #EFF6FF;
+  --awaiting: #B45309; --awaiting-bg: #FFF7ED; --awaiting-line: #F59E0B;
+  --success: #065F46; --success-bg: #F0FDF4; --success-line: #10B981;
+  --error: #B31212; --error-bg: #FEF2F2;
+  --bkash: #E2136E; --nagad: #F6921E; --rocket: #8C3494;
+  --radius: 14px; --shadow: 0 1px 2px rgba(15,23,42,.05), 0 8px 24px -12px rgba(15,23,42,.18);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Inter', sans-serif;
+  background: var(--paper); color: var(--ink);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  line-height: 1.5;
+}
+.num { font-variant-numeric: tabular-nums; }
+button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input { font: inherit; }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+.page { width: 100%; max-width: 460px; padding: 20px 18px 40px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.masthead { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px; }
+.masthead .store { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.masthead .mark {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--brand-ink), var(--brand));
+  color: #fff; display: grid; place-items: center;
+  font-weight: 800; font-size: 15px; letter-spacing: .02em;
+}
+.masthead .store .who { min-width: 0; }
+.masthead .store .who b { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.masthead .store .who span { display: block; font-size: 11.5px; color: var(--muted); }
+.trust-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 10.5px; font-weight: 650; color: var(--brand-ink);
+  background: var(--brand-soft); border: 1px solid #BFDBFE;
+  padding: 5px 10px; border-radius: 999px;
+}
+.trust-chip svg { width: 11px; height: 11px; }
+
+/* ── Amount card ────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.amount-card { padding: 20px 20px 18px; text-align: center; position: relative; overflow: hidden; }
+.amount-card::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--brand-ink), var(--brand), #60A5FA);
+}
+.amount-card .lbl { font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.amount-card .amt { font-size: 40px; font-weight: 800; letter-spacing: -.02em; margin-top: 4px; }
+.amount-card .amt .cur { font-size: 22px; font-weight: 700; color: var(--muted); margin-right: 2px; }
+.amount-card .desc { margin-top: 4px; font-size: 13px; color: var(--muted); }
+.amount-card .meta-row { display: flex; justify-content: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.chip-mini {
+  font-size: 10.5px; font-weight: 650; color: var(--ink-2);
+  background: var(--paper); border: 1px solid var(--line);
+  padding: 4px 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.chip-mini .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success-line); }
+
+/* ── Section titles ─────────────────────────────────────────────────── */
+.step-title { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); padding: 6px 4px 0; letter-spacing: .02em; }
+.step-title .n {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--brand-soft);
+  color: var(--brand-ink); font-size: 11px; font-weight: 800;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+
+/* ── Gateway pills ──────────────────────────────────────────────────── */
+.gateways { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px; }
+.gw {
+  position: relative; border: 2px solid var(--line); border-radius: 12px;
+  background: var(--surface); padding: 12px 12px 10px; text-align: left;
+  transition: border-color .18s ease, background .18s ease, transform .12s ease;
+  min-height: 74px;
+}
+.gw:active { transform: scale(.97); }
+.gw .gw-name { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.gw .gw-kind { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.gw .rail-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.gw[data-gw="bkash"]  .rail-dot { background: var(--bkash); }
+.gw[data-gw="nagad"]  .rail-dot { background: var(--nagad); }
+.gw[data-gw="rocket"] .rail-dot { background: var(--rocket); }
+.gw[data-gw="api"]    .rail-dot { background: var(--brand); }
+.gw .tick {
+  position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand); color: #fff; display: none; place-items: center;
+}
+.gw .tick svg { width: 10px; height: 10px; }
+.gw.selected { border-color: var(--brand); background: var(--brand-soft); }
+.gw.selected .tick { display: grid; }
+.gw .tag {
+  display: inline-block; margin-top: 6px; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .04em; padding: 2px 7px; border-radius: 999px;
+}
+.gw .tag.manual { color: var(--awaiting); background: var(--awaiting-bg); border: 1px solid #FDE4C4; }
+.gw .tag.api    { color: var(--brand-ink); background: var(--brand-soft); border: 1px solid #BFDBFE; }
+
+/* ── Manual MFS instructions ────────────────────────────────────────── */
+.send-card { padding: 16px; }
+.send-card .to { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--paper); border: 1.5px dashed #CBD5E1; border-radius: 10px; padding: 12px 14px; }
+.send-card .to .who span { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+.send-card .to .who b { font-size: 18px; font-weight: 800; letter-spacing: .02em; }
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 12px; font-weight: 700; color: var(--brand-ink);
+  background: var(--brand-soft); border: 1.5px solid #BFDBFE;
+  padding: 8px 12px; border-radius: 9px; transition: background .15s ease;
+}
+.copy-btn:active { background: #DBEAFE; }
+.copy-btn.copied { color: var(--success); background: var(--success-bg); border-color: #A7F3D0; }
+.copy-btn svg { width: 12px; height: 12px; }
+.howto { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.howto .h-step { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--ink-2); }
+.howto .h-step i {
+  font-style: normal; width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px;
+  border-radius: 50%; background: var(--awaiting-bg); color: var(--awaiting);
+  border: 1px solid #FDE4C4; font-size: 10px; font-weight: 800;
+  display: grid; place-items: center;
+}
+
+/* ── TrxID form ─────────────────────────────────────────────────────── */
+.trx-card { padding: 16px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+.field input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--surface);
+  font-size: 15px; font-weight: 600; letter-spacing: .03em;
+  transition: border-color .15s ease;
+}
+.field input:focus { outline: none; border-color: var(--brand); }
+.field .hint { font-size: 10.5px; color: var(--faint); margin-top: 4px; }
+
+.btn-primary {
+  width: 100%; padding: 14px; border-radius: 12px;
+  background: var(--brand); color: #fff; font-size: 15px; font-weight: 750;
+  box-shadow: 0 8px 18px -8px rgba(29,78,216,.55);
+  transition: transform .12s ease, background .15s ease;
+}
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { background: #93C5FD; box-shadow: none; cursor: not-allowed; }
+
+/* ── State panels (verifying / awaiting / done / error) ─────────────── */
+.panel { padding: 22px 18px; text-align: center; }
+.panel .p-eyebrow { font-size: 10.5px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.panel .p-title { font-size: 17px; font-weight: 800; margin-top: 5px; }
+.panel .p-desc { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.55; }
+
+.pulse { width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 50%; position: relative; display: grid; place-items: center; }
+.pulse::before, .pulse::after {
+  content: ""; position: absolute; inset: -8px; border-radius: 50%;
+  border: 2px solid currentColor; opacity: 0;
+}
+.pulse.listening { color: var(--awaiting-line); background: var(--awaiting-bg); }
+.pulse.listening::before, .pulse.listening::after { animation: ring 1.8s ease-out infinite; }
+.pulse.listening::after { animation-delay: .9s; }
+.pulse svg { width: 22px; height: 22px; }
+@keyframes ring { 0% { transform: scale(.6); opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+
+.ref-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 9px;
+  padding: 9px 12px; margin-top: 12px; font-size: 12px;
+}
+.ref-row b { font-weight: 700; }
+.timer { font-size: 12px; font-weight: 700; color: var(--awaiting); margin-top: 10px; }
+
+.check-wrap { width: 64px; height: 64px; margin: 0 auto 12px; }
+.check-wrap svg { width: 100%; height: 100%; }
+.check-wrap .ring { stroke: #A7F3D0; stroke-width: 2.5; fill: none; }
+.check-wrap .path { stroke: var(--success-line); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.done-amount { font-size: 26px; font-weight: 800; margin-top: 6px; }
+.done-note { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.done-actions { display: flex; gap: 8px; margin-top: 14px; }
+.btn-ghost {
+  flex: 1; padding: 11px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  background: var(--paper); border: 1.5px solid var(--line); color: var(--ink-2);
+  transition: background .15s ease;
+}
+.btn-ghost:active { background: var(--line); }
+
+.error-card { border: 1.5px solid #FECACA; background: var(--error-bg); }
+.error-card .p-eyebrow { color: var(--error); }
+.error-card .p-title { color: #7F1D1D; }
+.retry-btn {
+  margin-top: 12px; padding: 10px 22px; border-radius: 10px;
+  background: var(--ink); color: #fff; font-size: 13px; font-weight: 700;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.foot { text-align: center; font-size: 11px; color: var(--faint); padding: 6px 0 0; line-height: 1.6; }
+.foot b { color: var(--muted); font-weight: 700; }
+.demo-flag {
+  position: fixed; bottom: 12px; right: 12px; z-index: 50;
+  font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  background: var(--ink); color: #FDE68A; padding: 6px 10px; border-radius: 999px;
+  border: 1px solid #334155; opacity: .92;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="page" id="page">
+
+  <header class="masthead">
+    <div class="store">
+      <div class="mark">MM</div>
+      <div class="who"><b>Metro Mart</b><span>Order #EP-8842</span></div>
+    </div>
+    <span class="trust-chip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Secured
+    </span>
+  </header>
+
+  <!-- Amount -->
+  <section class="card amount-card" aria-label="Payment amount">
+    <div class="lbl">Amount to pay</div>
+    <div class="amt num"><span class="cur">৳</span><span id="amt" data-amt="2480.00">0.00</span></div>
+    <div class="desc">Groceries — 12 items, Express delivery</div>
+    <div class="meta-row">
+      <span class="chip-mini"><span class="dot"></span>Secure link</span>
+      <span class="chip-mini num" id="expiry">Expires in 29:41</span>
+    </div>
+  </section>
+
+  <!-- Step 1: choose method -->
+  <div class="step-title"><span class="n">1</span>Choose how to pay</div>
+  <section class="card" aria-label="Payment methods">
+    <div class="gateways" id="gateways">
+      <button class="gw" data-gw="bkash" data-type="manual" aria-pressed="false">
+        <span class="gw-name"><span class="rail-dot"></span>bKash</span>
+        <span class="gw-kind">Personal · Send Money</span>
+        <span class="tag manual">Verify by SMS</span>
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M4 12l6 6L20 6"/></svg></span>
+      </button>
+      <button class="gw" data-gw="nagad" data-type="manual" aria-pressed="false">
+        <span class="gw-name"><span class="rail-dot"></span>Nagad</span>
+        <span class="gw-kind">Personal · Send Money</span>
+        <span class="tag manual">Verify by SMS</span>
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M4 12l6 6L20 6"/></svg></span>
+      </button>
+      <button class="gw" data-gw="rocket" data-type="manual" aria-pressed="false">
+        <span class="gw-name"><span class="rail-dot"></span>Rocket</span>
+        <span class="gw-kind">Personal · Send Money</span>
+        <span class="tag manual">Verify by SMS</span>
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M4 12l6 6L20 6"/></svg></span>
+      </button>
+      <button class="gw" data-gw="api" data-type="api" aria-pressed="false">
+        <span class="gw-name"><span class="rail-dot"></span>bKash API</span>
+        <span class="gw-kind">Redirect · pay in app</span>
+        <span class="tag api">Instant</span>
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M4 12l6 6L20 6"/></svg></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 2 (manual): send money -->
+  <div id="manual-block" hidden>
+    <div class="step-title"><span class="n">2</span>Send the money</div>
+    <section class="card send-card">
+      <div class="to">
+        <div class="who">
+          <span>Metro Mart · bKash Personal</span>
+          <b class="num" id="mfs-number">01812-345678</b>
+        </div>
+        <button class="copy-btn" id="copy-number" aria-label="Copy bKash number">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <span id="copy-label">Copy</span>
+        </button>
+      </div>
+      <div class="howto">
+        <div class="h-step"><i>1</i>Open your bKash app and choose <b>&nbsp;Send Money</b></div>
+        <div class="h-step"><i>2</i>Send exactly <b class="num">&nbsp;৳2,480.00&nbsp;</b> to the number above</div>
+        <div class="h-step"><i>3</i>Come back and enter the <b>&nbsp;TrxID&nbsp;</b> from the confirmation SMS</div>
+      </div>
+    </section>
+
+    <div class="step-title"><span class="n">3</span>Confirm your payment</div>
+    <section class="card trx-card">
+      <form id="trx-form" novalidate>
+        <div class="field">
+          <label for="trxid">Transaction ID (TrxID)</label>
+          <input id="trxid" name="trxid" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 9HV7A5X2K1" required minlength="4" maxlength="24">
+          <div class="hint">Found in your bKash SMS — letters and digits</div>
+        </div>
+        <div class="field">
+          <label for="phone">Your bKash number</label>
+          <input id="phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required maxlength="14">
+          <div class="hint">The number you sent the money from</div>
+        </div>
+        <button class="btn-primary" id="verify-btn" type="submit" disabled>I've sent the money</button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Step 2 (api gateway): redirect notice -->
+  <div id="api-block" hidden>
+    <div class="step-title"><span class="n">2</span>Pay at bKash</div>
+    <section class="card trx-card">
+      <p style="font-size:13px; color:var(--ink-2); line-height:1.6; margin-bottom:14px;">
+        You'll be redirected to bKash to complete the payment of
+        <b class="num">৳2,480.00</b>. This page verifies automatically when you return.
+      </p>
+      <button class="btn-primary" id="go-gateway">Continue to bKash</button>
+    </section>
+  </div>
+
+  <!-- Verifying -->
+  <section class="card panel" id="verifying-panel" hidden aria-live="polite">
+    <div class="pulse listening">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 0 1 18 0" stroke-linecap="round"/><path d="M7 12a5 5 0 0 1 10 0" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <div class="p-eyebrow" style="color:var(--awaiting);">Checking</div>
+    <div class="p-title">Matching your payment…</div>
+    <div class="p-desc">We're confirming your TrxID with the carrier's confirmation. This usually takes a moment.</div>
+    <div class="timer num" id="verify-timer">00:00</div>
+  </section>
+
+  <!-- Awaiting SMS -->
+  <section class="card panel" id="awaiting-panel" hidden aria-live="polite">
+    <div class="pulse listening">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 13c3-3 13-3 16 0" stroke-linecap="round"/><path d="M7 16.5c2-2 8-2 10 0" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <div class="p-eyebrow" style="color:var(--awaiting);">Listening</div>
+    <div class="p-title">We received your TrxID</div>
+    <div class="p-desc">Your payment is being confirmed with the carrier's SMS. It usually settles within a minute — you can leave this page, your payment is already recorded.</div>
+    <div class="ref-row"><span>Reference</span><b class="num" id="await-ref">EP-8842 · 9HV7A5X2K1</b></div>
+    <div class="timer num" id="wait-timer">Elapsed 00:00</div>
+  </section>
+
+  <!-- Completed -->
+  <section class="card panel" id="done-panel" hidden aria-live="polite">
+    <div class="check-wrap">
+      <svg viewBox="0 0 64 64">
+        <circle class="ring" cx="32" cy="32" r="29"/>
+        <path class="path" id="check-path" d="M18 33.5l10 10L47 24"/>
+      </svg>
+    </div>
+    <div class="p-eyebrow" style="color:var(--success);">Payment completed</div>
+    <div class="done-amount num"><span class="cur" style="font-size:16px;color:var(--muted);font-weight:700;">৳</span><span id="done-amt">2,480.00</span></div>
+    <div class="done-note">TrxID <b class="num" id="done-trx">9HV7A5X2K1</b> verified · receipt sent to your SMS</div>
+    <div class="done-actions">
+      <button class="btn-ghost" id="done-copy">Copy receipt ID</button>
+      <button class="btn-ghost" onclick="window.print()">Save receipt</button>
+    </div>
+  </section>
+
+  <!-- Retryable error -->
+  <section class="card panel error-card" id="error-panel" hidden aria-live="polite">
+    <div class="p-eyebrow">Not confirmed yet</div>
+    <div class="p-title" id="err-title">This TrxID was already used</div>
+    <div class="p-desc" id="err-desc">This Transaction ID belongs to another completed payment. Please double-check the TrxID in your bKash SMS and try again.</div>
+    <button class="retry-btn" id="retry-btn">Edit my TrxID</button>
+  </section>
+
+  <footer class="foot">
+    Payments secured by <b>EdgePay</b> · your card details never touch this store<br>
+    Encrypted connection · verified merchant
+  </footer>
+</div>
+<div class="demo-flag">DEMO SAMPLE</div>
+
+<script defer>
+/* ═════ EdgePay checkout island ═════
+   Astro-hydration idiom: one script, no framework. */
+(() => {
+  "use strict";
+
+  /* ── haptics (from packages/ui — see report §8.2) ── */
+  const canVibrate = "vibrate" in navigator && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const haptic = {
+    tap()     { canVibrate && navigator.vibrate(8); },
+    select()  { canVibrate && navigator.vibrate([0, 10, 30, 10]); },
+    success() { canVibrate && navigator.vibrate([10, 40, 20]); },
+    error()   { canVibrate && navigator.vibrate([60, 40, 60]); },
+  };
+
+  /* ── API wiring (swap for production) ── */
+  const DEMO_MODE = true;
+  const API_BASE  = "https://api.edgepay.example";   // core origin
+  const TOKEN     = "tk_demo_8842";                  // path token — the only capability
+  const api = {
+    initiate: (gatewayId) => fetch(`${API_BASE}/checkout/${TOKEN}/initiate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gateway_id: gatewayId }) }),
+    verify: (trxId, phone) => fetch(`${API_BASE}/checkout/${TOKEN}/verify`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trx_id: trxId, sender_phone: phone }) }),
+    status: () => fetch(`${API_BASE}/checkout/${TOKEN}/status`),
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const show = (el) => { el.hidden = false; };
+  const hide = (el) => { el.hidden = true; };
+
+  /* amount count-up + expiry countdown */
+  const fmtBDT = (n) => n.toLocaleString("en-BD", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let expiryLeft = 29 * 60 + 41;
+  setInterval(() => {
+    if (expiryLeft > 0) expiryLeft--;
+    const m = String(Math.floor(expiryLeft / 60)).padStart(2, "0");
+    const s = String(expiryLeft % 60).padStart(2, "0");
+    $("expiry").textContent = `Expires in ${m}:${s}`;
+  }, 1000);
+
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const G = window.gsap || null;
+  const tween = (target, vars) => { if (G && !reduceMotion) return G.to(target, vars); return null; };
+  const from = (target, vars) => { if (G && !reduceMotion) return G.from(target, vars); return null; };
+
+  function enter(el, i = 0) {
+    show(el);
+    from(el, { y: 14, opacity: 0, duration: .28, ease: "power3.out", delay: i * .05 });
+  }
+
+  /* amount count-up */
+  document.addEventListener("DOMContentLoaded", () => {
+    const amtEl = $("amt"), target = parseFloat(amtEl.dataset.amt);
+    if (G && !reduceMotion) {
+      const o = { v: 0 };
+      G.to(o, { v: target, duration: .6, ease: "power2.out",
+        onUpdate: () => { amtEl.textContent = fmtBDT(o.v); } });
+    } else amtEl.textContent = fmtBDT(target);
+
+    if (G && !reduceMotion) {
+      G.from(".card, .step-title", { y: 12, opacity: 0, duration: .32, ease: "power3.out", stagger: .06 });
+    }
+  });
+
+  /* ── gateway selection ── */
+  let selected = null;
+  document.querySelectorAll(".gw").forEach((gw) => {
+    gw.addEventListener("click", () => {
+      haptic.select();
+      document.querySelectorAll(".gw").forEach((g) => {
+        g.classList.remove("selected"); g.setAttribute("aria-pressed", "false");
+      });
+      gw.classList.add("selected"); gw.setAttribute("aria-pressed", "true");
+      selected = gw.dataset;
+      if (G && !reduceMotion) G.fromTo(gw, { scale: .97 }, { scale: 1, duration: .22, ease: "back.out(2)" });
+      if (selected.type === "manual") { show($("manual-block")); hide($("api-block")); enter($("manual-block")); }
+      else { show($("api-block")); hide($("manual-block")); enter($("api-block")); }
+      $("manual-block").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+  });
+
+  /* copy number */
+  $("copy-number").addEventListener("click", async () => {
+    haptic.tap();
+    try { await navigator.clipboard.writeText($("mfs-number").textContent.replace(/-/g, "")); } catch {}
+    const btn = $("copy-number"), lbl = $("copy-label");
+    btn.classList.add("copied"); lbl.textContent = "Copied";
+    setTimeout(() => { btn.classList.remove("copied"); lbl.textContent = "Copy"; }, 1800);
+  });
+
+  /* form gate */
+  const trxInput = $("trxid"), phoneInput = $("phone"), submitBtn = $("verify-btn");
+  const gate = () => {
+    submitBtn.disabled = !(trxInput.value.trim().length >= 4 && phoneInput.value.trim().length >= 11 && selected);
+  };
+  [trxInput, phoneInput].forEach((i) => i.addEventListener("input", gate));
+
+  /* demo-only: any valid-looking TrxID works; 1 in 3 lands awaiting_sms */
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function startTimer(el, prefix) {
+    const t0 = Date.now();
+    return setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      el.textContent = `${prefix}${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    }, 1000);
+  }
+
+  async function pollStatus() {
+    /* production: loop api.status() on the report's backoff (2s/5s/10s cap).
+       demo: flip to completed after 6–10 s so the state machine is visible. */
+    await sleep(6000 + Math.random() * 4000);
+    return { status: "completed", trx_id: trxInput.value.trim().toUpperCase() };
+  }
+
+  function complete(trxId) {
+    hide($("verifying-panel")); hide($("awaiting-panel"));
+    $("done-trx").textContent = trxId || "—";
+    enter($("done-panel"));
+    haptic.success();
+    if (G && !reduceMotion) {
+      const path = $("check-path"), len = path.getTotalLength();
+      G.set(path, { strokeDasharray: len, strokeDashoffset: len });
+      G.fromTo($(".check-wrap .ring"), { opacity: 0, scale: .8 },
+        { opacity: 1, scale: 1, duration: .3, ease: "back.out(1.8)" });
+      G.to(path, { strokeDashoffset: 0, duration: .45, ease: "power2.inOut", delay: .1 });
+      G.from("#done-panel .done-amount, #done-panel .done-note, #done-panel .done-actions",
+        { y: 10, opacity: 0, duration: .3, ease: "power3.out", stagger: .07, delay: .25 });
+    }
+  }
+
+  async function awaiting() {
+    hide($("verifying-panel"));
+    $("await-ref").textContent = `EP-8842 · ${trxInput.value.trim().toUpperCase()}`;
+    enter($("awaiting-panel"));
+    let timer = startTimer($("wait-timer"), "Elapsed ");
+    const res = await pollStatus();
+    clearInterval(timer);
+    if (res.status === "completed") complete(res.trx_id);
+  }
+
+  async function verify() {
+    const trxId = trxInput.value.trim().toUpperCase();
+    const phone = phoneInput.value.trim();
+    haptic.tap();
+    submitBtn.disabled = true; submitBtn.textContent = "Verifying…";
+
+    let outcome;
+    if (!DEMO_MODE) {
+      const r = await api.verify(trxId, phone);
+      outcome = r.status === 200 ? await r.json() : { error: { code: r.status === 429 ? "RATE" : "TRX_ALREADY_USED" } };
+    } else {
+      await sleep(1400);
+      outcome = Math.random() < 0.34
+        ? { success: true, data: { status: "awaiting_sms", trx_id: trxId } }
+        : Math.random() < 0.15
+          ? { success: false, error: { code: "TRX_ALREADY_USED" } }
+          : { success: true, data: { status: "completed", trx_id: trxId } };
+    }
+
+    if (outcome.success && outcome.data.status === "completed") {
+      hide($("manual-block"));
+      complete(outcome.data.trx_id);
+    } else if (outcome.success && outcome.data.status === "awaiting_sms") {
+      hide($("manual-block"));
+      await awaiting();
+    } else {
+      const code = outcome.error?.code || "TRX_ALREADY_USED";
+      const map = {
+        TRX_ALREADY_USED: ["This TrxID was already used",
+          "This Transaction ID belongs to another completed payment. Please double-check the TrxID in your bKash SMS and try again."],
+        AMOUNT_MISMATCH: ["Amount doesn't match",
+          "The payment received for this TrxID doesn't match the order amount (৳2,480.00). Please contact Metro Mart if you sent a different amount."],
+        RATE: ["Too many attempts",
+          "Please wait a moment before trying again — this link is rate-limited to keep it secure."],
+      };
+      const [t, d] = map[code] || map.TRX_ALREADY_USED;
+      $("err-title").textContent = t; $("err-desc").textContent = d;
+      hide($("verifying-panel"));
+      enter($("error-panel"));
+      haptic.error();
+    }
+  }
+
+  $("trx-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (submitBtn.disabled) return;
+    hide($("error-panel"));
+    enter($("verifying-panel"));
+    startTimer($("verify-timer"), "");
+    verify();
+  });
+
+  $("retry-btn").addEventListener("click", () => {
+    haptic.tap();
+    hide($("error-panel"));
+    submitBtn.disabled = false; submitBtn.textContent = "I've sent the money";
+    trxInput.focus();
+    enter($("manual-block"));
+  });
+
+  $("done-copy").addEventListener("click", async () => {
+    haptic.tap();
+    try { await navigator.clipboard.writeText(`EP-8842 / ${$("done-trx").textContent}`); } catch {}
+  });
+
+  /* api-path redirect (demo) */
+  $("go-gateway").addEventListener("click", async () => {
+    haptic.tap();
+    $("go-gateway").disabled = true; $("go-gateway").textContent = "Redirecting…";
+    await sleep(1200);
+    complete("BK-8K2M4P9Q");
+    $("go-gateway").disabled = false; $("go-gateway").textContent = "Continue to bKash";
+  });
+})();
+</script>
+</body>
+</html>
