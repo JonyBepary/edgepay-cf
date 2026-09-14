@@ -33,34 +33,48 @@ if [ "$NODE_MAJOR" -lt 22 ]; then
   exit 1
 fi
 
-# 3. Resolve project directory
-# If executed inside an edgepay-cf clone, use current directory.
-# Otherwise, clone the repository.
+# 3. Resolve project directory & handle unbuilt repositories
+# Case 1: Executed directly inside an edgepay-cf clone
 if [ -f "package.json" ] && grep -q '"name": "edgepay-cf"' "package.json" 2>/dev/null && [ -d "packages/init" ]; then
-  REPO_DIR="$(pwd)"
-else
-  if ! command -v git >/dev/null 2>&1; then
-    echo "Error: git is required to clone EdgePay repository." >&2
-    exit 1
+  if [ ! -f "packages/init/dist/index.js" ] || [ ! -d "node_modules" ]; then
+    echo "Building installer..."
+    npm install
+    npm run build:init
   fi
-  REPO_DIR="edgepay-cf"
-  if [ ! -d "$REPO_DIR" ]; then
-    echo "Cloning EdgePay repository..."
-    git clone https://github.com/JonyBepary/edgepay-cf.git "$REPO_DIR"
+  exec node packages/init/bin/edgepay-init.mjs "$@"
+fi
+
+# Case 2: Executed in parent directory where ./edgepay-cf already exists
+if [ -d "edgepay-cf" ] && [ -f "edgepay-cf/package.json" ] && grep -q '"name": "edgepay-cf"' "edgepay-cf/package.json" 2>/dev/null && [ -d "edgepay-cf/packages/init" ]; then
+  echo "Found EdgePay clone in ./edgepay-cf, entering directory..."
+  cd edgepay-cf
+  if [ ! -f "packages/init/dist/index.js" ] || [ ! -d "node_modules" ]; then
+    echo "Building installer..."
+    npm install
+    npm run build:init
   fi
-  cd "$REPO_DIR"
+  exec node packages/init/bin/edgepay-init.mjs "$@"
 fi
 
-# 4. Ensure dependencies and installer build are present
-if [ ! -d "node_modules" ] || [ ! -d "packages/init/node_modules" ]; then
-  echo "Installing dependencies..."
-  npm install --silent
+# Case 3: Current directory is non-empty and is NOT an edgepay-cf clone
+if [ -n "$(ls -A . 2>/dev/null)" ]; then
+  echo "Error: current directory is not empty and is not an edgepay-cf clone." >&2
+  echo "Either cd into an empty directory or clone edgepay-cf first:" >&2
+  echo "  git clone https://github.com/JonyBepary/edgepay-cf.git && cd edgepay-cf" >&2
+  exit 1
 fi
 
-if [ ! -d "packages/init/dist" ] || [ ! -f "packages/init/dist/index.js" ]; then
-  echo "Building installer..."
-  npm --prefix packages/init run build --silent
+# Case 4: Current directory is empty — clone and build
+if ! command -v git >/dev/null 2>&1; then
+  echo "Error: git is required to clone EdgePay repository." >&2
+  exit 1
 fi
 
-# 5. Launch the installer
+echo "Cloning EdgePay repository..."
+git clone https://github.com/JonyBepary/edgepay-cf.git .
+echo "Installing dependencies..."
+npm install
+echo "Building installer..."
+npm run build:init
+
 exec node packages/init/bin/edgepay-init.mjs "$@"
