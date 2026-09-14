@@ -590,7 +590,7 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     // Provision default Main brand and store hierarchy (Core invariant)
     const { HierarchyService } = await import('../services/hierarchy');
     const hierarchyService = new HierarchyService(c.env.DB);
-    await hierarchyService.provisionDefaultHierarchy(newMerchantId, body.currency ?? 'BDT');
+    const { storeId } = await hierarchyService.provisionDefaultHierarchy(newMerchantId, body.currency ?? 'BDT');
 
     // 1. Provision default admin user for merchant
     const adminUserUuid = crypto.randomUUID();
@@ -661,6 +661,18 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
            VALUES (?, ?, 'personal', ?, ?, ?)`
         ).bind(gwId, newMerchantId, phone, instructions, now).run();
       }
+
+      // Auto-bind seeded gateway to Main store as a default gate
+      if (gwId) {
+        await hierarchyService.createGate({
+          store_id: storeId,
+          merchant_id: newMerchantId,
+          gateway_id: gwId,
+          label: gw.name,
+          currency: body.currency ?? 'BDT',
+          mfs_number: defaultPhone ?? null,
+        });
+      }
     }
 
     // 5. Seed companion pairing OTP using CSPRNG.
@@ -722,6 +734,110 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     console.error('Merchant provisioning error:', err);
     return c.json({ success: false, error: { code: 'PROVISION_ERROR', message: msg } }, 500);
   }
+});
+
+// List all gateways configured for a merchant (Platform Admin only)
+adminApiRoutes.get('/merchants/:id/gateways', requireScope('admin'), requirePlatformAdmin, async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+
+  const rows = await c.env.DB.prepare(
+    `SELECT g.id, g.slug, g.name, g.type, g.status, g.priority, g.supported_currencies,
+            mg.account_number, mg.payment_number, mg.account_name
+     FROM op_gateways g
+     LEFT JOIN op_manual_gateways mg ON mg.gateway_id = g.id
+     WHERE g.merchant_id = ?
+     ORDER BY g.priority ASC, g.id ASC`
+  ).bind(merchantId).all();
+
+  return c.json({ success: true, data: rows.results ?? [] });
+});
+
+// List all gates configured for a merchant (Platform Admin only)
+adminApiRoutes.get('/merchants/:id/gates', requireScope('admin'), requirePlatformAdmin, async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+
+  const rows = await c.env.DB.prepare(
+    `SELECT g.*, gw.slug as gateway_slug, gw.type as gateway_type, s.name as store_name
+     FROM op_gates g
+     JOIN op_gateways gw ON gw.id = g.gateway_id
+     JOIN op_stores s ON s.id = g.store_id
+     WHERE g.merchant_id = ?
+     ORDER BY g.id ASC`
+  ).bind(merchantId).all();
+
+  return c.json({ success: true, data: rows.results ?? [] });
+});
+
+// Create a gate for a merchant (Platform Admin only)
+adminApiRoutes.post('/merchants/:id/gates', requireScope('admin'), requirePlatformAdmin, async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+
+  const merchant = await c.env.DB.prepare(
+    `SELECT id, default_currency FROM op_merchants WHERE id = ? LIMIT 1`
+  ).bind(merchantId).first<{ id: number; default_currency: string }>();
+  if (!merchant) {
+    return c.json({ success: false, error: { code: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' } }, 404);
+  }
+
+  interface CreateGateBody {
+    gateway_id?: number;
+    store_id?: number;
+    label?: string;
+    currency?: string;
+    mfs_number?: string | null;
+  }
+  const body: CreateGateBody = await c.req.json<CreateGateBody>().catch(() => ({} as CreateGateBody));
+
+  if (!body.gateway_id) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'gateway_id is required' } }, 400);
+  }
+
+  const gw = await c.env.DB.prepare(
+    `SELECT id, name FROM op_gateways WHERE id = ? AND merchant_id = ? LIMIT 1`
+  ).bind(body.gateway_id, merchantId).first<{ id: number; name: string }>();
+  if (!gw) {
+    return c.json({ success: false, error: { code: 'GATEWAY_NOT_FOUND', message: 'Gateway not found for this merchant' } }, 404);
+  }
+
+  const { HierarchyService } = await import('../services/hierarchy');
+  const svc = new HierarchyService(c.env.DB);
+
+  let storeId = body.store_id;
+  if (!storeId) {
+    const mainStore = await svc.resolveMainStore(merchantId);
+    if (!mainStore) {
+      return c.json({ success: false, error: { code: 'STORE_NOT_FOUND', message: 'Merchant has no default Main store' } }, 404);
+    }
+    storeId = mainStore.id;
+  } else {
+    const store = await svc.getStore(storeId, merchantId);
+    if (!store) {
+      return c.json({ success: false, error: { code: 'STORE_NOT_FOUND', message: 'Store not found for this merchant' } }, 404);
+    }
+  }
+
+  const label = body.label?.trim() || gw.name;
+  const currency = body.currency || merchant.default_currency || 'BDT';
+
+  const gate = await svc.createGate({
+    store_id: storeId,
+    merchant_id: merchantId,
+    gateway_id: body.gateway_id,
+    label,
+    currency,
+    mfs_number: body.mfs_number ?? null,
+  });
+
+  return c.json({ success: true, data: gate }, 201);
 });
 
 // ---------------------------------------------------------------

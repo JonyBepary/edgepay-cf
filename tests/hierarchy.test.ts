@@ -450,8 +450,10 @@ describe('Domain Hierarchy (Phase 6a)', () => {
     expect(jsonA.data.some(s => s.slug === 'store-a-13')).toBe(true);
   });
 
-  // 14. HierarchyService.provisionDefaultHierarchy is race-safe under concurrent execution
-  it('14. HierarchyService.provisionDefaultHierarchy is race-safe under concurrent execution', async () => {
+  // 14. HierarchyService.provisionDefaultHierarchy is idempotent across repeated and parallel calls
+  // Note: While workerd serializes D1/SQLite queries within an isolate, this verifies that multiple
+  // simultaneous invocations produce exactly one brand and store without constraint violation throws.
+  it('14. HierarchyService.provisionDefaultHierarchy is idempotent across repeated calls', async () => {
     const testM = range.start + 115;
     await db.prepare(
       `INSERT INTO op_merchants (id, uuid, name, slug, email, timezone, default_currency, status)

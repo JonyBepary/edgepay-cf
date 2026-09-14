@@ -135,7 +135,7 @@ installRoutes.post('/', async (c) => {
   // Provision default Main brand and store hierarchy (Core invariant)
   const { HierarchyService } = await import('../services/hierarchy');
   const hierarchyService = new HierarchyService(c.env.DB);
-  await hierarchyService.provisionDefaultHierarchy(merchantId, body.currency ?? 'BDT');
+  const { storeId } = await hierarchyService.provisionDefaultHierarchy(merchantId, body.currency ?? 'BDT');
 
   // 2. Create super-admin user.
   //    PBKDF2 cost is env-configurable (PBKDF2_ITERATIONS): strictly-free-tier
@@ -201,6 +201,20 @@ installRoutes.post('/', async (c) => {
          (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
     ).bind(merchantId, gw.slug, gw.name, gw.type, gw.priority, JSON.stringify(gw.currencies), now, now).run();
+
+    const gwRow = await c.env.DB.prepare(
+      `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
+    ).bind(merchantId, gw.slug).first<{ id: number }>();
+    if (gwRow?.id) {
+      await hierarchyService.createGate({
+        store_id: storeId,
+        merchant_id: merchantId,
+        gateway_id: gwRow.id,
+        label: gw.name,
+        currency: body.currency ?? 'BDT',
+        mfs_number: cfg.mfs.defaultPhone ?? null,
+      });
+    }
   }
 
   // 6. Seed default SMS regex templates from centralized configuration

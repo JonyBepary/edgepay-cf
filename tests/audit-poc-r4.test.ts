@@ -273,10 +273,65 @@ describe('PoC-5: /api/admin/v1/merchants/claim platform gate (V3-010)', () => {
       headers: { Authorization: `Bearer ${claimData.data.api_key}` },
     });
     expect(brandsRes.status).toBe(200);
-    const brandsData = await brandsRes.json<{ success: boolean; data: Array<{ name: string; slug: string }> }>();
+    const brandsData = await brandsRes.json<{ success: boolean; data: Array<{ id: number; name: string; slug: string }> }>();
     expect(brandsData.data).toHaveLength(1);
     expect(brandsData.data[0].slug).toBe('main');
     expect(brandsData.data[0].name).toBe('Main');
+
+    // Sibling check: newly provisioned merchant has Main store initialized under Main brand
+    const storesRes = await SELF.fetch(`http://localhost/api/v1/brands/${brandsData.data[0].id}/stores`, {
+      headers: { Authorization: `Bearer ${claimData.data.api_key}` },
+    });
+    expect(storesRes.status).toBe(200);
+    const storesData = await storesRes.json<{ success: boolean; data: Array<{ id: number; name: string; slug: string }> }>();
+    expect(storesData.data).toHaveLength(1);
+    expect(storesData.data[0].slug).toBe('main');
+    expect(storesData.data[0].name).toBe('Main');
+
+    // Onboarding invariant check: newly provisioned merchant has gates automatically bound
+    const storeId = storesData.data[0].id;
+    const gatesRes = await SELF.fetch(`http://localhost/api/v1/stores/${storeId}/gates`, {
+      headers: { Authorization: `Bearer ${claimData.data.api_key}` },
+    });
+    expect(gatesRes.status).toBe(200);
+    const gatesData = await gatesRes.json<{ success: boolean; data: Array<{ id: number; label: string; currency: string }> }>();
+    expect(gatesData.data.length).toBeGreaterThanOrEqual(1);
+    expect(gatesData.data.some(g => g.label.includes('bKash'))).toBe(true);
+
+    // Platform admin check: GET /api/admin/v1/merchants/:id/gates
+    const merchantRow = await tenv.DB.prepare('SELECT id FROM op_merchants WHERE email = ?').bind('encrypted-tenant@example.com').first<{ id: number }>();
+    const adminGatesRes = await SELF.fetch(`http://localhost/api/admin/v1/merchants/${merchantRow!.id}/gates`, {
+      headers: { Authorization: `Bearer ${platformKey}` },
+    });
+    expect(adminGatesRes.status).toBe(200);
+    const adminGatesData = await adminGatesRes.json<{ success: boolean; data: Array<{ id: number; label: string }> }>();
+    expect(adminGatesData.data.length).toBe(gatesData.data.length);
+
+    // Platform admin check: GET /api/admin/v1/merchants/:id/gateways
+    const adminGwsRes = await SELF.fetch(`http://localhost/api/admin/v1/merchants/${merchantRow!.id}/gateways`, {
+      headers: { Authorization: `Bearer ${platformKey}` },
+    });
+    expect(adminGwsRes.status).toBe(200);
+    const adminGwsData = await adminGwsRes.json<{ success: boolean; data: Array<{ id: number; slug: string }> }>();
+    expect(adminGwsData.data.length).toBeGreaterThanOrEqual(3);
+
+    // Platform admin check: POST /api/admin/v1/merchants/:id/gates creates an additional gate
+    const customGateRes = await SELF.fetch(`http://localhost/api/admin/v1/merchants/${merchantRow!.id}/gates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${platformKey}`,
+      },
+      body: JSON.stringify({
+        gateway_id: adminGwsData.data[0].id,
+        label: 'Secondary VIP Gate',
+        mfs_number: '01999999999',
+      }),
+    });
+    expect(customGateRes.status).toBe(201);
+    const customGateData = await customGateRes.json<{ success: boolean; data: { id: number; label: string; mfs_number: string } }>();
+    expect(customGateData.data.label).toBe('Secondary VIP Gate');
+    expect(customGateData.data.mfs_number).toBe('01999999999');
   });
 });
 

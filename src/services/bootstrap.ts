@@ -77,7 +77,7 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
   // Provision default Main brand and store hierarchy (Core invariant)
   const { HierarchyService } = await import('./hierarchy');
   const hierarchyService = new HierarchyService(env.DB);
-  await hierarchyService.provisionDefaultHierarchy(merchantId, cfg.financial.defaultCurrency ?? 'BDT');
+  const { storeId } = await hierarchyService.provisionDefaultHierarchy(merchantId, cfg.financial.defaultCurrency ?? 'BDT');
 
   // 1.5. Ensure default admin user for platform merchant
   const existingAdminUser = await env.DB.prepare(
@@ -146,6 +146,23 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
           `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
            VALUES (?, ?, 'personal', ?, ?, ?)`
         ).bind(newGwId, merchantId, phone, instructions, now).run();
+      }
+
+      // Auto-bind seeded gateway to Main store as a default gate
+      if (newGwId) {
+        const existingGate = await env.DB.prepare(
+          `SELECT id FROM op_gates WHERE store_id = ? AND gateway_id = ? LIMIT 1`
+        ).bind(storeId, newGwId).first<{ id: number }>();
+        if (!existingGate) {
+          await hierarchyService.createGate({
+            store_id: storeId,
+            merchant_id: merchantId,
+            gateway_id: newGwId,
+            label: gw.name,
+            currency: cfg.financial.defaultCurrency ?? 'BDT',
+            mfs_number: defaultPhone ?? null,
+          });
+        }
       }
     }
   }
