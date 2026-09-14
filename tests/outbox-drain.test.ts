@@ -170,7 +170,7 @@ describe('Transactional Outbox — local commit and async drain', () => {
     const outbox1 = await stub.__testInspectOutbox!();
     const ev1 = outbox1.find(e => e.event_id === `m${MERCHANT}:posting:${txId}`);
     expect(ev1?.retry_count).toBeGreaterThanOrEqual(1);
-    expect(ev1?.last_error).toMatch(/INJECTED:fail_outbox_drain/);
+    expect(String(ev1?.last_error)).toMatch(/INJECTED:fail_outbox_drain/);
     expect(ev1?.next_retry_at).toBeGreaterThan(Date.now() - 500);
 
     // Second consecutive failure increases backoff

@@ -138,13 +138,17 @@ Expected Health Response:
 }
 ```
 
+> [!NOTE]
+> **Workers AI cost note:** The SMS parser uses Workers AI as a third-tier fallback when regex and heuristics fail. Each call to `@cf/meta/llama-3.1-8b-instruct` consumes Neurons from your Workers AI quota (10,000/day on the free tier; paid after). Typical installations: <500 Neurons/day. High-volume installations (>10,000 SMS/day with >5% parse-miss rate) may exceed the free tier. Monitor your Workers AI usage in the Cloudflare dashboard.
+
 ---
 
 ## 5. Scheduled CI Automation (Nightly & PR)
 
-The destroy→install cycle will be automated in GitHub Actions to run:
+The destroy→install cycle is automated in GitHub Actions via [`.github/workflows/installer-live-check.yml`](../.github/workflows/installer-live-check.yml):
 - **Nightly Schedule**: Every day at 02:00 UTC.
 - **Pull Request Trigger**: On any PR changing files in `packages/init/**`.
+- **Manual Trigger**: Supports `workflow_dispatch` on demand.
 
 ### Pipeline Secrets Required:
 - `CLOUDFLARE_API_TOKEN`: Token with Workers, D1, KV, R2, and Queues permissions.
@@ -153,6 +157,6 @@ The destroy→install cycle will be automated in GitHub Actions to run:
 - `EDGEPAY_DESTROY_CONFIRMED`: `yes`.
 
 ### Success Gates:
-- Total wall-clock time under 4 minutes.
+- Total wall-clock time under 300 seconds (measured fresh install is ~2m 29s).
 - HTTP 200 with `status: ok` and all 3 subsystems (`durable_objects`, `workflows`, `workers_ai`) true.
 - Zero untracked or unscoped resources remaining on the account.

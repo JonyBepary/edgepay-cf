@@ -3,8 +3,8 @@
 ## Summary
 
 ```text
-Test Files  32 passed (32)
-Tests       276 passed (276) — 100% green across all unit, integration, security, bff, and PoC suites
+Test Files  40 passed (40)
+Tests       404 passed (404) — 100% green across all unit, integration, security, bff, and PoC suites
 Typecheck   0 errors (tsc --noEmit covering src, tests, and frontend in strict mode)
 Lint        0 errors, 0 warnings (ESLint 9 flat config covering src, tests, and frontend)
 Audit Gate  node scripts/verify-remediations.mjs & node scripts/verify-config.mjs (PASS)
@@ -48,7 +48,7 @@ Runtime     Cloudflare Workers (workerd) via @cloudflare/vitest-plugin
    - Dedicated Observability & Analytics Engine verification (`tests/smoke.test.ts`)
 
 5. **Automated Verification & Packaging Pipeline**:
-   - `scripts/verify-remediations.mjs` verifies all 98 ledger claims with non-colliding IDs, test suite count synchronization (32 suites), and citation relevance checks
+   - `scripts/verify-remediations.mjs` verifies all 98 ledger claims with non-colliding IDs, test suite count synchronization (40 suites), and citation relevance checks
    - `scripts/verify-config.mjs` performs direct recursive filesystem tree scanning and JSONC parsing across all 7 wrangler configurations asserting compatibility_date `2026-07-21`
    - `scripts/package-release.mjs` enforces end-to-end automated pre-packaging verification and builds verified release archives (`dist/edgepay-cf-release.zip`)
    - `scripts/package-handoff.mjs` (`npm run package:handoff`) generates clean distribution hand-off archives (`dist/edgepay-cf-clean-handoff.zip`)
