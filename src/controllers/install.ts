@@ -132,6 +132,11 @@ installRoutes.post('/', async (c) => {
   if (!merchantRow?.id) throw new Error('Failed to retrieve newly created platform merchant ID');
   const merchantId = merchantRow.id;
 
+  // Provision default Main brand and store hierarchy (Core invariant)
+  const { HierarchyService } = await import('../services/hierarchy');
+  const hierarchyService = new HierarchyService(c.env.DB);
+  await hierarchyService.provisionDefaultHierarchy(merchantId, body.currency ?? 'BDT');
+
   // 2. Create super-admin user.
   //    PBKDF2 cost is env-configurable (PBKDF2_ITERATIONS): strictly-free-tier
   //    deployments cannot afford 600K iterations inside the 10ms CPU budget.

@@ -159,6 +159,71 @@ export class HierarchyService {
     ).bind(storeId, merchantId).first<Store>();
   }
 
+  /**
+   * Resolve the merchant's Main store. Migration 0014 guarantees one exists
+   * per merchant, but we return null defensively so the caller can produce a
+   * clear error instead of throwing.
+   */
+  async resolveMainStore(merchantId: number): Promise<Store | null> {
+    return await this.db.prepare(
+      `SELECT s.* FROM op_stores s
+       JOIN op_brands b ON b.id = s.brand_id
+       WHERE s.merchant_id = ? AND b.slug = 'main' AND s.slug = 'main'
+       LIMIT 1`
+    ).bind(merchantId).first<Store>();
+  }
+
+  /**
+   * Provision the default Main brand and Main store for a merchant.
+   * Idempotent: safe to call repeatedly across all merchant creation paths.
+   * Guarantees the merchant aggregate has a default store for device pairing and checkout.
+   */
+  async provisionDefaultHierarchy(merchantId: number, defaultCurrency: string = 'BDT'): Promise<{ brandId: number; storeId: number }> {
+    const now = new Date().toISOString();
+
+    // 1. Ensure Main brand
+    await this.db.prepare(
+      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       SELECT ?, lower(hex(randomblob(16))), 'Main', 'main', 'active', ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM op_brands WHERE merchant_id = ? AND slug = 'main'
+       )`
+    ).bind(merchantId, now, now, merchantId).run();
+
+    let brand = await this.db.prepare(
+      `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main' LIMIT 1`
+    ).bind(merchantId).first<{ id: number }>();
+
+    if (!brand) {
+      brand = await this.db.prepare(
+        `SELECT id FROM op_brands WHERE merchant_id = ? LIMIT 1`
+      ).bind(merchantId).first<{ id: number }>();
+    }
+    if (!brand) throw new Error(`Failed to resolve or create Main brand for merchant ${merchantId}`);
+
+    // 2. Ensure Main store
+    await this.db.prepare(
+      `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+       SELECT ?, ?, lower(hex(randomblob(16))), 'Main', 'main', ?, 'active', ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM op_stores WHERE merchant_id = ? AND slug = 'main'
+       )`
+    ).bind(brand.id, merchantId, defaultCurrency, now, now, merchantId).run();
+
+    let store = await this.db.prepare(
+      `SELECT id FROM op_stores WHERE merchant_id = ? AND slug = 'main' LIMIT 1`
+    ).bind(merchantId).first<{ id: number }>();
+
+    if (!store) {
+      store = await this.db.prepare(
+        `SELECT id FROM op_stores WHERE merchant_id = ? LIMIT 1`
+      ).bind(merchantId).first<{ id: number }>();
+    }
+    if (!store) throw new Error(`Failed to resolve or create Main store for merchant ${merchantId}`);
+
+    return { brandId: brand.id, storeId: store.id };
+  }
+
   async createGate(input: {
     store_id: number;
     merchant_id: number;

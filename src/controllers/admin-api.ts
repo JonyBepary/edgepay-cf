@@ -505,6 +505,11 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     const newMerchantId = merchantRow?.id;
     if (!newMerchantId) throw new Error('Failed to retrieve new merchant ID');
 
+    // Provision default Main brand and store hierarchy (Core invariant)
+    const { HierarchyService } = await import('../services/hierarchy');
+    const hierarchyService = new HierarchyService(c.env.DB);
+    await hierarchyService.provisionDefaultHierarchy(newMerchantId, body.currency ?? 'BDT');
+
     // 1. Provision default admin user for merchant
     const adminUserUuid = crypto.randomUUID();
     const emailHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.email))))

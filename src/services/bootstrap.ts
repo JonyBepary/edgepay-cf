@@ -74,6 +74,11 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     merchantId = row.id;
   }
 
+  // Provision default Main brand and store hierarchy (Core invariant)
+  const { HierarchyService } = await import('./hierarchy');
+  const hierarchyService = new HierarchyService(env.DB);
+  await hierarchyService.provisionDefaultHierarchy(merchantId, cfg.financial.defaultCurrency ?? 'BDT');
+
   // 1.5. Ensure default admin user for platform merchant
   const existingAdminUser = await env.DB.prepare(
     `SELECT id FROM op_merchant_users WHERE merchant_id = ? LIMIT 1`
