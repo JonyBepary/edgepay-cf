@@ -22,10 +22,10 @@ Run the single-command interactive TUI installer:
 curl -fsSL https://raw.githubusercontent.com/JonyBepary/edgepay-cf/main/scripts/install.sh | bash
 ```
 
-or directly via `npx`:
+or if already cloned locally:
 
 ```bash
-npx @edgepay/init
+npm run init
 ```
 
 The interactive terminal installer automates the entire provisioning and deployment workflow:

@@ -23,6 +23,7 @@
     "test:watch": "vitest",
     "test:init": "npm --prefix packages/init test",
     "build:init": "npm --prefix packages/init run build",
+    "init": "npm run build:init && node packages/init/bin/edgepay-init.mjs",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds.sql",
