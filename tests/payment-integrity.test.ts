@@ -14,6 +14,8 @@ import type { Env, D1Database } from '../src/types/env';
 import { sha256 } from '../src/lib/crypto';
 import { PaymentService } from '../src/services/payment';
 import { LedgerService, getLedgerDO } from '../src/services/ledger';
+import { HierarchyService } from '../src/services/hierarchy';
+import { NotFoundError, ValidationError } from '../src/lib/error';
 
 const tenv = env as unknown as Env;
 const db = tenv.DB as D1Database;
@@ -350,5 +352,112 @@ describe('Ledger posting before completion + atomic batch + recoverable pending'
     expect(trial.balanced).toBe(true);
     const consistency = await ledger.verifyDurableObjectConsistency(M_LEDGER);
     expect(consistency.consistent).toBe(true);
+  });
+});
+
+describe('PaymentIntent gate_id hierarchy resolution (Phase 6b)', () => {
+  const M_H1 = 920004;
+  const M_H2 = 920005;
+  let brandId: number;
+  let storeId: number;
+  let gateId: number;
+
+  beforeAll(async () => {
+    // Seed merchant 1
+    await db.prepare(
+      `INSERT OR IGNORE INTO op_merchants (id, uuid, name, slug, email, default_currency, status)
+       VALUES (?, ?, 'Hierarchy Merchant 1', 'h-m-1', 'hm1@test.local', 'BDT', 'active')`,
+    ).bind(M_H1, `test-uuid-${M_H1}`).run();
+
+    // Seed merchant 2
+    await db.prepare(
+      `INSERT OR IGNORE INTO op_merchants (id, uuid, name, slug, email, default_currency, status)
+       VALUES (?, ?, 'Hierarchy Merchant 2', 'h-m-2', 'hm2@test.local', 'BDT', 'active')`,
+    ).bind(M_H2, `test-uuid-${M_H2}`).run();
+
+    // Seed gateway for M_H1
+    await db.prepare(
+      `INSERT OR IGNORE INTO op_gateways (id, merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+       VALUES (?, ?, 'bkash-h1', 'bKash H1', 'manual', 'active', 1, '["BDT"]', datetime('now'), datetime('now'))`,
+    ).bind(920010, M_H1).run();
+
+    const hierarchy = new HierarchyService(db);
+    const brand = await hierarchy.createBrand({
+      merchant_id: M_H1,
+      name: 'H1 Brand',
+      slug: `h1-brand-${Date.now()}`,
+    });
+    brandId = brand.id;
+
+    const store = await hierarchy.createStore({
+      merchant_id: M_H1,
+      brand_id: brandId,
+      name: 'H1 Store',
+      slug: `h1-store-${Date.now()}`,
+      default_currency: 'BDT',
+    });
+    storeId = store.id;
+
+    const gate = await hierarchy.createGate({
+      merchant_id: M_H1,
+      store_id: storeId,
+      gateway_id: 920010,
+      label: 'H1 Gate',
+      currency: 'BDT',
+    });
+    gateId = gate.id;
+  });
+
+  it('records brand_id, store_id, gate_id on both payment intent and transaction when gate_id is provided', async () => {
+    const svc = new PaymentService(tenv);
+    const result = await svc.createIntent({
+      merchant_id: M_H1,
+      amount: '150.00',
+      currency: 'BDT',
+      gate_id: gateId,
+      description: 'gate_id test intent',
+    });
+
+    const pi = await db.prepare(
+      `SELECT brand_id, store_id, gate_id FROM op_payment_intents WHERE id = ?`,
+    ).bind(result.intent_id).first<{ brand_id: number; store_id: number; gate_id: number }>();
+
+    expect(pi).not.toBeNull();
+    expect(pi?.gate_id).toBe(gateId);
+    expect(pi?.store_id).toBe(storeId);
+    expect(pi?.brand_id).toBe(brandId);
+
+    const tx = await db.prepare(
+      `SELECT brand_id, store_id, gate_id FROM op_transactions WHERE payment_intent_id = ?`,
+    ).bind(result.intent_id).first<{ brand_id: number; store_id: number; gate_id: number }>();
+
+    expect(tx).not.toBeNull();
+    expect(tx?.gate_id).toBe(gateId);
+    expect(tx?.store_id).toBe(storeId);
+    expect(tx?.brand_id).toBe(brandId);
+  });
+
+  it('rejects createIntent when gate_id belongs to a different merchant', async () => {
+    const svc = new PaymentService(tenv);
+    await expect(
+      svc.createIntent({
+        merchant_id: M_H2,
+        amount: '150.00',
+        currency: 'BDT',
+        gate_id: gateId, // gateId belongs to M_H1, not M_H2
+      }),
+    ).rejects.toThrowError(NotFoundError);
+  });
+
+  it('rejects createIntent when currency does not match gate currency', async () => {
+    const svc = new PaymentService(tenv);
+    await expect(
+      svc.createIntent({
+        merchant_id: M_H1,
+        amount: '150.00',
+        currency: 'USD', // gateId is BDT
+        gate_id: gateId,
+      }),
+    ).rejects.toThrowError(ValidationError);
   });
 });

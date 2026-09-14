@@ -104,6 +104,31 @@ A store may operate multiple gates simultaneously (e.g., two bKash personal numb
 
 The hierarchy is optional for single-store merchants — migration `0014` creates a Main brand, Main store, and one Main gate per existing gateway, so older deployments continue to work without configuration changes.
 
+#### SMS Store Isolation (Phase 6b)
+
+Multi-store merchants operate physical devices at separate locations (e.g., Store A in Dhaka, Store B in Chittagong). Without store scoping, an incoming SMS confirmation from Store A could match an open order created at Store B if both share identical amounts and time windows.
+
+Phase 6b enforces store-level isolation across the mobile ingestion and corroboration pipeline:
+1. **Device-bound Store Scoping**: Every paired device in `op_paired_devices` is linked to a specific `store_id`. In `/api/mobile/v1/sms` and `/api/mobile/v1/sms/batch`, device lookups select `d.store_id` and attach it to the `SmsMessage` payload enqueued onto `SMS_QUEUE`.
+2. **Corroboration Isolation**: `SmsQueueConsumer.loadOpenOrders` filters open candidate transactions using:
+   ```sql
+   WHERE t.merchant_id = ?
+     AND t.status IN ('pending', 'awaiting_verification', 'processing', 'created')
+     AND t.created_at >= ?
+     AND (? IS NULL OR t.store_id IS NULL OR t.store_id = ?)
+   ```
+   An SMS from Store A cannot corroborate or confirm transactions originating from Store B, even with identical amounts and timestamps.
+3. **Legacy Backward Compatibility**: If `sms.store_id` is null (messages enqueued prior to Phase 6b) or `transaction.store_id` is null (orders created before migration `0014`), the fallback clause `? IS NULL OR t.store_id IS NULL` matches open orders across the merchant without disruption.
+4. **Telemetry**: The consumer records `sms_store_scope_applied` (value=1 when store-scoped, value=0 for legacy messages) via Workers Analytics Engine.
+
+#### Direct Gate Resolution on Payment Intents (Phase 6b)
+
+Payment intents can specify an explicit `gate_id`:
+- **Cross-Tenant Validation**: Validates that `gate_id` belongs to `input.merchant_id`. Cross-tenant gate hijacking attempts fail immediately with `404 NOT_FOUND`.
+- **Currency Enforcement**: Validates that `gate.currency` matches `input.currency`. Mismatches fail with `400 VALIDATION_ERROR`.
+- **Hierarchy Derivation**: When `gate_id` is supplied, `PaymentService.createIntent` resolves `store_id = gate.store_id`, derives `brand_id = store.brand_id`, and resolves `gateway_id = gate.gateway_id`, persisting all three hierarchy keys onto both `op_payment_intents` and `op_transactions`.
+- **Default Gate Fallback**: For legacy intents specifying only `gateway_id` or `gateway_slug`, `HierarchyService.resolveDefaultGate` derives default hierarchy attributes from the merchant's `main` brand and store without breaking legacy integrations.
+
 ## Device Policy Enforcement Modes & Telemetry
 
 EdgePay-CF serves emerging markets where merchants often operate on budget Android handsets (2016–2018 vintage, custom ROMs, or lacking discrete hardware security chips). Enforcing hardware attestation platform-wide would disenfranchise a significant portion of legitimate merchants.

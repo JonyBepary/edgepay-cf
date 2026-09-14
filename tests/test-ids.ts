@@ -19,6 +19,7 @@ export const TEST_MERCHANT_RANGES = {
   AUDIT_POC_R4_PLATFORM: { start: 970001, end: 979999, file: 'tests/audit-poc-r4.test.ts' },
   AUDIT_POC_R4_REFUND: { start: 980001, end: 989999, file: 'tests/audit-poc-r4.test.ts' },
   AUDIT_POC_R4_TENANTS: { start: 990001, end: 999999, file: 'tests/audit-poc-r4.test.ts' },
+  SMS_STORE_SCOPING: { start: 840001, end: 849999, file: 'tests/sms-store-scoping.test.ts' },
   SMS_HARDENING: { start: 850001, end: 859999, file: 'tests/sms-hardening.test.ts' },
   KEY_ATTESTATION: { start: 860001, end: 869999, file: 'tests/key-attestation.test.ts' },
   ATTESTATION_CHALLENGE_RACE: { start: 870001, end: 879999, file: 'tests/attestation-challenge-race.test.ts' },

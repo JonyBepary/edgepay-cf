@@ -121,7 +121,11 @@ export class SmsQueueConsumer {
       }
 
       // --- Corroborate against OPEN transactions before confirming ---
-      const openOrders = await this.loadOpenOrders(env, sms.merchant_id);
+      const openOrders = await this.loadOpenOrders(env, sms.merchant_id, sms.store_id ?? null);
+      metric(env, 'sms_store_scope_applied', {
+        merchant_id: sms.merchant_id,
+        value: sms.store_id ? 1 : 0,
+      });
       const verifiedGateway = carrier.gatewaySlug ?? senderToGatewaySlug(sms.sender);
       const decision = corroborateSmsPayment(extraction, openOrders, verifiedGateway);
 
@@ -163,7 +167,7 @@ export class SmsQueueConsumer {
   }
 
   /** Open (awaiting_verification) transactions in the match window. */
-  private async loadOpenOrders(env: Env, merchantId: number): Promise<OpenOrderCandidate[]> {
+  private async loadOpenOrders(env: Env, merchantId: number, storeId: number | null): Promise<OpenOrderCandidate[]> {
     const since = new Date(Date.now() - MATCH_WINDOW_MS).toISOString();
     const rows = await env.DB
       .prepare(
@@ -171,10 +175,13 @@ export class SmsQueueConsumer {
          FROM op_transactions t
          JOIN op_payment_intents pi ON pi.id = t.payment_intent_id
          LEFT JOIN op_gateways g ON g.id = t.gateway_id
-         WHERE t.merchant_id = ? AND t.status IN ('pending', 'awaiting_verification', 'processing', 'created') AND t.created_at >= ?
+         WHERE t.merchant_id = ?
+           AND t.status IN ('pending', 'awaiting_verification', 'processing', 'created')
+           AND t.created_at >= ?
+           AND (? IS NULL OR t.store_id IS NULL OR t.store_id = ?)
          ORDER BY t.created_at DESC LIMIT 50`,
       )
-      .bind(merchantId, since)
+      .bind(merchantId, since, storeId, storeId)
       .all<{
         id: number;
         payment_intent_id: number;

@@ -712,7 +712,7 @@ mobileRoutes.post('/sms', async (c) => {
 
   // 2. Look up device status, registered hardware public key, and merchant device policy
   const device = await c.env.DB.prepare(
-    `SELECT d.id, d.status, d.public_key, d.key_algorithm,
+    `SELECT d.id, d.status, d.public_key, d.key_algorithm, d.store_id,
             d.attestation_verified_at, d.attestation_strong,
             d.attestation_verified_boot, d.device_patch_level,
             p.min_tier, p.min_patch_level, p.strict_pairing, p.enforcement_mode
@@ -725,6 +725,7 @@ mobileRoutes.post('/sms', async (c) => {
     status: string;
     public_key: string | null;
     key_algorithm: string | null;
+    store_id: number | null;
     attestation_verified_at: string | null;
     attestation_strong: number;
     attestation_verified_boot: number;
@@ -890,6 +891,7 @@ mobileRoutes.post('/sms', async (c) => {
   await c.env.SMS_QUEUE.send({
     merchant_id: merchantId as number,
     device_id: deviceId as number,
+    store_id: device?.store_id ?? null,
     sender: carrier.canonicalSender,
     body: body.body,
     received_at: body.received_at ?? new Date().toISOString(),
@@ -925,7 +927,7 @@ mobileRoutes.post('/sms/batch', async (c) => {
   }
 
   const device = await c.env.DB.prepare(
-    `SELECT d.id, d.status, d.public_key, d.key_algorithm,
+    `SELECT d.id, d.status, d.public_key, d.key_algorithm, d.store_id,
             d.attestation_verified_at, d.attestation_strong,
             d.attestation_verified_boot, d.device_patch_level,
             p.min_tier, p.min_patch_level, p.strict_pairing, p.enforcement_mode
@@ -938,6 +940,7 @@ mobileRoutes.post('/sms/batch', async (c) => {
     status: string;
     public_key: string | null;
     key_algorithm: string | null;
+    store_id: number | null;
     attestation_verified_at: string | null;
     attestation_strong: number;
     attestation_verified_boot: number;
@@ -1122,6 +1125,7 @@ mobileRoutes.post('/sms/batch', async (c) => {
     queueMessages.push({
       merchant_id: merchantId as number,
       device_id: deviceId,
+      store_id: device?.store_id ?? null,
       sender: carrier.canonicalSender,
       body: msg.body,
       received_at: msg.received_at ?? new Date().toISOString(),

@@ -30,18 +30,21 @@ import { HttpError, NotFoundError, ValidationError } from '../lib/error';
 
 export interface CreateIntentInput {
   merchant_id: number;
-  amount: Money;
+  amount: Money | string | number;
   currency: string;
+  customer_phone?: string;
+  customer_email?: string;
+  metadata?: Record<string, unknown>;
+  gateway_slug?: string;
+  gateway_id?: number;
+  gateway?: string;
+  gate_id?: number;              // NEW: direct gate reference (Phase 6b)
   description?: string;
   customer?: {
     name?: string;
     email?: string;
     phone?: string;
   };
-  gateway_id?: number;
-  gateway?: string;
-  gateway_slug?: string;
-  metadata?: Record<string, unknown>;
   expires_in_seconds?: number;       // default 15min
 }
 
@@ -60,8 +63,9 @@ export class PaymentService {
    * will use to access the checkout page at /checkout/{token}.
    */
   async createIntent(input: CreateIntentInput): Promise<CreateIntentResult> {
+    const amountStr = String(input.amount);
     // Validate amount > 0
-    if (isZero(input.amount)) {
+    if (isZero(amountStr)) {
       throw new ValidationError('Amount must be greater than zero');
     }
 
@@ -72,57 +76,115 @@ export class PaymentService {
       Date.now() + (input.expires_in_seconds ?? 900) * 1000,
     ).toISOString();
 
-    // Resolve gateway_id (supports numeric ID, string slug, or falls back to merchant's default gateway)
     let gatewayId = input.gateway_id;
-    if (!gatewayId && (input.gateway || input.gateway_slug)) {
-      const slug = input.gateway || input.gateway_slug;
-      if (slug && slug !== 'manual') {
-        assertGatewayEnabled(this.env, slug);
-        assertGatewayPorted(slug);
-      }
-      const gwRow = await this.env.DB.prepare(
-        `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
-      ).bind(input.merchant_id, slug).first<{ id: number }>();
-      if (gwRow) {
-        gatewayId = gwRow.id;
-      }
-    }
+    let resolvedBrandId: number | null = null;
+    let resolvedStoreId: number | null = null;
+    let resolvedGateId: number | null = null;
 
-    if (!gatewayId) {
-      const defaultGw = await this.env.DB.prepare(
-        `SELECT id FROM op_gateways WHERE merchant_id = ? LIMIT 1`
-      ).bind(input.merchant_id).first<{ id: number }>();
+    if (input.gate_id) {
+      // Direct gate reference — validate it belongs to this merchant and matches currency
+      const { HierarchyService } = await import('./hierarchy');
+      const hierarchy = new HierarchyService(this.env);
+      const gate = await hierarchy.getGate(input.gate_id, input.merchant_id);
+      if (!gate) {
+        throw new NotFoundError(`Gate ${input.gate_id} not found or does not belong to merchant`);
+      }
+      if (gate.currency !== input.currency && gate.currency.toUpperCase() !== input.currency.toUpperCase()) {
+        throw new ValidationError(`Gate currency (${gate.currency}) does not match intent currency (${input.currency})`);
+      }
+      resolvedGateId = gate.id;
+      resolvedStoreId = gate.store_id;
+      if (!gatewayId) {
+        gatewayId = gate.gateway_id;
+      }
 
-      if (defaultGw) {
-        gatewayId = defaultGw.id;
-      } else {
-        const gwRes = await this.env.DB.prepare(
-          `INSERT INTO op_gateways (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
-           VALUES (?, 'manual', 'Manual Payment', 'manual', 'active', 0, '["BDT","USD"]', ?, ?)`
-        ).bind(input.merchant_id, now, now).run();
-        
-        const seeded = await this.env.DB.prepare(
-          `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = 'manual' LIMIT 1`
+      // Resolve brand from store
+      const store = await hierarchy.getStore(gate.store_id, input.merchant_id);
+      if (store) {
+        resolvedBrandId = store.brand_id;
+      }
+    } else {
+      // Resolve gateway_id (supports numeric ID, string slug, or falls back to merchant's default gateway)
+      if (!gatewayId && (input.gateway || input.gateway_slug)) {
+        const slug = input.gateway || input.gateway_slug;
+        if (slug && slug !== 'manual') {
+          assertGatewayEnabled(this.env, slug);
+          assertGatewayPorted(slug);
+        }
+        const gwRow = await this.env.DB.prepare(
+          `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
+        ).bind(input.merchant_id, slug).first<{ id: number }>();
+        if (gwRow) {
+          gatewayId = gwRow.id;
+        }
+      }
+
+      if (!gatewayId) {
+        const defaultGw = await this.env.DB.prepare(
+          `SELECT id FROM op_gateways WHERE merchant_id = ? LIMIT 1`
         ).bind(input.merchant_id).first<{ id: number }>();
-        gatewayId = seeded?.id ?? Number(gwRes.meta?.last_row_id ?? 1);
+
+        if (defaultGw) {
+          gatewayId = defaultGw.id;
+        } else {
+          const gwRes = await this.env.DB.prepare(
+            `INSERT INTO op_gateways (merchant_id, slug, name, type, status, priority, supported_currencies, created_at, updated_at)
+             VALUES (?, 'manual', 'Manual Payment', 'manual', 'active', 0, '["BDT","USD"]', ?, ?)`
+          ).bind(input.merchant_id, now, now).run();
+          
+          const seeded = await this.env.DB.prepare(
+            `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = 'manual' LIMIT 1`
+          ).bind(input.merchant_id).first<{ id: number }>();
+          gatewayId = seeded?.id ?? Number(gwRes.meta?.last_row_id ?? 1);
+        }
+      }
+
+      // Legacy path: gateway specified, resolve default gate if hierarchy exists
+      if (gatewayId) {
+        try {
+          const { HierarchyService } = await import('./hierarchy');
+          const hierarchy = new HierarchyService(this.env);
+          const defaultGate = await hierarchy.resolveDefaultGate(input.merchant_id, gatewayId);
+          if (defaultGate) {
+            resolvedGateId = defaultGate.id;
+            resolvedStoreId = defaultGate.store_id;
+            const store = await hierarchy.getStore(defaultGate.store_id, input.merchant_id);
+            if (store) resolvedBrandId = store.brand_id;
+          }
+        } catch {
+          // Hierarchy resolution is non-blocking on legacy path
+        }
       }
     }
+
+    const metaObj = {
+      ...(input.metadata ?? {}),
+      ...(input.customer_phone ? { customer_phone: input.customer_phone } : {}),
+      ...(input.customer_email ? { customer_email: input.customer_email } : {}),
+      ...(input.customer?.phone ? { customer_phone: input.customer.phone } : {}),
+      ...(input.customer?.email ? { customer_email: input.customer.email } : {}),
+    };
+    const metadataStr = Object.keys(metaObj).length > 0 ? JSON.stringify(metaObj) : null;
 
     // Create the payment intent record
     const result = await this.env.DB.prepare(
       `INSERT INTO op_payment_intents
          (uuid, merchant_id, token, amount, currency, description,
-          customer_id, gateway_id, status, metadata, expires_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 'pending', ?, ?, ?, ?)`
+          customer_id, gateway_id, brand_id, store_id, gate_id,
+          status, metadata, expires_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`
     ).bind(
       uuid,
       input.merchant_id,
       token,
-      input.amount,
+      amountStr,
       input.currency.toUpperCase(),
       input.description ?? null,
       gatewayId,
-      input.metadata ? JSON.stringify(input.metadata) : null,
+      resolvedBrandId,
+      resolvedStoreId,
+      resolvedGateId,
+      metadataStr,
       expiresAt,
       now,
       now,
@@ -144,16 +206,20 @@ export class PaymentService {
     await this.env.DB.prepare(
       `INSERT INTO op_transactions
          (merchant_id, trx_id, payment_intent_id, gateway_id,
+          brand_id, store_id, gate_id,
           amount, currency, fee, net_amount, status, gateway_type, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, '0.00', ?, 'pending', 'pending', ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '0.00', ?, 'pending', 'pending', ?, ?)`
     ).bind(
       input.merchant_id,
       trxId,
       intentId,
       gatewayId,
-      input.amount,
+      resolvedBrandId,
+      resolvedStoreId,
+      resolvedGateId,
+      amountStr,
       input.currency.toUpperCase(),
-      input.amount,  // net_amount = amount until fee applied at completion
+      amountStr,  // net_amount = amount until fee applied at completion
       now,
       now,
     ).run();

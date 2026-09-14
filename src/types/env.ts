@@ -206,6 +206,9 @@ export interface EmailMessage {
 export interface SmsMessage {
   merchant_id: number;
   device_id: number;
+  /** Store the forwarding device belongs to. Optional for backward compatibility
+   *  with messages enqueued before Phase 6b. Consumers MUST handle null. */
+  store_id?: number | null;
   sender: string;
   body: string;
   received_at: string;
