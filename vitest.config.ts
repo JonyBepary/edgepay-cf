@@ -33,6 +33,7 @@ export default defineConfig({
   },
   plugins: [
     cloudflareTest({
+      remoteBindings: false,
       wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
         compatibilityFlags: ['nodejs_compat'],
