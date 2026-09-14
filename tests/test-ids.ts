@@ -27,4 +27,5 @@ export const TEST_MERCHANT_RANGES = {
   DEVICE_POLICY_MODES: { start: 890001, end: 899999, file: 'tests/device-policy-modes.test.ts' },
   DEVICE_POLICY_OVERRIDES: { start: 900001, end: 909999, file: 'tests/device-policy-overrides.test.ts' },
   HIERARCHY: { start: 910100, end: 919999, file: 'tests/hierarchy.test.ts' },
+  CHECKOUT_GATE_SELECTION: { start: 830001, end: 839999, file: 'tests/checkout-gate-selection.test.ts' },
 } as const;

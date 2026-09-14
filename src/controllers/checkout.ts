@@ -8,6 +8,7 @@ import { Hono, type Context } from 'hono';
 import type { Env } from '../types/env';
 import { PaymentService } from '../services/payment';
 import { resolveIntentStatus } from '../services/checkout-status';
+import { HierarchyService, type CheckoutGate, type CheckoutBrand } from '../services/hierarchy';
 
 type CheckoutContext = Context<{ Bindings: Env; Variables: Record<string, unknown> }>;
 
@@ -28,7 +29,7 @@ checkoutRoutes.get('/:token', async (c) => {
 
   const intent = await c.env.DB.prepare(
     `SELECT pi.id, pi.merchant_id, pi.amount, pi.currency, pi.description, pi.status, pi.expires_at,
-            pi.gateway_id
+            pi.gateway_id, pi.store_id, pi.brand_id, pi.gate_id
      FROM op_payment_intents pi
      WHERE pi.token = ?
      LIMIT 1`
@@ -40,36 +41,50 @@ checkoutRoutes.get('/:token', async (c) => {
     description: string | null;
     status: string;
     gateway_id: number | null;
+    store_id: number | null;
+    brand_id: number | null;
+    gate_id: number | null;
   }>();
 
   if (!intent) {
     return c.html('<h1>Payment Not Found</h1>', 404);
   }
 
-  // Load active gateways for this merchant with manual gateway instructions
-  let gateways: Array<{ id: number; slug: string; name: string; type: string; account_number?: string | null; instructions?: string | null }> = [];
-  if (intent.gateway_id) {
-    const gw = await c.env.DB.prepare(
-      `SELECT g.id, g.slug, g.name, g.type, m.account_number, m.instructions
-       FROM op_gateways g
-       LEFT JOIN op_manual_gateways m ON m.gateway_id = g.id
-       WHERE g.id = ? AND g.merchant_id = ? AND g.status = 'active' LIMIT 1`,
-    ).bind(intent.gateway_id, intent.merchant_id).first<{ id: number; slug: string; name: string; type: string; account_number?: string | null; instructions?: string | null }>();
-    if (gw) gateways = [gw];
+  const hierarchy = new HierarchyService(c.env.DB);
+
+  let gates: CheckoutGate[] = [];
+  let brand: CheckoutBrand | null = null;
+
+  if (intent.brand_id) {
+    brand = await hierarchy.getBrandForCheckout(intent.brand_id, intent.merchant_id);
+  }
+
+  if (intent.gate_id) {
+    // The intent was created against a specific gate — show only that one.
+    const store = await hierarchy.getStore(
+      intent.store_id ?? 0,
+      intent.merchant_id,
+    );
+    if (store) {
+      const all = await hierarchy.listGatesForCheckout(store.id);
+      gates = all.filter(g => g.id === intent.gate_id);
+    }
+  } else if (intent.store_id) {
+    gates = await hierarchy.listGatesForCheckout(intent.store_id);
   } else {
-    const gws = await c.env.DB.prepare(
-      `SELECT g.id, g.slug, g.name, g.type, m.account_number, m.instructions
-       FROM op_gateways g
-       LEFT JOIN op_manual_gateways m ON m.gateway_id = g.id
-       WHERE g.merchant_id = ? AND g.status = 'active' ORDER BY g.priority ASC, g.id ASC`,
-    ).bind(intent.merchant_id).all<{ id: number; slug: string; name: string; type: string; account_number?: string | null; instructions?: string | null }>();
-    gateways = gws.results ?? [];
+    gates = await hierarchy.listGatesForMerchantDefault(intent.merchant_id);
+  }
+
+  if (gates.length === 0) {
+    // No gates configured. Render a minimal page telling the customer
+    // to contact the merchant. This is a merchant misconfiguration.
+    return c.html(renderNoGatesPage(intent, brand), 200);
   }
 
   // Render checkout HTML
   const merchant = c.get('merchant') as { name?: string; color?: string } | null;
-  const brandName = merchant?.name ?? 'EdgePay';
-  const brandColor = merchant?.color ?? '#0052cc';
+  const brandName = brand?.name ?? merchant?.name ?? 'EdgePay';
+  const brandColor = brand?.brand_color ?? merchant?.color ?? '#0052cc';
 
   return c.html(renderCheckoutHTML({
     token,
@@ -79,29 +94,42 @@ checkoutRoutes.get('/:token', async (c) => {
     status: String(intent.status),
     brandName,
     brandColor,
-    gateways,
+    gates,
+    brand,
   }));
 });
 
 // POST /checkout/{token}/initiate — customer clicks "Pay"
 checkoutRoutes.post('/:token/initiate', async (c) => {
   const token = c.req.param('token');
-  const body = await c.req.json<{ gateway_id?: number }>();
+  const body = await c.req.json<{ gate_id?: number; gateway_id?: number }>();
 
   const intent = await c.env.DB.prepare(
-    `SELECT id FROM op_payment_intents WHERE token = ? LIMIT 1`
-  ).bind(token).first<{ id: number }>();
+    `SELECT id, merchant_id FROM op_payment_intents WHERE token = ? LIMIT 1`
+  ).bind(token).first<{ id: number; merchant_id: number }>();
 
   if (!intent) {
     return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Invalid checkout token' } }, 404);
   }
 
-  if (!body.gateway_id) {
+  const hierarchy = new HierarchyService(c.env.DB);
+  let resolvedGatewayId: number | undefined = body.gateway_id;
+
+  if (body.gate_id) {
+    const gate = await hierarchy.getGate(body.gate_id, intent.merchant_id);
+    if (!gate) {
+      return c.json({ success: false, error: { code: 'GATE_NOT_FOUND', message: 'Gate not found' } }, 404);
+    }
+    // The gate's gateway must belong to the same merchant as the intent.
+    resolvedGatewayId = gate.gateway_id;
+  }
+
+  if (!resolvedGatewayId) {
     return c.json({ success: false, error: { code: 'GATEWAY_REQUIRED', message: 'Select a payment method' } }, 400);
   }
 
   const service = new PaymentService(c.env);
-  const result = await service.initiatePayment(intent.id, body.gateway_id);
+  const result = await service.initiatePayment(intent.id, resolvedGatewayId);
 
   return c.json({ success: true, data: result });
 });
@@ -183,6 +211,7 @@ const handleCustomerTrxVerify = async (c: CheckoutContext) => {
   // Load intent & transaction (incl. gateway slug for per-gateway format gate)
   const intent = await c.env.DB.prepare(
     `SELECT pi.id, pi.merchant_id, pi.amount, pi.currency, pi.status, pi.metadata, pi.gateway_id,
+            pi.store_id, pi.brand_id, pi.gate_id,
             g.slug AS gateway_slug,
             t.id AS trx_db_id, t.gateway_trx_id
      FROM op_payment_intents pi
@@ -198,6 +227,9 @@ const handleCustomerTrxVerify = async (c: CheckoutContext) => {
     status: string;
     metadata: string | null;
     gateway_id: number | null;
+    store_id: number | null;
+    brand_id: number | null;
+    gate_id: number | null;
     gateway_slug: string | null;
     trx_db_id: number | null;
     gateway_trx_id: string | null;
@@ -383,6 +415,65 @@ checkoutRoutes.get('/:token/status', async (c) => {
   });
 });
 
+function renderNoGatesPage(
+  intent: { amount: string; currency: string; description?: string | null },
+  brand: CheckoutBrand | null,
+): string {
+  const brandName = brand?.name ?? 'EdgePay';
+  const brandColor = sanitizeBrandColor(brand?.brand_color ?? undefined);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout — ${escapeHtml(brandName)}</title>
+<style>
+:root {
+  --primary: ${brandColor};
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+h2 { font-size: 1.25rem; margin-bottom: 0.75rem; color: #0f172a; }
+p { color: var(--text-muted); font-size: 0.9375rem; margin-bottom: 1rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+  ${brand?.logo_path ? `<img src="${escapeHtml(brand.logo_path)}" alt="${escapeHtml(brandName)}" style="max-height: 48px; margin-bottom: 1rem;" />` : ''}
+  <h2>Payment Unavailable</h2>
+  <p>Amount: <strong>${escapeHtml(intent.currency)} ${escapeHtml(intent.amount)}</strong></p>
+  <p>No active payment methods are currently available for this order.</p>
+  <p>Please <strong>contact the merchant</strong> to complete your payment.</p>
+  ${brand?.support_email ? `<p style="font-size: 0.8125rem; color: var(--text-muted);">Support: <a href="mailto:${escapeHtml(brand.support_email)}">${escapeHtml(brand.support_email)}</a></p>` : ''}
+  ${brand?.support_phone ? `<p style="font-size: 0.8125rem; color: var(--text-muted);">Phone: ${escapeHtml(brand.support_phone)}</p>` : ''}
+</div>
+</body>
+</html>`;
+}
+
 function renderCheckoutHTML(opts: {
   token: string;
   amount: string;
@@ -391,10 +482,11 @@ function renderCheckoutHTML(opts: {
   status: string;
   brandName: string;
   brandColor: string;
-  gateways: Array<{ id: number; slug: string; name: string; type: string; account_number?: string | null; instructions?: string | null }>;
+  gates: CheckoutGate[];
+  brand?: CheckoutBrand | null;
 }): string {
   const isCompleted = opts.status === 'completed';
-  const primaryColor = sanitizeBrandColor(opts.brandColor);
+  const primaryColor = sanitizeBrandColor(opts.brand?.brand_color ?? opts.brandColor);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -669,6 +761,7 @@ body {
     </div>
   ` : `
     <div class="checkout-header">
+      ${opts.brand?.logo_path ? `<div class="brand-logo-wrap" style="margin-bottom: 0.75rem;"><img src="${escapeHtml(opts.brand.logo_path)}" alt="${escapeHtml(opts.brandName)}" class="brand-logo" style="max-height: 48px; max-width: 200px; object-fit: contain;" /></div>` : ''}
       <div class="brand-name">${escapeHtml(opts.brandName)}</div>
       <div class="order-amount">${escapeHtml(opts.currency)} ${escapeHtml(opts.amount)}</div>
     </div>
@@ -680,16 +773,16 @@ body {
 
       <div class="section-label">1. Select Payment Method</div>
       <div class="gateway-list">
-        ${opts.gateways.map((gw, idx) => `
-          <label class="gateway-option ${idx === 0 ? 'selected' : ''}" data-id="${gw.id}" data-account="${escapeHtml(gw.account_number || '')}" data-instructions="${escapeHtml(gw.instructions || '')}" data-type="${escapeHtml(gw.type)}">
+        ${opts.gates.map((g, idx) => `
+          <label class="gateway-option ${idx === 0 ? 'selected' : ''}" data-id="${g.id}" data-gateway-id="${g.gateway_id}" data-account="${escapeHtml(g.destination_number || 'Contact merchant')}" data-instructions="${escapeHtml(g.instructions || '')}" data-type="${escapeHtml(g.gateway_type)}">
             <div class="gw-left">
-              <input type="radio" name="gateway_id" value="${gw.id}" ${idx === 0 ? 'checked' : ''} style="display:none">
-              <span>${escapeHtml(gw.name)}</span>
+              <input type="radio" name="gate_id" value="${g.id}" ${idx === 0 ? 'checked' : ''} style="display:none">
+              <span>${escapeHtml(g.label)}</span>
             </div>
-            <span style="font-size: 0.8125rem; color: #64748b;">${escapeHtml(gw.type.toUpperCase())}</span>
+            <span style="font-size: 0.8125rem; color: #64748b;">${escapeHtml(g.destination_number || 'Contact merchant')}</span>
           </label>
         `).join('')}
-        ${opts.gateways.length === 0 ? '<p style="color: #dc2626;">No active payment methods configured</p>' : ''}
+        ${opts.gates.length === 0 ? '<p style="color: #dc2626;">No active payment methods configured</p>' : ''}
       </div>
 
       <div id="mfsDetails" class="mfs-info-card">
@@ -699,10 +792,10 @@ body {
           <li>Choose <strong>Send Money</strong> and transfer <strong>${escapeHtml(opts.currency)} ${escapeHtml(opts.amount)}</strong> to:</li>
         </ol>
         <div class="copy-row">
-          <span id="mfsAccount"></span>
+          <span id="mfsAccount">${escapeHtml(opts.gates[0]?.destination_number || 'Contact merchant')}</span>
           <button class="copy-btn" onclick="copyAccount()">Copy Number</button>
         </div>
-        <div id="mfsInstructions" style="color: #64748b; font-size: 0.8125rem; margin-bottom: 1rem;"></div>
+        <div id="mfsInstructions" style="color: #64748b; font-size: 0.8125rem; margin-bottom: 1rem;">${escapeHtml(opts.gates[0]?.instructions || '')}</div>
 
         <div style="font-weight: 700; color: #0f172a; margin-bottom: 0.75rem;">3. Submit Payment Proof (TrxID):</div>
         
@@ -721,13 +814,20 @@ body {
 
       <div class="footer-secure">
         🔒 Protected by EdgePay Cloudflare Zero-Trust Ledger
+        ${opts.brand?.support_email || opts.brand?.support_phone ? `
+          <div class="brand-support" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+            ${opts.brand.support_email ? `<div>Support: <a href="mailto:${escapeHtml(opts.brand.support_email)}" style="color: inherit;">${escapeHtml(opts.brand.support_email)}</a></div>` : ''}
+            ${opts.brand.support_phone ? `<div>Phone: ${escapeHtml(opts.brand.support_phone)}</div>` : ''}
+          </div>
+        ` : ''}
       </div>
     </div>
   `}
 </div>
 
 <script>
-let currentGatewayId = ${opts.gateways[0]?.id || 0};
+let currentGateId = ${opts.gates[0]?.id || 0};
+let currentGatewayId = ${opts.gates[0]?.gateway_id || 0};
 let pollInterval = null;
 
 function selectGateway(el, id, accountNumber, instructions, type) {
@@ -735,13 +835,14 @@ function selectGateway(el, id, accountNumber, instructions, type) {
   el.classList.add('selected');
   const radio = el.querySelector('input');
   if (radio) radio.checked = true;
-  currentGatewayId = Number(id);
+  currentGateId = Number(id);
+  currentGatewayId = Number(el.dataset.gatewayId || 0);
 
   const mfsBox = document.getElementById('mfsDetails');
   if (mfsBox) {
     mfsBox.style.display = 'block';
     const accEl = document.getElementById('mfsAccount');
-    if (accEl) accEl.innerText = accountNumber || 'Contact Merchant';
+    if (accEl) accEl.innerText = accountNumber || 'Contact merchant';
     const instEl = document.getElementById('mfsInstructions');
     if (instEl) instEl.innerText = instructions || 'Send exact payment amount to this personal account number.';
   }

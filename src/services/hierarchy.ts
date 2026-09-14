@@ -45,6 +45,29 @@ export interface Gate {
   updated_at: string;
 }
 
+export interface CheckoutGate {
+  id: number;
+  label: string;
+  currency: string;
+  gateway_id: number;
+  gateway_slug: string;
+  gateway_type: string;
+  /** Resolved MFS destination number, or null if none can be determined. */
+  destination_number: string | null;
+  instructions: string | null;
+}
+
+export interface CheckoutBrand {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  brand_color: string | null;
+  support_email: string | null;
+  support_phone: string | null;
+  terms_url: string | null;
+  privacy_url: string | null;
+}
+
 export class HierarchyService {
   constructor(private db: D1Database) {}
 
@@ -201,5 +224,60 @@ export class HierarchyService {
        ORDER BY id ASC`
     ).bind(storeId).all<Gate>();
     return res.results ?? [];
+  }
+
+  async listGatesForCheckout(storeId: number): Promise<CheckoutGate[]> {
+    const res = await this.db.prepare(
+      `SELECT
+         g.id,
+         g.label,
+         g.currency,
+         g.gateway_id,
+         gw.slug     AS gateway_slug,
+         gw.type     AS gateway_type,
+         COALESCE(g.mfs_number, mg.account_number, mg.payment_number) AS destination_number,
+         mg.instructions
+       FROM op_gates g
+       JOIN op_gateways gw ON gw.id = g.gateway_id
+       LEFT JOIN op_manual_gateways mg ON mg.gateway_id = g.gateway_id
+       WHERE g.store_id = ? AND g.status = 'active'
+       ORDER BY g.id ASC`
+    ).bind(storeId).all<CheckoutGate>();
+    return res.results ?? [];
+  }
+
+  /**
+   * Merchant-wide fallback. Used when an intent has no store_id — e.g. created
+   * before Phase 6b or by a client that didn't supply a gate_id.
+   */
+  async listGatesForMerchantDefault(merchantId: number): Promise<CheckoutGate[]> {
+    const res = await this.db.prepare(
+      `SELECT
+         g.id,
+         g.label,
+         g.currency,
+         g.gateway_id,
+         gw.slug     AS gateway_slug,
+         gw.type     AS gateway_type,
+         COALESCE(g.mfs_number, mg.account_number, mg.payment_number) AS destination_number,
+         mg.instructions
+       FROM op_gates g
+       JOIN op_gateways gw ON gw.id = g.gateway_id
+       LEFT JOIN op_manual_gateways mg ON mg.gateway_id = g.gateway_id
+       JOIN op_stores s ON s.id = g.store_id
+       JOIN op_brands b ON b.id = s.brand_id
+       WHERE g.merchant_id = ? AND g.status = 'active'
+         AND b.slug = 'main' AND s.slug = 'main'
+       ORDER BY g.id ASC`
+    ).bind(merchantId).all<CheckoutGate>();
+    return res.results ?? [];
+  }
+
+  async getBrandForCheckout(brandId: number, merchantId: number): Promise<CheckoutBrand | null> {
+    return await this.db.prepare(
+      `SELECT id, name, logo_path, brand_color, support_email, support_phone, terms_url, privacy_url
+       FROM op_brands
+       WHERE id = ? AND merchant_id = ? LIMIT 1`
+    ).bind(brandId, merchantId).first<CheckoutBrand>();
   }
 }

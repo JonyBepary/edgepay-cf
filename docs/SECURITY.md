@@ -129,6 +129,19 @@ Payment intents can specify an explicit `gate_id`:
 - **Hierarchy Derivation**: When `gate_id` is supplied, `PaymentService.createIntent` resolves `store_id = gate.store_id`, derives `brand_id = store.brand_id`, and resolves `gateway_id = gate.gateway_id`, persisting all three hierarchy keys onto both `op_payment_intents` and `op_transactions`.
 - **Default Gate Fallback**: For legacy intents specifying only `gateway_id` or `gateway_slug`, `HierarchyService.resolveDefaultGate` derives default hierarchy attributes from the merchant's `main` brand and store without breaking legacy integrations.
 
+#### Checkout Gate Selection (Phase 6c)
+
+The hosted checkout renders the store's gates, not the merchant's gateways. When an intent carries a `store_id`, only that store's active gates are presented. When it carries a `gate_id`, only that gate is presented. When neither is set (legacy intents), the merchant's Main store gates are used as a fallback.
+
+The destination phone number for each gate is resolved as:
+
+    gate.mfs_number
+      ?? manualGateway.account_number
+      ?? manualGateway.payment_number
+      ?? null
+
+If none of these are set, the checkout renders "Contact merchant" in place of a number. Merchants should populate `op_gates.mfs_number` via the admin API when adding new gates.
+
 ## Device Policy Enforcement Modes & Telemetry
 
 EdgePay-CF serves emerging markets where merchants often operate on budget Android handsets (2016–2018 vintage, custom ROMs, or lacking discrete hardware security chips). Enforcing hardware attestation platform-wide would disenfranchise a significant portion of legitimate merchants.
