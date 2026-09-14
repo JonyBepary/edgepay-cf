@@ -432,17 +432,44 @@ export function isNotFound(err: any): boolean {
 }
 
 export async function deleteD1(
-  name: string,
+  nameOrUuid: string,
   accountId?: string,
   _executor: WranglerExecutor = wrangler,
 ): Promise<void> {
   try {
-    await _executor(['d1', 'delete', name, '--skip-confirmation'], {
+    await _executor(['d1', 'delete', nameOrUuid, '--skip-confirmation'], {
       silent: true,
       accountId,
     });
-  } catch (err) {
-    if (!isNotFound(err)) throw err;
+    return;
+  } catch (err: any) {
+    if (isNotFound(err)) return;
+
+    // If direct delete failed and nameOrUuid might be a database name needing UUID lookup:
+    try {
+      const rawList = (await _executor(['d1', 'list', '--json'], {
+        json: true,
+        silent: true,
+        accountId,
+      })) as any;
+      const list = Array.isArray(rawList)
+        ? (rawList as Array<{ name: string; uuid: string }>)
+        : extractJson<Array<{ name: string; uuid: string }>>(String(rawList));
+      if (Array.isArray(list)) {
+        const found = list.find((d) => d.name === nameOrUuid);
+        if (found?.uuid && found.uuid !== nameOrUuid) {
+          await _executor(['d1', 'delete', found.uuid, '--skip-confirmation'], {
+            silent: true,
+            accountId,
+          });
+          return;
+        }
+      }
+    } catch (innerErr) {
+      if (isNotFound(innerErr)) return;
+    }
+
+    throw err;
   }
 }
 

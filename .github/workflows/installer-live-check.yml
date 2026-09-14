@@ -44,7 +44,7 @@ jobs:
       - name: Pre-run Teardown (Clean Slate)
         run: |
           echo "Executing pre-run cleanup in case previous run left lingering resources..."
-          node packages/init/bin/edgepay-init.mjs --destroy --i-know-what-im-doing --yes || true
+          node packages/init/bin/edgepay-init.mjs --destroy --name=edgepay-fresh --i-know-what-im-doing --yes || true
 
       - name: Execute Fresh Installation (Timed)
         id: install
@@ -95,9 +95,5 @@ jobs:
       - name: Post-run Teardown & Resource Isolation
         if: always()
         run: |
-          if [ -f .edgepay-init.json ] || [ -f wrangler.jsonc ]; then
-            echo "Executing post-run cleanup to leave zero remote resources..."
-            node packages/init/bin/edgepay-init.mjs --destroy --i-know-what-im-doing --yes
-          else
-            echo "No deployment configuration found (.edgepay-init.json / wrangler.jsonc). Zero remote resources to clean up."
-          fi
+          echo "Executing post-run cleanup to leave zero remote resources..."
+          node packages/init/bin/edgepay-init.mjs --destroy --name=edgepay-fresh --i-know-what-im-doing --yes || true

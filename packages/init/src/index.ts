@@ -169,6 +169,28 @@ OPTIONS:
       }
     }
 
+    if (!state.config && flags.deploymentName) {
+      try {
+        const auth = await whoami();
+        const targetAccount = auth?.accounts?.[0];
+        if (targetAccount?.id) {
+          state.config = {
+            deployment_name: flags.deploymentName,
+            account_id: targetAccount.id,
+            account_name: targetAccount.name || targetAccount.id,
+            primary_currency: flags.primaryCurrency || 'BDT',
+            merchant_name: flags.merchantName || flags.deploymentName,
+            generate_secrets: false,
+            d1_name: `${flags.deploymentName}-db`,
+            kv_name: `${flags.deploymentName}-kv`,
+            r2_name: `${flags.deploymentName}-assets`,
+          };
+        }
+      } catch {
+        // failed to resolve whoami
+      }
+    }
+
     if (!state.config) {
       console.error(pc.red('Error: No EdgePay deployment found to destroy.'));
       console.error(
