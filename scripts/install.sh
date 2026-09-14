@@ -22,14 +22,14 @@ fi
 
 # 2. Check prerequisites
 if ! command -v node >/dev/null 2>&1; then
-  echo "Error: Node.js 20+ is required to run the EdgePay installer." >&2
+  echo "Error: Node.js 22+ is required to run the EdgePay installer." >&2
   echo "Install Node.js: https://nodejs.org" >&2
   exit 1
 fi
 
 NODE_MAJOR=$(node -e 'console.log(process.versions.node.split(".")[0])')
-if [ "$NODE_MAJOR" -lt 20 ]; then
-  echo "Error: Node.js 20+ is required (detected $(node -v))." >&2
+if [ "$NODE_MAJOR" -lt 22 ]; then
+  echo "Error: Node.js 22+ is required (detected $(node -v))." >&2
   exit 1
 fi
 

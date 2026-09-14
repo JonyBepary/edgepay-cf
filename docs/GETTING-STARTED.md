@@ -34,7 +34,7 @@ Full walkthrough incl. what gets provisioned and troubleshooting:
 
 ## Route B: local development
 
-Prerequisites: Node.js 20+ and a free Cloudflare account.
+Prerequisites: Node.js 22+ and a free Cloudflare account.
 
 ```bash
 git clone https://github.com/JonyBepary/edgepay-cf && cd edgepay-cf
@@ -57,7 +57,7 @@ cp .dev.vars.example .dev.vars           # fill in the three secrets
 npm run dev                              # → http://localhost:8787
 ```
 
-Run the test suite any time — 104 tests executing **inside workerd** against
+Run the test suite any time — 455 tests executing **inside workerd** against
 real D1/Durable Objects/Workflows bindings:
 
 ```bash

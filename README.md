@@ -1,7 +1,6 @@
 # EdgePay-CF — Edge-Native Self-Hosted Payment Engine & Ledger
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
-[![Vitest Unit Tests](https://img.shields.io/badge/tests-212%20passed-brightgreen.svg)](tests/)
+[![Vitest Tests](https://img.shields.io/badge/tests-455%20root%20%7C%2042%20installer-brightgreen.svg)](tests/)
 [![TypeScript Strict](https://img.shields.io/badge/typescript-strict%205.9-blue.svg)](tsconfig.json)
 [![Cloudflare Workers](https://img.shields.io/badge/runtime-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com)
 [![Interactive Scalar Docs](https://img.shields.io/badge/docs-Scalar%20OpenAPI%203.1-purple.svg)](https://edgepay-cf.bm-jonybepary.workers.dev/api/reference)
@@ -29,37 +28,27 @@ npm run init
 ```
 
 The interactive terminal installer automates the entire provisioning and deployment workflow:
-- **Prerequisites Check**: Verifies Node.js 20+, Wrangler CLI, and Git.
+- **Prerequisites Check**: Verifies Node.js 22+, Wrangler CLI, and Git.
 - **Cloudflare Authentication**: Auto-detects session, assists login, and supports multi-account selection.
 - **Resource Provisioning**: Auto-provisions D1 SQLite, KV, R2, Queues, and Dead-Letter Queues.
 - **Cryptographic Security**: Generates high-entropy secrets (`JWT_SECRET`, `APP_KEY`, `ENCRYPTION_KEY`) and pushes them to Cloudflare without manual copy-pasting.
-- **Database Migrations**: Applies all 11 D1 schema migrations remotely.
+- **Database Migrations**: Applies all 15 D1 schema migrations remotely.
 - **Worker Deployment & Health Check**: Publishes the Worker and verifies health check response before completion.
 - **Crash Resilience**: Saves intermediate progress to `.edgepay-init.json` to resume where you left off if interrupted.
 
 ---
 
-## Deploy in 1 click
+### Option B: Wrangler Fallback (Full Control / Manual Deployment)
 
-Copy-paste this button into any markdown file. It is the official snippet. Only the `url` parameter is supported — there are no custom parameters.
+If you prefer configuring resources by hand or running inside automated CI/CD pipelines:
 
-```md
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/JonyBepary/edgepay-cf)
-```
+#### 1. Prerequisites
 
-Click it, paste 3 secrets on the setup page, and you get a live payment platform in 3–5 minutes. No terminal needed.
+- A **Cloudflare account** (free tier works)
+- **Node.js 22+** and npm
+- **Wrangler CLI** (`npm install -g wrangler` or via `npx wrangler`)
 
-Official docs: [Deploy to Cloudflare buttons](https://developers.cloudflare.com/workers/platform/deploy-buttons/) · [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) · [Wrangler environments](https://developers.cloudflare.com/workers/wrangler/environments/)
-
-### Prerequisites
-
-You need 2 accounts and 1 tool version:
-
-- A **Cloudflare account** (free works) + a **GitHub account** (the button clones this repo into your GitHub).
-- **Node.js 20+** only if you use the Wrangler fallback below. The 1-click path needs no local tools.
-- **Analytics Engine (AE) note:** you do nothing. The AE dataset auto-creates on the first `writeDataPoint` call. Do not create it by hand. If you see error `10089`, it just means no data has been written yet — open the app once and it goes away. See [docs/DASHBOARD-PITFALLS.md](docs/DASHBOARD-PITFALLS.md).
-
-Generate the 3 secrets **before** you click (you paste them on the setup page — values are never prefilled):
+Generate the 3 required secrets before deploying:
 
 ```bash
 openssl rand -hex 32        # JWT_SECRET — signs mobile + pairing tokens (min 32 chars)
@@ -67,44 +56,13 @@ openssl rand -base64 32     # APP_KEY — HMAC key for webhook signing
 openssl rand -base64 32     # ENCRYPTION_KEY — AES-256-GCM key for gateway creds + PII. Back this up: losing it makes stored credentials unrecoverable.
 ```
 
-> Never commit real secrets to git. On Cloudflare they are set with `wrangler secret put`. Details: [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md).
+> [!WARNING]
+> Never commit real secrets to git. On Cloudflare Workers they must be set via `wrangler secret put`. Details: [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md).
 
-### What 1-click does in 3–5 minutes
-
-1. **Clone** — copies this repo into your GitHub so you own the code.
-2. **Setup page** — you pick a Worker name and paste the 3 secrets above. Secrets are typed in by you; the page never prefills them.
-3. **Provision** — Cloudflare auto-creates KV, D1, R2, Queues, Durable Objects, and Workers AI bindings. The resource IDs are rewritten in your clone automatically.
-4. **Migrate** — the deploy script applies the D1 schema before upload, referenced by binding name (`wrangler d1 migrations apply DB --remote`), so it hits the right database no matter what it was named.
-5. **Deploy** — Workers Builds installs, builds, and puts your Worker live.
-
-### What 1-click does NOT do
-
-You finish these after deploy (5–10 min):
-
-- **Secret values** — the button never invents secrets for you. You paste them.
-- **Custom domains** — add them manually in the Cloudflare dashboard after deploy.
-- **Access app** — create the Cloudflare Access app for `/api/admin/*` yourself (admin API returns 503 until you do — that is intentional).
-- **`ALLOWED_ORIGINS` / `ENABLED_GATEWAYS`** — set these vars yourself if the defaults do not fit.
-- **`/install` bootstrap** — open `/install` yourself to create the platform merchant + super-admin. The wizard locks after one run.
-
-Monorepos, Pages projects, and private repos are **not supported** by the button. Use the Wrangler fallback instead.
-
-### Post-deploy checklist
-
-Do these in order:
-
-1. Open `https://<your-worker>.workers.dev/install` and complete the wizard.
-2. Save the `bootstrap-key` the wizard shows (shown once).
-3. Create your Access app: Cloudflare Zero Trust at <https://one.dash.cloudflare.com> → app covering `https://<your-worker>/api/admin/*` → set `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD_TAG`.
-4. In the admin UI, install gateways and paste gateway credentials.
-5. Send a `webhook.test` event to verify your endpoint.
-6. Explore `https://<your-worker>/api/reference` (live Scalar docs).
-
-Full walkthrough: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md). Gotcha table: [docs/DASHBOARD-PITFALLS.md](docs/DASHBOARD-PITFALLS.md).
-
-### Wrangler fallback (full control)
+#### 2. Resource Provisioning & Deployment
 
 ```bash
+git clone https://github.com/JonyBepary/edgepay-cf.git && cd edgepay-cf
 npm install
 npx wrangler login
 
@@ -120,7 +78,7 @@ npx wrangler queues create sms-parse
 # Local dev secrets
 cp .dev.vars.example .dev.vars   # then fill in JWT_SECRET, APP_KEY, ENCRYPTION_KEY
 
-# Local DB then remote DB (binding name DB, always --remote for live)
+# Local DB then remote DB (binding name DB, applies all 15 schema migrations)
 npm run db:migrate:local
 npx wrangler d1 migrations apply DB --remote
 
@@ -132,9 +90,22 @@ npx wrangler secret put ENCRYPTION_KEY
 npm run deploy
 ```
 
-`npm run deploy` = apply D1 migrations by binding name + `wrangler deploy`. It works no matter what your database is named.
+`npm run deploy` applies D1 schema migrations by binding name (`wrangler d1 migrations apply DB --remote`) followed by `wrangler deploy`. It functions predictably regardless of database naming.
 
-### Verify it works
+#### 3. Post-Deploy Checklist
+
+Do these in order:
+
+1. **Bootstrap Platform**: Open `https://<your-worker>.workers.dev/install` and complete the wizard to initialize the platform merchant, super-admin account, chart of accounts, and default carrier gates.
+2. **Save Bootstrap Key**: Securely record the `bootstrap-key` displayed upon wizard completion (shown once).
+3. **Configure Cloudflare Access**: Set up a Zero Trust Access application at <https://one.dash.cloudflare.com> protecting `https://<your-worker>.workers.dev/api/admin/*`.
+   - Set `CF_ACCESS_TEAM_DOMAIN` (e.g. `https://<your-team>.cloudflareaccess.com`) and `CF_ACCESS_AUD_TAG` as Worker secrets using `wrangler secret put` (do **not** put them in plain text in `wrangler.jsonc`).
+   - The Admin API deliberately returns HTTP 503 until both Access secrets are active.
+4. **Configure Carrier Gates**: In the admin UI or via `PATCH /api/admin/v1/gates/:id`, configure merchant MFS numbers (`mfs_number`) for bKash, Nagad, and Rocket.
+5. **Verify Webhooks**: Send a `webhook.test` event to verify connectivity with your backend systems.
+6. **Explore OpenAPI Console**: Open `https://<your-worker>.workers.dev/api/reference` for interactive Scalar documentation.
+
+#### 4. Verify It Works
 
 ```bash
 curl https://<your-worker>.workers.dev/health
@@ -143,13 +114,16 @@ curl https://<your-worker>.workers.dev/api/v1/health
 
 Then check: Cloudflare dashboard → your Worker → Bindings (D1, KV, R2, Queues, DO all present) → open `/install` (shows requirements report) → open `/api/reference` (Scalar UI loads).
 
-### Security notes
+> [!NOTE]
+> **Analytics Engine (AE) note**: The AE dataset auto-creates on the first `writeDataPoint` call. If you see error `10089`, it just means no events have been recorded yet — make one request and it resolves automatically. See [docs/DASHBOARD-PITFALLS.md](docs/DASHBOARD-PITFALLS.md).
 
-- Set secrets only with `wrangler secret put` (or the setup page). Never in code or git.
-- JWTs + 6-digit OTPs: OTPs are hashed, expire in 300s, and lock out after a few wrong tries.
-- Webhooks use HMAC signatures with a 300s replay window — old or reused payloads are rejected.
-- Refunds need an `Idempotency-Key` header so a retry never charges twice.
-- Rotate keys with narrow scopes, and PII is encrypted/redacted in logs. More: [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md) · [docs/SECURITY.md](docs/SECURITY.md).
+#### 5. Security Notes
+
+- **Secrets Management**: Set secrets only with `wrangler secret put` (or `.dev.vars` for local development). Never commit secrets to source control.
+- **Authentication**: JWTs + 6-digit OTPs. OTPs are hashed, expire in 300s, and lock out after consecutive failed attempts.
+- **Replay Protection**: Webhook deliveries utilize HMAC-SHA256 signatures with a 300s replay window.
+- **Idempotency**: All refund operations require an `Idempotency-Key` header so retries never charge or credit twice.
+- **Data Protection**: Sensitive credentials and PII are encrypted with AES-256-GCM. See [docs/CRYPTO-NORMS.md](docs/CRYPTO-NORMS.md) and [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
@@ -191,6 +165,10 @@ sequenceDiagram
 ```
 
 * **Multi-Tenant Isolation**: Host unlimited independent merchants on a single deployment. Each merchant gets isolated API keys, gateway settings, custom domains, and a dedicated **Durable Object Double-Entry Ledger** (`merchant:${id}`).
+* **Multi-Store Merchant Hierarchy**: Full multi-tier hierarchy (`Merchant → Brand → Store → Gate`). Supports multi-brand merchants, store-level inventory and gate isolation, store-aware checkout URL routing, and automatic default hierarchy provisioning (`Main Brand` and `Main Store` with auto-seeded `bKash`, `Nagad`, `Rocket` carrier gates).
+* **Hardware-Backed Device Attestation**: Android forwarder telemetry verified via AOSP Keymaster/Keymint hardware keystore attestation with pinned Google RKP (Remote Key Provisioning) and RSA root-of-trust certificates, preventing device spoofing and emulator attacks.
+* **Device Policy Enforcement**: Configurable security policies (`audit`, `enforce`, `off`) verifying hardware-backed keymaster status, bootloader lock, OS patch level, and system integrity before admitting device telemetry.
+* **Signed Override Exceptions**: Cryptographically signed, time-limited (up to 90 days), reasoned, attributable security overrides allowing legacy or non-TEE devices temporary access under strict audit logging.
 * **Strict Two-Way TrxID Corroboration**: Eliminates fraud and ambiguous amount matching. Every manual MFS payment intent requires an exact, verified TrxID match from the carrier SMS network before money is cleared.
 * **Anti-Replay & Anti-Double-Spending Protection**:
   - Replay attacks on claimed TrxIDs are rejected immediately with `409 TRX_ALREADY_USED`.
@@ -291,12 +269,14 @@ curl -H "Authorization: Bearer $ADMIN_KEY" \
 | **Merchant API** | `/api/v1/transactions` | Bearer `op_live_...` | Scoped transactions & ledger history |
 | **Merchant API** | `/api/v1/refunds` | Bearer `op_live_...` | Create workflow-driven refunds |
 | **Admin API** | `/api/admin/v1/merchants` | Admin Bearer / Access | Provision new merchant tenants dynamically |
+| **Admin API** | `/api/admin/v1/gates/:id` | Admin Bearer / Access | Update carrier gate MFS numbers & status |
+| **Admin API** | `/api/admin/v1/stores` | Admin Bearer / Access | Manage multi-store hierarchy |
 | **Admin API** | `/api/admin/v1/ledger/trial-balance` | Admin Bearer / Access | Real-time GAAP ledger audit |
-| **Companion API**| `/api/mobile/v1/pair` | Anonymous (OTP) | Pair device & receive JWT |
+| **Companion API**| `/api/mobile/v1/pair` | Anonymous (OTP) | Pair device (with store selection) & receive JWT |
 | **Companion API**| `/api/mobile/v1/refresh` | Refresh Token | Seamless token rotation |
-| **Companion API**| `/api/mobile/v1/heartbeat` | Mobile JWT | Background telemetry sync |
+| **Companion API**| `/api/mobile/v1/heartbeat` | Mobile JWT | Background telemetry sync & attestation check |
 | **Companion API**| `/api/mobile/v1/sms` | Mobile JWT | Ingest & corroborate carrier SMS |
-| **Customer Checkout** | `/checkout/:token` | Public | Hosted checkout UI with MFS payment steps |
+| **Customer Checkout** | `/checkout/:token` | Public | Hosted checkout UI with store-aware carrier gates |
 | **Customer Checkout** | `/checkout/:token/verify` | Public | Submit customer TrxID & sender phone for 2-way verification |
 | **Customer Checkout** | `/checkout/:token/status` | Public | Real-time polling endpoint |
 | **Docs Portal** | `/api/reference` | Public | Interactive Scalar OpenAPI console |
@@ -305,10 +285,17 @@ curl -H "Authorization: Bearer $ADMIN_KEY" \
 
 ## 🧪 Verification & Testing Suite
 
-Run the full battery of 212 Vitest unit tests inside workerd:
+Run the full battery of 455 Vitest unit and integration tests (across 45 test suites) inside workerd, plus 42 installer tests (497 tests total):
 
 ```bash
+# Root Worker test suite (455 tests across 45 suites in workerd)
 npm run typecheck && npm test
+
+# Terminal installer test suite (42 tests in packages/init)
+npm run test:init
+
+# Remediation ledger verification
+node scripts/verify-remediations.mjs
 ```
 
 Run the live edge multi-role penetration and blackbox suite:
@@ -324,3 +311,8 @@ node scratch/test_manual_corroboration.mjs
 ## 📄 License
 
 AGPL-3.0-or-later. Built with [HonoJS](https://hono.dev), [Cloudflare Workers](https://workers.cloudflare.com), and [Scalar](https://scalar.com).
+
+---
+
+**Version:** 0.5.0 · **Last verified:** 2026-09-15 · **Cloudflare compatibility date:** 2026-07-21
+
