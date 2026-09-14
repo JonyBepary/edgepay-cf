@@ -8,10 +8,13 @@
  * guards against double application across files.
  *
  * NOTE FOR TEST AUTHORS:
- * Any test that creates payments or transactions must first call
- * LedgerService.createDefaultChartOfAccounts(merchantId, currency)
- * for the merchant. Otherwise the ledger post at completeTransaction
- * throws UNKNOWN_ACCOUNT.
+ * 1. Any test that creates payments or transactions must first call
+ *    LedgerService.createDefaultChartOfAccounts(merchantId, currency)
+ *    for the merchant. Otherwise the ledger post at completeTransaction
+ *    throws UNKNOWN_ACCOUNT.
+ * 2. Gateway credentials are NOT in op_gateways. They live in op_gateway_configs,
+ *    keyed by gateway_id. Seeding an op_gateways row for a test does not require
+ *    seeding credentials — the createIntent path tolerates a missing config row.
  */
 
 import { beforeAll } from 'vitest';

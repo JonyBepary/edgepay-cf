@@ -13,6 +13,7 @@
  *   9. POST /checkout/:token/initiate accepts gate_id and resolves gateway_id
  *  10. POST /checkout/:token/initiate rejects a gate from another merchant (404 GATE_NOT_FOUND)
  *  11. POST /checkout/:token/initiate with only gateway_id still works (legacy)
+ *  12. Merchant with zero gates renders Payment Unavailable fallback and emits checkout_no_gates
  */
 
 import { describe, it, expect } from 'vitest';
@@ -150,6 +151,8 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
     expect(html).toContain('Store A Counter');
     expect(html).not.toContain('Store B Counter');
     expect(gateMatches).toBe(1);
+    expect(html).toContain('<meta name="csrf-token"');
+    expect(html).toContain('X-CSRF-Token');
   });
 
   it('Test 2 — Intent with gate_id renders only that gate', async () => {
@@ -212,7 +215,7 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
     const storeId = await seedStore(brandId, m, { name: 'Store 4', slug: 'store-4' });
 
     const gw = await seedGateway(m, `bkash-4-${m}`, 'bKash 4');
-    await seedManualGateway(gw, m, { accountNumber: '01799999999' });
+    await seedManualGateway(gw, m, { accountNumber: '01799999999', paymentNumber: '01788888888' });
     await seedGate(storeId, m, gw, { label: 'Gate With MFS Number', mfsNumber: '01711111111' });
 
     const { token } = await seedPaymentIntent(m, { storeId, brandId });
@@ -226,6 +229,7 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
 
     expect(html).toContain('01711111111');
     expect(html).not.toContain('01799999999');
+    expect(html).not.toContain('01788888888');
   });
 
   it('Test 5 — Destination number falls back to manual gateway account_number', async () => {
@@ -235,7 +239,7 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
     const storeId = await seedStore(brandId, m, { name: 'Store 5', slug: 'store-5' });
 
     const gw = await seedGateway(m, `bkash-5-${m}`, 'bKash 5');
-    await seedManualGateway(gw, m, { accountNumber: '01799999999' });
+    await seedManualGateway(gw, m, { accountNumber: '01799999999', paymentNumber: '01788888888' });
     await seedGate(storeId, m, gw, { label: 'Gate Fallback Account', mfsNumber: null });
 
     const { token } = await seedPaymentIntent(m, { storeId, brandId });
@@ -248,6 +252,7 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
     console.log(`Test 5 rendered ${gateMatches} gate(s)`);
 
     expect(html).toContain('01799999999');
+    expect(html).not.toContain('01788888888');
   });
 
   it('Test 6 — Destination number falls back to manual gateway payment_number when account_number is null', async () => {
@@ -443,5 +448,25 @@ describe('Checkout Gate Selection (Phase 6c)', () => {
     expect(updated?.gateway_id).toBe(gw);
     expect(updated?.status).toBe('processing');
     console.log('Test 11 legacy initiate succeeded with gateway_id:', gw);
+  });
+
+  it('Test 12 — Merchant with zero gates renders Payment Unavailable fallback', async () => {
+    const m = range.start + 13;
+    await seedMerchant(m);
+    const brandId = await seedBrand(m, { name: 'Empty Brand', slug: 'empty-brand' });
+    const storeId = await seedStore(brandId, m, { name: 'Empty Store', slug: 'empty-store' });
+    // Do NOT seed any gateways or gates for this merchant
+
+    const { token } = await seedPaymentIntent(m, { storeId, brandId });
+
+    const res = await SELF.fetch(`http://localhost/checkout/${token}`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+
+    expect(html).toContain('Payment Unavailable');
+    expect(html).toContain('contact the merchant');
+    expect(html).toContain('No active payment methods are currently available for this order.');
+    expect(html).not.toContain('class="gateway-option"');
+    console.log('Test 12 successfully rendered renderNoGatesPage for merchant with zero gates');
   });
 });

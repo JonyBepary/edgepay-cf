@@ -9,6 +9,7 @@ import type { Env } from '../types/env';
 import { PaymentService } from '../services/payment';
 import { resolveIntentStatus } from '../services/checkout-status';
 import { HierarchyService, type CheckoutGate, type CheckoutBrand } from '../services/hierarchy';
+import { metric } from '../lib/observability';
 
 type CheckoutContext = Context<{ Bindings: Env; Variables: Record<string, unknown> }>;
 
@@ -78,6 +79,7 @@ checkoutRoutes.get('/:token', async (c) => {
   if (gates.length === 0) {
     // No gates configured. Render a minimal page telling the customer
     // to contact the merchant. This is a merchant misconfiguration.
+    metric(c.env, 'checkout_no_gates', { merchant_id: intent.merchant_id, value: 1 });
     return c.html(renderNoGatesPage(intent, brand), 200);
   }
 
@@ -85,6 +87,7 @@ checkoutRoutes.get('/:token', async (c) => {
   const merchant = c.get('merchant') as { name?: string; color?: string } | null;
   const brandName = brand?.name ?? merchant?.name ?? 'EdgePay';
   const brandColor = brand?.brand_color ?? merchant?.color ?? '#0052cc';
+  const csrfToken = (c.get('csrfToken') as string) || '';
 
   return c.html(renderCheckoutHTML({
     token,
@@ -96,6 +99,7 @@ checkoutRoutes.get('/:token', async (c) => {
     brandColor,
     gates,
     brand,
+    csrfToken,
   }));
 });
 
@@ -484,6 +488,7 @@ function renderCheckoutHTML(opts: {
   brandColor: string;
   gates: CheckoutGate[];
   brand?: CheckoutBrand | null;
+  csrfToken?: string;
 }): string {
   const isCompleted = opts.status === 'completed';
   const primaryColor = sanitizeBrandColor(opts.brand?.brand_color ?? opts.brandColor);
@@ -493,6 +498,7 @@ function renderCheckoutHTML(opts: {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" content="${escapeHtml(opts.csrfToken || '')}">
 <title>Secure Checkout — ${escapeHtml(opts.brandName)}</title>
 <style>
 :root {
@@ -826,6 +832,7 @@ body {
 </div>
 
 <script>
+const csrfToken = '${escapeHtml(opts.csrfToken || '')}';
 let currentGateId = ${opts.gates[0]?.id || 0};
 let currentGatewayId = ${opts.gates[0]?.gateway_id || 0};
 let pollInterval = null;
@@ -892,10 +899,16 @@ async function submitTrxVerification() {
   btn.innerText = 'Verifying with Network...';
   showFeedback('info', 'Verifying TrxID ' + trxId + ' with incoming SMS confirmations...');
 
+  const metaCsrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  const activeCsrf = csrfToken || metaCsrf || '';
+
   try {
     const res = await fetch('/checkout/${opts.token}/verify', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(activeCsrf ? { 'X-CSRF-Token': activeCsrf } : {}),
+      },
       body: JSON.stringify({
         trx_id: trxId,
         sender_phone: senderPhone,
