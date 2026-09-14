@@ -19,8 +19,18 @@ import m8 from '../migrations/0008_device_attestation.sql?raw';
 import m9 from '../migrations/0009_merchant_device_policies.sql?raw';
 import m10 from '../migrations/0010_device_policy_modes.sql?raw';
 import m11 from '../migrations/0011_device_policy_overrides.sql?raw';
+import m12 from '../migrations/0012_hierarchy.sql?raw';
+import m13 from '../migrations/0013_hierarchy_columns.sql?raw';
+import m14 from '../migrations/0014_hierarchy_backfill.sql?raw';
 
 const db = (env as unknown as { DB: D1Database }).DB;
+
+function splitStatements(sql: string): string[] {
+  return sql
+    .split(/;\s*(?:\n|$)/)
+    .map(s => s.replace(/^\s*--[^\n]*$/gm, '').trim())
+    .filter(s => s.length > 0);
+}
 
 interface IndexInfoRow {
   seqno: number;
@@ -352,6 +362,116 @@ describe('D1 Migration Protocol (0001 -> 0006)', () => {
       .all<IndexInfoRow>();
     const idxCols = (idxInfo.results ?? []).map((i) => i.name);
     expect(idxCols).toEqual(['merchant_id', 'device_id', 'expires_at']);
+  });
+
+  it('0012 creates op_brands, op_stores, op_gates and six indexes', async () => {
+    expect(m12).toContain('CREATE TABLE IF NOT EXISTS op_brands');
+    expect(m12).toContain('CREATE TABLE IF NOT EXISTS op_stores');
+    expect(m12).toContain('CREATE TABLE IF NOT EXISTS op_gates');
+    expect(m12).toContain('idx_brands_merchant');
+    expect(m12).toContain('idx_stores_brand');
+    expect(m12).toContain('idx_stores_merchant');
+    expect(m12).toContain('idx_gates_store');
+    expect(m12).toContain('idx_gates_merchant');
+    expect(m12).toContain('idx_gates_mfs');
+
+    const brandCols = await db.prepare(`PRAGMA table_info(op_brands)`).all<TableInfoRow>();
+    const brandColNames = (brandCols.results ?? []).map(c => c.name);
+    for (const col of ['id', 'merchant_id', 'uuid', 'name', 'slug', 'status', 'brand_color', 'support_email']) {
+      expect(brandColNames).toContain(col);
+    }
+
+    const storeCols = await db.prepare(`PRAGMA table_info(op_stores)`).all<TableInfoRow>();
+    const storeColNames = (storeCols.results ?? []).map(c => c.name);
+    for (const col of ['id', 'brand_id', 'merchant_id', 'uuid', 'name', 'slug', 'timezone', 'default_currency', 'status']) {
+      expect(storeColNames).toContain(col);
+    }
+
+    const gateCols = await db.prepare(`PRAGMA table_info(op_gates)`).all<TableInfoRow>();
+    const gateColNames = (gateCols.results ?? []).map(c => c.name);
+    for (const col of ['id', 'store_id', 'merchant_id', 'gateway_id', 'label', 'mfs_number', 'currency', 'status']) {
+      expect(gateColNames).toContain(col);
+    }
+
+    const gateIndices = await db.prepare(`PRAGMA index_list(op_gates)`).all<{ name: string }>();
+    const gateIndexNames = (gateIndices.results ?? []).map(i => i.name);
+    expect(gateIndexNames).toContain('idx_gates_mfs');
+    expect(gateIndexNames).toContain('idx_gates_store');
+    expect(gateIndexNames).toContain('idx_gates_merchant');
+  });
+
+  it('0013 adds store_id to op_paired_devices, gate_id/store_id/brand_id to op_transactions and op_payment_intents', async () => {
+    expect(m13).toContain('ALTER TABLE op_paired_devices   ADD COLUMN store_id INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_payment_intents  ADD COLUMN brand_id INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_payment_intents  ADD COLUMN store_id INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_payment_intents  ADD COLUMN gate_id  INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_transactions     ADD COLUMN brand_id INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_transactions     ADD COLUMN store_id INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_transactions     ADD COLUMN gate_id  INTEGER;');
+    expect(m13).toContain('ALTER TABLE op_domains          ADD COLUMN brand_id INTEGER;');
+
+    const deviceCols = await db.prepare(`PRAGMA table_info(op_paired_devices)`).all<TableInfoRow>();
+    expect((deviceCols.results ?? []).some(c => c.name === 'store_id')).toBe(true);
+
+    const intentCols = await db.prepare(`PRAGMA table_info(op_payment_intents)`).all<TableInfoRow>();
+    const intentColNames = (intentCols.results ?? []).map(c => c.name);
+    expect(intentColNames).toContain('brand_id');
+    expect(intentColNames).toContain('store_id');
+    expect(intentColNames).toContain('gate_id');
+
+    const txCols = await db.prepare(`PRAGMA table_info(op_transactions)`).all<TableInfoRow>();
+    const txColNames = (txCols.results ?? []).map(c => c.name);
+    expect(txColNames).toContain('brand_id');
+    expect(txColNames).toContain('store_id');
+    expect(txColNames).toContain('gate_id');
+
+    const domainCols = await db.prepare(`PRAGMA table_info(op_domains)`).all<TableInfoRow>();
+    expect((domainCols.results ?? []).some(c => c.name === 'brand_id')).toBe(true);
+  });
+
+  it('0014 is idempotent — running it twice does not duplicate Main brands, Main stores, or gates', async () => {
+    const testMerchantId = 841001;
+    const now = Date.now();
+    const uuid = `mig-m14-uuid-${now}`;
+    const slug = `mig-m14-${now}`;
+    const email = `mig-m14-${now}@example.com`;
+
+    await db.prepare(
+      `INSERT OR IGNORE INTO op_merchants (id, uuid, name, slug, email, default_currency, status)
+       VALUES (?, ?, ?, ?, ?, 'BDT', 'active')`
+    ).bind(testMerchantId, uuid, 'Migration Test Merchant', slug, email).run();
+
+    const gatewaySlug = `gw-m14-${now}`;
+    await db.prepare(
+      `INSERT INTO op_gateways (merchant_id, slug, name, type, status)
+       VALUES (?, ?, 'bKash Personal', 'manual', 'active')`
+    ).bind(testMerchantId, gatewaySlug).run();
+
+    const m14Stmts = splitStatements(m14);
+    for (const stmt of m14Stmts) {
+      await db.prepare(stmt).run();
+    }
+
+    const brandsCount1 = await db.prepare(`SELECT count(*) as count FROM op_brands WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+    const storesCount1 = await db.prepare(`SELECT count(*) as count FROM op_stores WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+    const gatesCount1 = await db.prepare(`SELECT count(*) as count FROM op_gates WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+
+    expect(brandsCount1?.count).toBe(1);
+    expect(storesCount1?.count).toBe(1);
+    expect(gatesCount1?.count).toBe(1);
+
+    // Second run
+    for (const stmt of m14Stmts) {
+      await db.prepare(stmt).run();
+    }
+
+    const brandsCount2 = await db.prepare(`SELECT count(*) as count FROM op_brands WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+    const storesCount2 = await db.prepare(`SELECT count(*) as count FROM op_stores WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+    const gatesCount2 = await db.prepare(`SELECT count(*) as count FROM op_gates WHERE merchant_id = ?`).bind(testMerchantId).first<{ count: number }>();
+
+    expect(brandsCount2?.count).toBe(1);
+    expect(storesCount2?.count).toBe(1);
+    expect(gatesCount2?.count).toBe(1);
   });
 });
 

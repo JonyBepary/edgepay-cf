@@ -27,6 +27,7 @@ import {
   grantDeviceOverride,
   revokeDeviceOverride,
 } from '../services/device-policy';
+import { HierarchyService } from '../services/hierarchy';
 
 export const apiRoutes = new Hono<{ Bindings: Env; Variables: ApiVariables }>();
 
@@ -1221,4 +1222,121 @@ apiRoutes.post('/devices/:id/policy-override/revoke', async (c) => {
 
   return c.json({ success: true, data: res.data }, 200);
 });
+
+// ===============================================================
+// Hierarchy Routes — Brands, Stores, Gates (Phase 6a)
+// ===============================================================
+
+// GET /api/v1/brands
+apiRoutes.get('/brands', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const svc = new HierarchyService(c.env.DB);
+  const brands = await svc.listBrands(merchantId);
+  return c.json({ success: true, data: brands });
+});
+
+// POST /api/v1/brands
+apiRoutes.post('/brands', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const body = await c.req.json<{
+    name?: string; slug?: string; brand_color?: string; support_email?: string;
+  }>();
+  if (!body.name || !body.slug) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name and slug required' } }, 400);
+  }
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(body.slug)) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'slug must be lowercase alphanumeric with hyphens, 1-64 chars' } }, 400);
+  }
+  const svc = new HierarchyService(c.env.DB);
+  const brand = await svc.createBrand({
+    merchant_id: merchantId,
+    name: body.name,
+    slug: body.slug,
+    brand_color: body.brand_color,
+    support_email: body.support_email,
+  });
+  return c.json({ success: true, data: brand }, 201);
+});
+
+// GET /api/v1/brands/:id/stores
+apiRoutes.get('/brands/:id/stores', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const brandId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(brandId) || brandId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_BRAND_ID' } }, 400);
+  }
+  const svc = new HierarchyService(c.env.DB);
+  const brand = await svc.getBrand(brandId, merchantId);
+  if (!brand) return c.json({ success: false, error: { code: 'NOT_FOUND' } }, 404);
+  const stores = await svc.listStores(brandId, merchantId);
+  return c.json({ success: true, data: stores });
+});
+
+// POST /api/v1/brands/:id/stores
+apiRoutes.post('/brands/:id/stores', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const brandId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(brandId) || brandId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_BRAND_ID' } }, 400);
+  }
+  const body = await c.req.json<{
+    name?: string; slug?: string; default_currency?: string; timezone?: string;
+  }>();
+  if (!body.name || !body.slug || !body.default_currency) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name, slug, default_currency required' } }, 400);
+  }
+  const svc = new HierarchyService(c.env.DB);
+  const brand = await svc.getBrand(brandId, merchantId);
+  if (!brand) return c.json({ success: false, error: { code: 'NOT_FOUND' } }, 404);
+  const store = await svc.createStore({
+    merchant_id: merchantId,
+    brand_id: brandId,
+    name: body.name,
+    slug: body.slug,
+    default_currency: body.default_currency,
+    timezone: body.timezone,
+  });
+  return c.json({ success: true, data: store }, 201);
+});
+
+// GET /api/v1/stores/:id/gates
+apiRoutes.get('/stores/:id/gates', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const storeId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(storeId) || storeId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_STORE_ID' } }, 400);
+  }
+  const svc = new HierarchyService(c.env.DB);
+  const gates = await svc.listGates(storeId, merchantId);
+  return c.json({ success: true, data: gates });
+});
+
+// POST /api/v1/stores/:id/gates
+apiRoutes.post('/stores/:id/gates', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const storeId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(storeId) || storeId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_STORE_ID' } }, 400);
+  }
+  const body = await c.req.json<{
+    gateway_id?: number; label?: string; currency?: string; mfs_number?: string | null;
+  }>();
+  if (!body.gateway_id || !body.label || !body.currency) {
+    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'gateway_id, label, currency required' } }, 400);
+  }
+  const svc = new HierarchyService(c.env.DB);
+  const store = await svc.getStore(storeId, merchantId);
+  if (!store) return c.json({ success: false, error: { code: 'NOT_FOUND' } }, 404);
+
+  const gate = await svc.createGate({
+    store_id: storeId,
+    merchant_id: merchantId,
+    gateway_id: body.gateway_id,
+    label: body.label,
+    currency: body.currency,
+    mfs_number: body.mfs_number ?? null,
+  });
+  return c.json({ success: true, data: gate }, 201);
+});
+
 

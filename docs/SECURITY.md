@@ -91,6 +91,19 @@ Because merchant companion phones forward raw carrier SMS messages that trigger 
    - `STRONGBOX_REQUIRED`: Requires discrete EAL5+ StrongBox security chip (`422 STRONGBOX_REQUIRED`).
    - `ATTESTATION_MAX_AGE_DAYS`: Enforces attestation freshness window (default 30 days; stale keys fail with `422 ATTESTATION_STALE`).
 
+### Domain Hierarchy
+
+EdgePay-CF organizes merchants into four tiers: Merchant → Brand → Store → Gate.
+
+- **Merchant** is the legal/tenant root, owning the ledger.
+- **Brand** is the consumer-facing identity (logo, colors, support links).
+- **Store** is a selling channel or physical location.
+- **Gate** is a concrete payment endpoint — one MFS number or gateway account bound to a store.
+
+A store may operate multiple gates simultaneously (e.g., two bKash personal numbers plus one Nagad merchant number). Paired Android devices attach to the store, not the gate, because a single phone receives SMS notifications for all carrier SIMs at that shop.
+
+The hierarchy is optional for single-store merchants — migration `0014` creates a Main brand, Main store, and one Main gate per existing gateway, so older deployments continue to work without configuration changes.
+
 ## Device Policy Enforcement Modes & Telemetry
 
 EdgePay-CF serves emerging markets where merchants often operate on budget Android handsets (2016–2018 vintage, custom ROMs, or lacking discrete hardware security chips). Enforcing hardware attestation platform-wide would disenfranchise a significant portion of legitimate merchants.

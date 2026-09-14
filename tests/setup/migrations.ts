@@ -22,6 +22,9 @@ import m8 from '../../migrations/0008_device_attestation.sql?raw';
 import m9 from '../../migrations/0009_merchant_device_policies.sql?raw';
 import m10 from '../../migrations/0010_device_policy_modes.sql?raw';
 import m11 from '../../migrations/0011_device_policy_overrides.sql?raw';
+import m12 from '../../migrations/0012_hierarchy.sql?raw';
+import m13 from '../../migrations/0013_hierarchy_columns.sql?raw';
+import m14 from '../../migrations/0014_hierarchy_backfill.sql?raw';
 
 function splitStatements(sql: string): string[] {
   return sql
@@ -35,13 +38,13 @@ beforeAll(async () => {
 
   const marker = await db
     .prepare(
-      `SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_overrides_active'`,
+      `SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_gates_mfs'`,
     )
     .first<{ name: string }>();
 
   if (marker) return; // already migrated by an earlier test file
 
-  const statements = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11]
+  const statements = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14]
     .flatMap(sql => splitStatements(sql))
     .map(sql => db.prepare(sql));
 
