@@ -142,6 +142,9 @@ export async function renderWranglerConfig(
     };
   }
 
+  // Ensure Workers AI binding is present for SMS parser long-tail fallback
+  parsed.ai = parsed.ai || { binding: 'AI' };
+
   const renderedJson = JSON.stringify(parsed, null, 2);
   await fs.writeFile(targetPath, renderedJson, 'utf-8');
   return targetPath;

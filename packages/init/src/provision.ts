@@ -168,16 +168,18 @@ export async function provisionAll(
   }
 
   const queuePlan = getDeploymentQueueNames(config.deployment_name, { existingWranglerContent });
-  for (const q of queuePlan.allInProvisionOrder) {
-    onProgress?.('queue', q);
-    await ensureQueue(q, {
-      accountId,
-      expectedExistingId: existingResources?.queues?.find((x) => x === q),
-      adoptExisting,
-      _executor,
-    });
-    resources.queues!.push(q);
-  }
+  await Promise.all(
+    queuePlan.allInProvisionOrder.map(async (q) => {
+      onProgress?.('queue', q);
+      await ensureQueue(q, {
+        accountId,
+        expectedExistingId: existingResources?.queues?.find((x) => x === q),
+        adoptExisting,
+        _executor,
+      });
+    }),
+  );
+  resources.queues = [...queuePlan.allInProvisionOrder];
 
   return resources;
 }

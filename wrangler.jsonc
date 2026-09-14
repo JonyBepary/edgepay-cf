@@ -254,14 +254,14 @@
     "binding": "ASSETS",
     "not_found_handling": "none",
     "run_worker_first": true
-  }
+  },
 
   // ============================================================
-  // Workers AI — SMS parser long-tail fallback (opt-in after first
-  //   deploy: uncomment and redeploy; the test runner cannot emulate it)
-  // ------------------------------------------------------------
-  // "ai": { "binding": "AI" }
+  // Workers AI — SMS parser long-tail fallback
   // ============================================================
+  "ai": {
+    "binding": "AI"
+  }
 
   // ============================================================
   // Cloudflare Access — Zero Trust identity proxy for /admin/*

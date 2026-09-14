@@ -170,7 +170,12 @@ OPTIONS:
     }
 
     if (!state.config) {
-      p.log.error('No configuration found in .edgepay-init.json or wrangler.jsonc to destroy.');
+      console.error(pc.red('Error: No EdgePay deployment found to destroy.'));
+      console.error(
+        pc.yellow(
+          'Neither .edgepay-init.json nor wrangler.jsonc could be found in the project root.\nPlease run this command from the root directory of an EdgePay project.',
+        ),
+      );
       process.exitCode = 1;
       return;
     }

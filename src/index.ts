@@ -330,7 +330,7 @@ app.use('/checkout/*/submit-trx', perIpRateLimit('checkout'));
 app.route('/install', installRoutes);
 
 // Health check (no auth) — must be mounted BEFORE /api/v1 routes
-app.get('/api/v1/health', (c) => {
+const healthHandler = (c: Context<{ Bindings: Env }>) => {
   return c.json({
     success: true,
     data: {
@@ -345,7 +345,10 @@ app.get('/api/v1/health', (c) => {
       workers_ai: !!c.env.AI,
     },
   });
-});
+};
+
+app.get('/api/v1/health', healthHandler);
+app.get('/health', healthHandler);
 
 app.route('/api/v1', apiRoutes);
 app.route('/api/mobile/v1', mobileRoutes);
