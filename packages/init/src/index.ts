@@ -28,6 +28,9 @@ export interface CliFlags {
   version: boolean;
   adoptLegacyDevVars: boolean;
   adoptExistingResources: boolean;
+  deploymentName?: string;
+  primaryCurrency?: string;
+  merchantName?: string;
   projectRoot?: string;
   statePath?: string;
 }
@@ -50,6 +53,9 @@ export function parseArgs(args: string[]): CliFlags {
     adoptLegacyDevVars: args.includes('--adopt-legacy-dev-vars'),
     adoptExistingResources:
       args.includes('--adopt-existing-resources') || args.includes('--adopt-existing'),
+    deploymentName: findArgValue('--name') ?? findArgValue('--deployment-name'),
+    primaryCurrency: findArgValue('--currency'),
+    merchantName: findArgValue('--merchant') ?? findArgValue('--merchant-name'),
     projectRoot: findArgValue('--projectRoot') ?? findArgValue('--project-root'),
     statePath: findArgValue('--statePath') ?? findArgValue('--state-path'),
   };
@@ -294,6 +300,11 @@ OPTIONS:
   if (!state.config) {
     state.config = await gatherConfig(account, {
       nonInteractive: flags.yes,
+      defaults: {
+        deployment_name: flags.deploymentName,
+        primary_currency: flags.primaryCurrency,
+        merchant_name: flags.merchantName,
+      },
     });
     await persistState();
     stepSuccess('Deployment name', state.config.deployment_name);
