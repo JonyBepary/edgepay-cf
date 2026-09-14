@@ -41,9 +41,9 @@ function isTransientError(err: any): boolean {
     /ECONNRESET/i,
     /ECONNREFUSED/i,
     /socket hang up/i,
-    /rate limit/i,
-    /status[:\s]+429/i,
-    /status[:\s]+50[0234]/i,
+    /status[:\s]+429\b/i,
+    /429\s+Too\s+Many\s+Requests/i,
+    /status[:\s]+50[0234]\b/i,
     /gateway timeout/i,
     /service unavailable/i,
     /network timeout/i,
@@ -79,7 +79,7 @@ export async function wrangler<T = unknown>(
   };
 
   let lastError: any = null;
-  const maxAttempts = 2;
+  const maxAttempts = Number(process.env.EDGEPAY_RETRY_ATTEMPTS ?? 3);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -98,7 +98,8 @@ export async function wrangler<T = unknown>(
     } catch (err: any) {
       lastError = err;
       if (attempt < maxAttempts && isTransientError(err)) {
-        await delay(2000);
+        const backoffMs = 2000 * Math.pow(2, attempt - 1);
+        await delay(backoffMs);
         continue;
       }
       break;
@@ -157,7 +158,13 @@ export async function login(): Promise<void> {
   });
 }
 
-export async function ensureD1(name: string, accountId?: string): Promise<string> {
+export interface EnsureResourceOpts {
+  accountId?: string;
+  expectedExistingId?: string;
+}
+
+export async function ensureD1(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
+  const accountId = opts.accountId;
   try {
     const list = await wrangler<Array<{ name: string; uuid: string }>>(
       ['d1', 'list', '--json'],
@@ -165,10 +172,19 @@ export async function ensureD1(name: string, accountId?: string): Promise<string
     );
     if (Array.isArray(list)) {
       const existing = list.find((d) => d.name === name);
-      if (existing?.uuid) return existing.uuid;
+      if (existing?.uuid) {
+        if (opts.expectedExistingId && opts.expectedExistingId === existing.uuid) {
+          return existing.uuid;
+        }
+        throw new Error(
+          `Cannot provision D1 database "${name}": a database with this name already exists in Cloudflare account ${accountId ?? ''} (UUID: ${existing.uuid}). Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing database manually.`,
+        );
+      }
     }
-  } catch {
-    // continue to create
+  } catch (err: any) {
+    if (err.message?.includes('Refusing to adopt')) {
+      throw err;
+    }
   }
 
   const createOutput = (await wrangler(['d1', 'create', name], {
@@ -196,7 +212,8 @@ export async function ensureD1(name: string, accountId?: string): Promise<string
   throw new Error(`Failed to resolve D1 database UUID for ${name}. Output: ${createOutput}`);
 }
 
-export async function ensureKv(title: string, accountId?: string): Promise<string> {
+export async function ensureKv(title: string, opts: EnsureResourceOpts = {}): Promise<string> {
+  const accountId = opts.accountId;
   try {
     // Note: wrangler kv namespace list returns JSON by default; passing --json is an error in wrangler v4
     const rawList = (await wrangler(['kv', 'namespace', 'list'], {
@@ -206,10 +223,19 @@ export async function ensureKv(title: string, accountId?: string): Promise<strin
     const list = extractJson<Array<{ id: string; title: string }>>(rawList);
     if (Array.isArray(list)) {
       const existing = list.find((k) => k.title === title);
-      if (existing?.id) return existing.id;
+      if (existing?.id) {
+        if (opts.expectedExistingId && opts.expectedExistingId === existing.id) {
+          return existing.id;
+        }
+        throw new Error(
+          `Cannot provision KV namespace "${title}": a namespace with this title already exists in Cloudflare account ${accountId ?? ''} (ID: ${existing.id}). Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing namespace manually.`,
+        );
+      }
     }
-  } catch {
-    // continue to create
+  } catch (err: any) {
+    if (err.message?.includes('Refusing to adopt')) {
+      throw err;
+    }
   }
 
   const createOutput = (await wrangler(['kv', 'namespace', 'create', title], {
@@ -228,7 +254,8 @@ export async function ensureKv(title: string, accountId?: string): Promise<strin
   throw new Error(`Failed to resolve KV namespace ID for ${title}. Output: ${createOutput}`);
 }
 
-export async function ensureR2(name: string, accountId?: string): Promise<string> {
+export async function ensureR2(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
+  const accountId = opts.accountId;
   try {
     const rawList = (await wrangler(['r2', 'bucket', 'list'], {
       silent: true,
@@ -239,9 +266,18 @@ export async function ensureR2(name: string, accountId?: string): Promise<string
       const match = l.match(/name:\s+(\S+)/);
       return match && match[1] === name;
     });
-    if (existing) return name;
-  } catch {
-    // continue to create
+    if (existing) {
+      if (opts.expectedExistingId && opts.expectedExistingId === name) {
+        return name;
+      }
+      throw new Error(
+        `Cannot provision R2 bucket "${name}": a bucket with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing bucket manually.`,
+      );
+    }
+  } catch (err: any) {
+    if (err.message?.includes('Refusing to adopt')) {
+      throw err;
+    }
   }
 
   try {
@@ -259,7 +295,8 @@ export async function ensureR2(name: string, accountId?: string): Promise<string
   return name;
 }
 
-export async function ensureQueue(name: string, accountId?: string): Promise<string> {
+export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
+  const accountId = opts.accountId;
   try {
     const rawList = (await wrangler(['queues', 'list'], {
       silent: true,
@@ -267,9 +304,18 @@ export async function ensureQueue(name: string, accountId?: string): Promise<str
     })) as string;
     const lines = rawList.split('\n');
     const existing = lines.some((l) => l.includes(name));
-    if (existing) return name;
-  } catch {
-    // continue to create
+    if (existing) {
+      if (opts.expectedExistingId && opts.expectedExistingId === name) {
+        return name;
+      }
+      throw new Error(
+        `Cannot provision Queue "${name}": a queue with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing queue manually.`,
+      );
+    }
+  } catch (err: any) {
+    if (err.message?.includes('Refusing to adopt')) {
+      throw err;
+    }
   }
 
   try {
@@ -287,9 +333,29 @@ export async function ensureQueue(name: string, accountId?: string): Promise<str
   return name;
 }
 
-function isNotFound(err: any): boolean {
+export function isNotFound(err: any): boolean {
   const msg = `${err?.message ?? ''} ${err?.stderr ?? ''} ${err?.stdout ?? ''}`;
-  return /not found|does not exist|10007|10008|could not find/i.test(msg);
+  // Explicitly disallow permission/auth errors from being treated as not found
+  if (/permission\s+denied|unauthorized|forbidden|authentication\s+error|10000|10007/i.test(msg)) {
+    return false;
+  }
+  // Explicitly disallow user/account errors
+  if (/user\s+not\s+found|account\s+not\s+found/i.test(msg)) {
+    return false;
+  }
+
+  const notFoundPatterns = [
+    /database\s+not\s+found/i,
+    /could\s+not\s+find\s+database/i,
+    /namespace\s+not\s+found/i,
+    /could\s+not\s+find\s+namespace/i,
+    /bucket\s+not\s+found/i,
+    /bucket\s+does\s+not\s+exist/i,
+    /queue\s+not\s+found/i,
+    /could\s+not\s+find\s+queue/i,
+    /\b(7000|10014|10006|11001)\b/,
+  ];
+  return notFoundPatterns.some((p) => p.test(msg));
 }
 
 export async function deleteD1(name: string, accountId?: string): Promise<void> {

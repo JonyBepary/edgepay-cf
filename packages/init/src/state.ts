@@ -48,11 +48,9 @@ export interface InitState {
 }
 
 export function sanitizeState(state: InitState): InitState {
-  const copy: InitState = JSON.parse(JSON.stringify(state));
-  if (copy.config && copy.config.secrets) {
-    delete copy.config.secrets;
-  }
-  return copy;
+  if (!state.config?.secrets) return state;
+  const { secrets, ...config } = state.config;
+  return { ...state, config };
 }
 
 export async function loadState(filePath: string = DEFAULT_STATE_FILE): Promise<InitState> {

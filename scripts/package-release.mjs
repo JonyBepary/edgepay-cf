@@ -184,7 +184,7 @@ if (scanErrors > 0) {
 // 4. Write release-manifest.json
 const manifest = {
   release: 'edgepay-cf',
-  version: '0.4.5',
+  version: '0.5.0',
   timestamp: new Date().toISOString(),
   staged_file_count: Object.keys(manifestFiles).length,
   manifest_note: 'archive contains staged_file_count + 1 file entries (plus directory path entries in unzip listing)',

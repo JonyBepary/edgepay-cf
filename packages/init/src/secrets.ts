@@ -18,16 +18,28 @@ export interface PushSecretsOptions {
   projectRoot?: string;
 }
 
+export const DEV_VARS_MARKER = '# managed by @edgepay/init - DO NOT COMMIT TO VERSION CONTROL';
+
 export async function readDevVars(projectRoot: string = process.cwd()): Promise<Partial<InitSecrets>> {
   const filePath = path.join(projectRoot, '.dev.vars');
   try {
     const raw = await fs.readFile(filePath, 'utf-8');
+    // Scoped safety: refuse to read an unmanaged foreign .dev.vars
+    if (!raw.includes(DEV_VARS_MARKER)) {
+      return {};
+    }
+
     const result: Partial<InitSecrets> = {};
     for (const line of raw.split('\n')) {
-      const match = line.match(/^([^=]+)=(.*)$/);
-      if (match) {
-        const key = match[1].trim();
-        const val = match[2].trim();
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#')) continue; // Skip comments
+
+      const idx = line.indexOf('=');
+      if (idx > 0) {
+        const key = line.slice(0, idx).trim();
+        let val = line.slice(idx + 1);
+        if (val.endsWith('\r')) val = val.slice(0, -1);
+
         if (key === 'JWT_SECRET') result.jwt_secret = val;
         if (key === 'APP_KEY') result.app_key = val;
         if (key === 'ENCRYPTION_KEY') result.encryption_key = val;
@@ -44,31 +56,46 @@ export async function syncDevVars(
   projectRoot: string = process.cwd(),
 ): Promise<void> {
   const filePath = path.join(projectRoot, '.dev.vars');
-  let content = '';
+  let existingContent = '';
   try {
-    content = await fs.readFile(filePath, 'utf-8');
+    existingContent = await fs.readFile(filePath, 'utf-8');
   } catch {
     // file does not exist yet
   }
 
-  const lines = content.split('\n').filter((l) => l.trim().length > 0);
-  const map = new Map<string, string>();
+  const lines = existingContent.split('\n');
+  const otherLines: string[] = [];
+
   for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === DEV_VARS_MARKER) continue;
+    if (trimmed.startsWith('#')) {
+      otherLines.push(line);
+      continue;
+    }
     const idx = line.indexOf('=');
     if (idx > 0) {
-      map.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
+      const key = line.slice(0, idx).trim();
+      if (key !== 'JWT_SECRET' && key !== 'APP_KEY' && key !== 'ENCRYPTION_KEY') {
+        otherLines.push(line);
+      }
+    } else {
+      otherLines.push(line);
     }
   }
 
-  map.set('JWT_SECRET', secrets.jwt_secret);
-  map.set('APP_KEY', secrets.app_key);
-  map.set('ENCRYPTION_KEY', secrets.encryption_key);
+  const outputLines = [
+    DEV_VARS_MARKER,
+    ...otherLines,
+    `JWT_SECRET=${secrets.jwt_secret}`,
+    `APP_KEY=${secrets.app_key}`,
+    `ENCRYPTION_KEY=${secrets.encryption_key}`,
+    '',
+  ];
 
-  const out = Array.from(map.entries())
-    .map(([k, v]) => `${k}=${v}`)
-    .join('\n') + '\n';
-
-  await fs.writeFile(filePath, out, 'utf-8');
+  const content = outputLines.join('\n');
+  await fs.writeFile(filePath, content, { encoding: 'utf-8', mode: 0o600 });
+  await fs.chmod(filePath, 0o600).catch(() => {});
 }
 
 export async function pushSecret(

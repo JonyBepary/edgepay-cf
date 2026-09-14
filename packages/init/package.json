@@ -1,6 +1,6 @@
 {
   "name": "@edgepay/init",
-  "version": "0.4.5",
+  "version": "0.5.0",
   "description": "Modern TUI Self-Hosted Installer for EdgePay on Cloudflare Workers",
   "type": "module",
   "bin": {

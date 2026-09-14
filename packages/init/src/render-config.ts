@@ -76,6 +76,47 @@ export async function renderWranglerConfig(
     },
   ];
 
+  // Update Queues if provisioned
+  if (resources.queues && resources.queues.length >= 6) {
+    const webhookOut = resources.queues.find((q) => q.endsWith('webhook-out')) ?? 'webhook-out';
+    const webhookDlq = resources.queues.find((q) => q.endsWith('webhook-out-dlq')) ?? 'webhook-out-dlq';
+    const emailOut = resources.queues.find((q) => q.endsWith('email-out')) ?? 'email-out';
+    const emailDlq = resources.queues.find((q) => q.endsWith('email-out-dlq')) ?? 'email-out-dlq';
+    const smsParse = resources.queues.find((q) => q.endsWith('sms-parse')) ?? 'sms-parse';
+    const smsDlq = resources.queues.find((q) => q.endsWith('sms-parse-dlq')) ?? 'sms-parse-dlq';
+
+    parsed.queues = {
+      producers: [
+        { queue: webhookOut, binding: 'WEBHOOK_QUEUE' },
+        { queue: emailOut, binding: 'EMAIL_QUEUE' },
+        { queue: smsParse, binding: 'SMS_QUEUE' },
+      ],
+      consumers: [
+        {
+          queue: webhookOut,
+          max_batch_size: 10,
+          max_batch_timeout: 5,
+          max_retries: 3,
+          dead_letter_queue: webhookDlq,
+        },
+        {
+          queue: emailOut,
+          max_batch_size: 25,
+          max_batch_timeout: 30,
+          max_retries: 5,
+          dead_letter_queue: emailDlq,
+        },
+        {
+          queue: smsParse,
+          max_batch_size: 50,
+          max_batch_timeout: 10,
+          max_retries: 3,
+          dead_letter_queue: smsDlq,
+        },
+      ],
+    };
+  }
+
   const renderedJson = JSON.stringify(parsed, null, 2);
   await fs.writeFile(targetPath, renderedJson, 'utf-8');
   return targetPath;

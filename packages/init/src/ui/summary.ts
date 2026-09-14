@@ -23,16 +23,29 @@ export function renderSuccessSummary(data: SummaryData): void {
   console.log(pc.green('  └──────────────────────────────────────────┘\n'));
 }
 
-export function renderDryRunSummary(data: SummaryData & { d1Name?: string; kvName?: string; r2Name?: string }): void {
+export function renderPreviewSummary(data: SummaryData & { d1Name?: string; kvName?: string; r2Name?: string }): void {
+  console.log('\n' + pc.cyan('  ┌──────────────────────────────────────────┐'));
+  console.log(pc.cyan('  │  ') + pc.bold(pc.white('[PREVIEW] Configuration Verified'.padEnd(40))) + pc.cyan('│'));
+  console.log(pc.cyan('  │                                          │'));
+  console.log(pc.cyan('  │  ') + pc.white(`Deployment: ${data.deploymentName}`.padEnd(40)) + pc.cyan('│'));
+  console.log(pc.cyan('  │  ') + pc.white(`Account:    ${data.accountName}`.padEnd(40)) + pc.cyan('│'));
+  console.log(pc.cyan('  │  ') + pc.white(`Currency:   ${data.currency}`.padEnd(40)) + pc.cyan('│'));
+  console.log(pc.cyan('  │                                          │'));
+  console.log(pc.cyan('  │  ') + pc.dim('✓ Prerequisites & Auth Verified'.padEnd(40)) + pc.cyan('│'));
+  console.log(pc.cyan('  │  ') + pc.dim('No Cloudflare resources were mutated.'.padEnd(40)) + pc.cyan('│'));
+  console.log(pc.cyan('  └──────────────────────────────────────────┘\n'));
+}
+
+export function renderDryRunSummary(data: SummaryData): void {
   console.log('\n' + pc.yellow('  ┌──────────────────────────────────────────┐'));
-  console.log(pc.yellow('  │  ') + pc.bold(pc.white('[PREVIEW] Dry-Run Verification'.padEnd(40))) + pc.yellow('│'));
+  console.log(pc.yellow('  │  ') + pc.bold(pc.white('[DRY-RUN] Infrastructure Provisioned'.padEnd(40))) + pc.yellow('│'));
   console.log(pc.yellow('  │                                          │'));
   console.log(pc.yellow('  │  ') + pc.white(`Deployment: ${data.deploymentName}`.padEnd(40)) + pc.yellow('│'));
   console.log(pc.yellow('  │  ') + pc.white(`Account:    ${data.accountName}`.padEnd(40)) + pc.yellow('│'));
   console.log(pc.yellow('  │  ') + pc.white(`Currency:   ${data.currency}`.padEnd(40)) + pc.yellow('│'));
   console.log(pc.yellow('  │                                          │'));
-  console.log(pc.yellow('  │  ') + pc.dim('✓ Prerequisites & Auth Verified'.padEnd(40)) + pc.yellow('│'));
-  console.log(pc.yellow('  │  ') + pc.dim('No Cloudflare resources were mutated.'.padEnd(40)) + pc.yellow('│'));
+  console.log(pc.yellow('  │  ') + pc.dim('Resources & secrets configured.'.padEnd(40)) + pc.yellow('│'));
+  console.log(pc.yellow('  │  ') + pc.dim('Worker was NOT deployed (--dry-run).'.padEnd(40)) + pc.yellow('│'));
   console.log(pc.yellow('  └──────────────────────────────────────────┘\n'));
 }
 

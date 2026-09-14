@@ -1,6 +1,6 @@
 import pc from 'picocolors';
 
-export function renderIntro(version = '0.4.5'): void {
+export function renderIntro(version = '0.5.0'): void {
   const line1 = 'EdgePay Self-Hosted Installer';
   const line2 = `v${version}`;
 

@@ -13,11 +13,11 @@ import { verify } from './verify.js';
 import { loadState, saveState, clearState, type InitState } from './state.js';
 import { renderIntro } from './ui/intro.js';
 import { stepHeader, stepSuccess } from './ui/steps.js';
-import { renderSuccessSummary, renderDryRunSummary, renderDestroySummary } from './ui/summary.js';
+import { renderSuccessSummary, renderPreviewSummary, renderDryRunSummary, renderDestroySummary } from './ui/summary.js';
 
 export interface CliFlags {
-  dryRun: boolean;
   preview: boolean;
+  dryRun: boolean;
   destroy: boolean;
   iKnowWhatImDoing: boolean;
   verbose: boolean;
@@ -30,8 +30,8 @@ export interface CliFlags {
 
 export function parseArgs(args: string[]): CliFlags {
   return {
-    dryRun: args.includes('--dry-run') || args.includes('--preview'),
-    preview: args.includes('--preview') || args.includes('--dry-run'),
+    preview: args.includes('--preview'),
+    dryRun: args.includes('--dry-run'),
     destroy: args.includes('--destroy'),
     iKnowWhatImDoing: args.includes('--i-know-what-im-doing') || args.includes('--force'),
     verbose: args.includes('--verbose'),
@@ -45,7 +45,7 @@ export async function runInstaller(rawArgs: string[] = process.argv.slice(2)): P
   const flags = parseArgs(rawArgs);
 
   if (flags.version) {
-    console.log('0.4.5');
+    console.log('0.5.0');
     return;
   }
 
@@ -57,7 +57,8 @@ USAGE:
   npx @edgepay/init [OPTIONS]
 
 OPTIONS:
-  --preview, --dry-run    Verify prerequisites and preview actions without modifying Cloudflare
+  --preview               Inspect configuration and verify auth without modifying Cloudflare
+  --dry-run               Provision Cloudflare resources and configure project without deploying Worker
   --destroy               Tear down all provisioned resources for this deployment
   --i-know-what-im-doing  Confirm destruction without interactive typing prompt
   --verbose               Show detailed Wrangler command output
@@ -76,7 +77,7 @@ OPTIONS:
     return;
   }
 
-  renderIntro('0.4.5');
+  renderIntro('0.5.0');
 
   const projectRoot = flags.projectRoot ?? process.cwd();
   const statePath = flags.statePath ?? path.join(projectRoot, '.edgepay-init.json');
@@ -128,6 +129,7 @@ OPTIONS:
       for (const err of destroyResult.errors) {
         p.log.warn(`  - ${err.resource}: ${err.error.split('\n')[0]}`);
       }
+      process.exitCode = 1;
     }
 
     await clearState(statePath);
@@ -190,9 +192,9 @@ OPTIONS:
     stepSuccess('Using saved configuration', state.config.deployment_name);
   }
 
-  // If in preview or dry-run mode, exit before mutating Cloudflare resources
-  if (flags.preview || flags.dryRun) {
-    renderDryRunSummary({
+  // If in preview mode, display configuration preview without mutating Cloudflare resources
+  if (flags.preview) {
+    renderPreviewSummary({
       url: `https://${state.config.deployment_name}.workers.dev`,
       deploymentName: state.config.deployment_name,
       currency: state.config.primary_currency,
@@ -201,7 +203,7 @@ OPTIONS:
       kvName: state.config.kv_name,
       r2Name: state.config.r2_name,
     });
-    await clearState(statePath);
+    // Preview is strictly read-only: do NOT clear existing state
     return;
   }
 
@@ -212,7 +214,7 @@ OPTIONS:
   if (!state.provisioned || !state.resources) {
     const s = p.spinner();
     s.start('Creating D1 database, KV namespace, R2 bucket, and Queues...');
-    state.resources = await provisionAll(state.config, (step, name) => {
+    state.resources = await provisionAll(state.config, state.resources, (step, name) => {
       s.message(`Provisioning ${step}: ${name}...`);
     });
     s.stop('Cloudflare resources provisioned');
@@ -276,6 +278,17 @@ OPTIONS:
     await saveState(state, statePath);
   } else {
     stepSuccess('Secrets already configured');
+  }
+
+  // If in dry-run mode, stop here (resources provisioned, Worker not deployed)
+  if (flags.dryRun) {
+    renderDryRunSummary({
+      url: `https://${state.config.deployment_name}.workers.dev`,
+      deploymentName: state.config.deployment_name,
+      currency: state.config.primary_currency,
+      accountName: state.config.account_name,
+    });
+    return;
   }
 
   // -------------------------------------------------------------

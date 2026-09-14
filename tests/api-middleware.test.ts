@@ -141,7 +141,7 @@ describe('miniflare bindings merge (test-infrastructure guard)', () => {
     // vars, APP_VERSION would be undefined here.
     const res = await SELF.fetch('http://localhost/api/v1/health');
     const body = await res.json() as { data: { version: string; environment: string } };
-    expect(body.data.version).toBe('0.4.5');
+    expect(body.data.version).toBe('0.5.0');
     // ENVIRONMENT is intentionally overridden to 'test' by the miniflare
     // bindings in vitest.config.ts (line 44); wrangler.jsonc ships
     // ENVIRONMENT=production. The guard proves APP_VERSION merges through.

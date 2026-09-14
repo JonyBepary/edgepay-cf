@@ -14,8 +14,57 @@ export interface ProvisionProgressCallback {
   (step: string, resourceName: string): void;
 }
 
+export interface DeploymentQueueNames {
+  webhookOut: string;
+  webhookOutDlq: string;
+  emailOut: string;
+  emailOutDlq: string;
+  smsParse: string;
+  smsParseDlq: string;
+  allInProvisionOrder: string[];
+  allInTeardownOrder: string[];
+}
+
+export function getDeploymentQueueNames(deploymentName: string): DeploymentQueueNames {
+  const isDefault = deploymentName === 'edgepay-cf';
+  const prefix = isDefault ? '' : `${deploymentName}-`;
+
+  const webhookOut = `${prefix}webhook-out`;
+  const webhookOutDlq = `${prefix}webhook-out-dlq`;
+  const emailOut = `${prefix}email-out`;
+  const emailOutDlq = `${prefix}email-out-dlq`;
+  const smsParse = `${prefix}sms-parse`;
+  const smsParseDlq = `${prefix}sms-parse-dlq`;
+
+  return {
+    webhookOut,
+    webhookOutDlq,
+    emailOut,
+    emailOutDlq,
+    smsParse,
+    smsParseDlq,
+    allInProvisionOrder: [
+      webhookOutDlq,
+      webhookOut,
+      emailOutDlq,
+      emailOut,
+      smsParseDlq,
+      smsParse,
+    ],
+    allInTeardownOrder: [
+      webhookOut,
+      emailOut,
+      smsParse,
+      webhookOutDlq,
+      emailOutDlq,
+      smsParseDlq,
+    ],
+  };
+}
+
 export async function provisionAll(
   config: InitConfig,
+  existingResources?: ProvisionedResources,
   onProgress?: ProvisionProgressCallback,
 ): Promise<ProvisionedResources> {
   const accountId = config.account_id;
@@ -26,30 +75,34 @@ export async function provisionAll(
   // 1. D1 Database
   onProgress?.('d1', config.d1_name);
   resources.d1_name = config.d1_name;
-  resources.d1_id = await ensureD1(config.d1_name, accountId);
+  resources.d1_id = await ensureD1(config.d1_name, {
+    accountId,
+    expectedExistingId: existingResources?.d1_id,
+  });
 
   // 2. KV Namespace
   onProgress?.('kv', config.kv_name);
   resources.kv_name = config.kv_name;
-  resources.kv_id = await ensureKv(config.kv_name, accountId);
+  resources.kv_id = await ensureKv(config.kv_name, {
+    accountId,
+    expectedExistingId: existingResources?.kv_id,
+  });
 
   // 3. R2 Bucket
   onProgress?.('r2', config.r2_name);
-  resources.r2_name = await ensureR2(config.r2_name, accountId);
+  resources.r2_name = await ensureR2(config.r2_name, {
+    accountId,
+    expectedExistingId: existingResources?.r2_name,
+  });
 
   // 4. Queues & DLQs
-  const queuesToProvision = [
-    'webhook-out-dlq',
-    'webhook-out',
-    'email-out-dlq',
-    'email-out',
-    'sms-parse-dlq',
-    'sms-parse',
-  ];
-
-  for (const q of queuesToProvision) {
+  const queuePlan = getDeploymentQueueNames(config.deployment_name);
+  for (const q of queuePlan.allInProvisionOrder) {
     onProgress?.('queue', q);
-    await ensureQueue(q, accountId);
+    await ensureQueue(q, {
+      accountId,
+      expectedExistingId: existingResources?.queues?.find((x) => x === q),
+    });
     resources.queues!.push(q);
   }
 
@@ -107,20 +160,15 @@ export async function destroyAll(
   }
 
   // 4. Queues: Primary queues FIRST, then dead-letter queues
-  const primaryQueues = ['webhook-out', 'email-out', 'sms-parse'];
-  const dlqQueues = ['webhook-out-dlq', 'email-out-dlq', 'sms-parse-dlq'];
+  const queuePlan = getDeploymentQueueNames(config.deployment_name);
+  const queuesToTeardown = resources?.queues && resources.queues.length > 0
+    ? [
+        ...resources.queues.filter((q) => !q.endsWith('-dlq')),
+        ...resources.queues.filter((q) => q.endsWith('-dlq')),
+      ]
+    : queuePlan.allInTeardownOrder;
 
-  for (const q of primaryQueues) {
-    onProgress?.('delete-queue', q);
-    try {
-      await deleteQueue(q, accountId);
-      deleted.push(`queue:${q}`);
-    } catch (err: any) {
-      errors.push({ resource: `queue:${q}`, error: err.message });
-    }
-  }
-
-  for (const q of dlqQueues) {
+  for (const q of queuesToTeardown) {
     onProgress?.('delete-queue', q);
     try {
       await deleteQueue(q, accountId);

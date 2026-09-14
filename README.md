@@ -19,7 +19,7 @@ It operates **100% on the Cloudflare Free Tier** (~3.3K payments/day practical c
 Run the single-command interactive TUI installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JonyBepary/edgepay-cf/main/scripts/get.edgepay.dev.sh | bash
+curl -fsSL https://raw.githubusercontent.com/JonyBepary/edgepay-cf/main/scripts/install.sh | bash
 ```
 
 or directly via `npx`:
