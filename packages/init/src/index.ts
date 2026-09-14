@@ -25,11 +25,17 @@ export interface CliFlags {
   help: boolean;
   version: boolean;
   adoptLegacyDevVars: boolean;
+  adoptExistingResources: boolean;
   projectRoot?: string;
   statePath?: string;
 }
 
 export function parseArgs(args: string[]): CliFlags {
+  const findArgValue = (prefix: string): string | undefined => {
+    const arg = args.find((a) => a.startsWith(`${prefix}=`));
+    return arg ? arg.slice(prefix.length + 1) : undefined;
+  };
+
   return {
     preview: args.includes('--preview'),
     dryRun: args.includes('--dry-run'),
@@ -40,6 +46,10 @@ export function parseArgs(args: string[]): CliFlags {
     help: args.includes('--help') || args.includes('-h'),
     version: args.includes('--version') || args.includes('-v'),
     adoptLegacyDevVars: args.includes('--adopt-legacy-dev-vars'),
+    adoptExistingResources:
+      args.includes('--adopt-existing-resources') || args.includes('--adopt-existing'),
+    projectRoot: findArgValue('--projectRoot') ?? findArgValue('--project-root'),
+    statePath: findArgValue('--statePath') ?? findArgValue('--state-path'),
   };
 }
 
@@ -59,15 +69,16 @@ USAGE:
   npx @edgepay/init [OPTIONS]
 
 OPTIONS:
-  --preview                Inspect configuration and verify auth without modifying Cloudflare
-  --dry-run                Provision Cloudflare resources and configure project without deploying Worker
-  --destroy                Tear down all provisioned resources for this deployment
-  --i-know-what-im-doing   Confirm destruction without interactive typing prompt
-  --adopt-legacy-dev-vars  Adopt existing unmanaged .dev.vars without regenerating/rotating secrets
-  --verbose                Show detailed Wrangler command output
-  --yes, -y                Non-interactive mode (use defaults and auto-confirm)
-  --help, -h               Show this help message
-  --version, -v            Show installer version
+  --preview                   Inspect configuration and verify auth without modifying Cloudflare
+  --dry-run                   Provision Cloudflare resources and configure project without deploying Worker
+  --destroy                   Tear down all provisioned resources for this deployment
+  --i-know-what-im-doing      (CI only) Bypass interactive confirmation for --destroy (requires EDGEPAY_DESTROY_CONFIRMED=yes)
+  --adopt-legacy-dev-vars     Adopt existing unmanaged .dev.vars without regenerating/rotating secrets
+  --adopt-existing-resources  Adopt pre-existing Cloudflare D1, KV, R2, and Queue resources by name
+  --verbose                   Show detailed Wrangler command output
+  --yes, -y                   Non-interactive mode (use defaults and auto-confirm)
+  --help, -h                  Show this help message
+  --version, -v               Show installer version
 `);
     return;
   }
@@ -103,9 +114,30 @@ OPTIONS:
 
     const depName = state.config.deployment_name;
 
+    // Safety allowlist check (EDGEPAY_SCRATCH_ACCOUNTS)
+    if (process.env.EDGEPAY_SCRATCH_ACCOUNTS) {
+      const allowedAccounts = process.env.EDGEPAY_SCRATCH_ACCOUNTS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!allowedAccounts.includes(state.config.account_id)) {
+        console.error(pc.red(`Error: Refusing to destroy resources on account ${state.config.account_id}.`));
+        console.error(
+          pc.yellow(
+            `Account is not in the EDGEPAY_SCRATCH_ACCOUNTS allowlist (${allowedAccounts.join(', ')}). Add it to EDGEPAY_SCRATCH_ACCOUNTS if this is intentional.`,
+          ),
+        );
+        process.exitCode = 1;
+        return;
+      }
+    }
+
     if (!flags.iKnowWhatImDoing) {
       if (flags.yes || !process.stdin.isTTY) {
-        console.error(pc.red(`Error: Refusing to destroy resources in non-interactive mode without --i-know-what-im-doing flag.`));
+        console.error(
+          pc.red(
+            `Error: Refusing to destroy resources in non-interactive mode without both --i-know-what-im-doing flag AND environment variable EDGEPAY_DESTROY_CONFIRMED=yes.`,
+          ),
+        );
         process.exitCode = 1;
         return;
       }
@@ -122,6 +154,20 @@ OPTIONS:
       if (p.isCancel(typedConfirmation) || typedConfirmation !== depName) {
         p.cancel('Teardown cancelled. No resources were deleted.');
         return;
+      }
+    } else {
+      // Non-interactive confirmation requires independent environment signal: EDGEPAY_DESTROY_CONFIRMED=yes
+      if (flags.yes || !process.stdin.isTTY) {
+        if (process.env.EDGEPAY_DESTROY_CONFIRMED !== 'yes') {
+          console.error(pc.red('Error: Refusing to destroy resources in non-interactive mode.'));
+          console.error(
+            pc.yellow(
+              'Automated/CI destroy requires both --i-know-what-im-doing flag AND environment variable EDGEPAY_DESTROY_CONFIRMED=yes to prevent accidental deletion.',
+            ),
+          );
+          process.exitCode = 1;
+          return;
+        }
       }
     }
 
@@ -222,8 +268,12 @@ OPTIONS:
   if (!state.provisioned || !state.resources) {
     const s = p.spinner();
     s.start('Creating D1 database, KV namespace, R2 bucket, and Queues...');
-    state.resources = await provisionAll(state.config, state.resources, (step, name) => {
-      s.message(`Provisioning ${step}: ${name}...`);
+    state.resources = await provisionAll(state.config, state.resources, {
+      projectRoot,
+      adoptExisting: flags.adoptExistingResources,
+      onProgress(step, name) {
+        s.message(`Provisioning ${step}: ${name}...`);
+      },
     });
     s.stop('Cloudflare resources provisioned');
     state.provisioned = true;

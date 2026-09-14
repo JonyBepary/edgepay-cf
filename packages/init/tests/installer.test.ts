@@ -296,7 +296,7 @@ Current Version ID: abc-123
   });
 
   describe('CLI Argument Parsing', () => {
-    it('parses all flags correctly with distinct preview, dryRun, and adoptLegacyDevVars semantics', () => {
+    it('parses all flags correctly with distinct preview, dryRun, and adoption semantics', () => {
       expect(parseArgs(['--preview', '--verbose'])).toEqual({
         dryRun: false,
         preview: true,
@@ -307,6 +307,7 @@ Current Version ID: abc-123
         help: false,
         version: false,
         adoptLegacyDevVars: false,
+        adoptExistingResources: false,
       });
 
       expect(parseArgs(['--dry-run'])).toEqual({
@@ -319,6 +320,7 @@ Current Version ID: abc-123
         help: false,
         version: false,
         adoptLegacyDevVars: false,
+        adoptExistingResources: false,
       });
 
       expect(parseArgs(['--destroy', '--i-know-what-im-doing', '-y'])).toEqual({
@@ -331,6 +333,7 @@ Current Version ID: abc-123
         help: false,
         version: false,
         adoptLegacyDevVars: false,
+        adoptExistingResources: false,
       });
 
       expect(parseArgs(['--adopt-legacy-dev-vars'])).toEqual({
@@ -343,6 +346,33 @@ Current Version ID: abc-123
         help: false,
         version: false,
         adoptLegacyDevVars: true,
+        adoptExistingResources: false,
+      });
+
+      expect(parseArgs(['--adopt-existing-resources'])).toEqual({
+        dryRun: false,
+        preview: false,
+        destroy: false,
+        iKnowWhatImDoing: false,
+        verbose: false,
+        yes: false,
+        help: false,
+        version: false,
+        adoptLegacyDevVars: false,
+        adoptExistingResources: true,
+      });
+
+      expect(parseArgs(['--adopt-existing'])).toEqual({
+        dryRun: false,
+        preview: false,
+        destroy: false,
+        iKnowWhatImDoing: false,
+        verbose: false,
+        yes: false,
+        help: false,
+        version: false,
+        adoptLegacyDevVars: false,
+        adoptExistingResources: true,
       });
 
       expect(parseArgs(['--help'])).toEqual({
@@ -355,6 +385,7 @@ Current Version ID: abc-123
         help: true,
         version: false,
         adoptLegacyDevVars: false,
+        adoptExistingResources: false,
       });
 
       expect(parseArgs(['--version'])).toEqual({
@@ -367,6 +398,7 @@ Current Version ID: abc-123
         help: false,
         version: true,
         adoptLegacyDevVars: false,
+        adoptExistingResources: false,
       });
     });
   });
@@ -469,6 +501,53 @@ Current Version ID: abc-123
       expect(res).toBe('webhook-out');
       expect(mockExec).toHaveBeenCalledWith(['queues', 'create', 'webhook-out'], expect.anything());
     });
+
+    it('refuses to adopt existing D1 database when no expectedExistingId and adoptExisting is false, providing guidance', async () => {
+      const { ensureD1 } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue([{ name: 'test-db', uuid: 'preexisting-d1-uuid' }]);
+      await expect(
+        ensureD1('test-db', { _executor: mockExec }),
+      ).rejects.toThrow(/To adopt pre-existing Cloudflare resources into this deployment, re-run with: --adopt-existing-resources/);
+    });
+
+    it('successfully adopts existing resources across D1, KV, R2, and Queues when adoptExisting is true', async () => {
+      const { ensureD1, ensureKv, ensureR2, ensureQueue } = await import('../src/wrangler.js');
+
+      // D1
+      const d1Exec = vi.fn().mockResolvedValue([{ name: 'my-d1', uuid: 'adopted-d1-uuid' }]);
+      expect(await ensureD1('my-d1', { adoptExisting: true, _executor: d1Exec })).toBe('adopted-d1-uuid');
+
+      // KV
+      const kvExec = vi.fn().mockResolvedValue(JSON.stringify([{ id: 'adopted-kv-id', title: 'my-kv' }]));
+      expect(await ensureKv('my-kv', { adoptExisting: true, _executor: kvExec })).toBe('adopted-kv-id');
+
+      // R2
+      const r2Exec = vi.fn().mockResolvedValue('name: my-bucket\ncreated: 2026-09-01');
+      expect(await ensureR2('my-bucket', { adoptExisting: true, _executor: r2Exec })).toBe('my-bucket');
+
+      // Queue
+      const queueTable = `
+┌──────────────────────────────────┬─────────────────┬──────────
+│ id                               │ name            │ created_on
+├──────────────────────────────────┼─────────────────┼──────────
+│ queue-uuid-abc                   │ my-queue        │ 2026-09-01
+└──────────────────────────────────┴─────────────────┴──────────
+`;
+      const queueExec = vi.fn().mockResolvedValue(queueTable);
+      expect(await ensureQueue('my-queue', { adoptExisting: true, _executor: queueExec })).toBe('my-queue');
+    });
+
+    it('warns when parseQueueList table output contains "name" but 0 queues are parsed', async () => {
+      const { parseQueueList } = await import('../src/wrangler.js');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const badTable = `Some output containing the word name but no pipe delimiters`;
+      const parsed = parseQueueList(badTable);
+      expect(parsed).toHaveLength(0);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('parseQueueList: Table output contained "name" but parsed 0 queues'));
+
+      warnSpy.mockRestore();
+    });
   });
 
   describe('Cloudflare Error Classification & isNotFound', () => {
@@ -559,6 +638,127 @@ Current Version ID: abc-123
       expect(teardownOrder.indexOf('email-out')).toBeLessThan(teardownOrder.indexOf('email-out-dlq'));
       expect(teardownOrder.indexOf('sms-parse')).toBeLessThan(teardownOrder.indexOf('sms-parse-dlq'));
     });
+
+    it('detects legacy queue bindings in existing wrangler.jsonc and preserves unscoped names', async () => {
+      const { detectLegacyQueueBindings, getDeploymentQueueNames } = await import('../src/provision.js');
+
+      const legacyConfig = `
+{
+  "name": "my-legacy-deployment",
+  "queues": {
+    "producers": [
+      { "binding": "WEBHOOK_QUEUE", "queue": "webhook-out" },
+      { "binding": "EMAIL_QUEUE", "queue": "email-out" }
+    ]
+  }
+}
+`;
+      expect(detectLegacyQueueBindings(legacyConfig)).toBe(true);
+
+      const scopedConfig = `
+{
+  "name": "my-new-deployment",
+  "queues": {
+    "producers": [
+      { "binding": "WEBHOOK_QUEUE", "queue": "my-new-deployment-webhook-out" }
+    ]
+  }
+}
+`;
+      expect(detectLegacyQueueBindings(scopedConfig)).toBe(false);
+
+      // When existingWranglerContent has legacy bindings, getDeploymentQueueNames keeps them unscoped
+      const queues = getDeploymentQueueNames('my-legacy-deployment', {
+        existingWranglerContent: legacyConfig,
+      });
+      expect(queues.webhookOut).toBe('webhook-out');
+      expect(queues.webhookOutDlq).toBe('webhook-out-dlq');
+    });
+  });
+
+  describe('Teardown Safety Gates & Process Isolation', () => {
+    it('refuses non-interactive destroy without EDGEPAY_DESTROY_CONFIRMED=yes', async () => {
+      const { runInstaller } = await import('../src/index.js');
+      const testStateFile = path.join(tmpDir, '.edgepay-init.json');
+      await saveState(
+        {
+          version: 1,
+          started_at: 'now',
+          config: {
+            deployment_name: 'test-dep',
+            account_id: '12345',
+            account_name: 'Test Acc',
+            primary_currency: 'BDT',
+            merchant_name: 'Test',
+            generate_secrets: false,
+            d1_name: 'test-dep-db',
+            kv_name: 'test-dep-kv',
+            r2_name: 'test-dep-r2',
+          },
+        },
+        testStateFile,
+      );
+
+      const origEnv = process.env.EDGEPAY_DESTROY_CONFIRMED;
+      delete process.env.EDGEPAY_DESTROY_CONFIRMED;
+
+      process.exitCode = 0;
+      await runInstaller([
+        '--destroy',
+        '--i-know-what-im-doing',
+        '--yes',
+        `--statePath=${testStateFile}`,
+        `--projectRoot=${tmpDir}`,
+      ]);
+
+      expect(process.exitCode).toBe(1);
+      process.exitCode = 0;
+
+      if (origEnv !== undefined) {
+        process.env.EDGEPAY_DESTROY_CONFIRMED = origEnv;
+      }
+    });
+
+    it('refuses destroy when EDGEPAY_SCRATCH_ACCOUNTS allowlist is configured and account does not match', async () => {
+      const { runInstaller } = await import('../src/index.js');
+      const testStateFile = path.join(tmpDir, '.edgepay-init.json');
+      await saveState(
+        {
+          version: 1,
+          started_at: 'now',
+          config: {
+            deployment_name: 'test-dep',
+            account_id: 'prod-account-999',
+            account_name: 'Prod Acc',
+            primary_currency: 'BDT',
+            merchant_name: 'Test',
+            generate_secrets: false,
+            d1_name: 'test-dep-db',
+            kv_name: 'test-dep-kv',
+            r2_name: 'test-dep-r2',
+          },
+        },
+        testStateFile,
+      );
+
+      process.env.EDGEPAY_SCRATCH_ACCOUNTS = 'allowed-scratch-account-1,allowed-scratch-account-2';
+      process.env.EDGEPAY_DESTROY_CONFIRMED = 'yes';
+
+      process.exitCode = 0;
+      await runInstaller([
+        '--destroy',
+        '--i-know-what-im-doing',
+        '--yes',
+        `--statePath=${testStateFile}`,
+        `--projectRoot=${tmpDir}`,
+      ]);
+
+      expect(process.exitCode).toBe(1);
+      process.exitCode = 0;
+
+      delete process.env.EDGEPAY_SCRATCH_ACCOUNTS;
+      delete process.env.EDGEPAY_DESTROY_CONFIRMED;
+    });
   });
 
   describe('Safety & Isolation Regression: Account Resource Collision Guard', () => {
@@ -575,6 +775,59 @@ Current Version ID: abc-123
         expect(queueName).toContain(scratchDeploymentName);
         expect(defaultQueues.allInTeardownOrder).not.toContain(queueName);
       }
+    });
+
+    it('recovers cleanly when state file was deleted, reusing .dev.vars secrets and adopting resources', async () => {
+      const { syncDevVars, readDevVars, generateSecrets } = await import('../src/secrets.js');
+      const { provisionAll } = await import('../src/provision.js');
+
+      // 1. Existing .dev.vars with managed header
+      const secrets = generateSecrets();
+      await syncDevVars(secrets, tmpDir);
+
+      // Reading .dev.vars must find the existing secrets
+      const loadedSecrets = await readDevVars(tmpDir);
+      expect(loadedSecrets.jwt_secret).toBe(secrets.jwt_secret);
+
+      // 2. Provisioning with adoptExisting: true reuses pre-existing resources without throwing
+      const mockExec = vi.fn().mockImplementation(async (args: string[]) => {
+        if (args[0] === 'd1' && args[1] === 'list') return [{ name: 'rec-db', uuid: 'rec-d1-uuid' }];
+        if (args[0] === 'kv' && args[1] === 'namespace' && args[2] === 'list')
+          return JSON.stringify([{ id: 'rec-kv-id', title: 'rec-kv' }]);
+        if (args[0] === 'r2' && args[1] === 'bucket' && args[2] === 'list')
+          return 'name: rec-r2\n';
+        if (args[0] === 'queues' && args[1] === 'list')
+          return `
+┌──────────────────────────────────┬──────────────────────┬──────────
+│ id                               │ name                 │ created_on
+├──────────────────────────────────┼──────────────────────┼──────────
+│ q1                               │ rec-webhook-out      │ 2026-09-01
+│ q2                               │ rec-webhook-out-dlq  │ 2026-09-01
+│ q3                               │ rec-email-out        │ 2026-09-01
+│ q4                               │ rec-email-out-dlq    │ 2026-09-01
+│ q5                               │ rec-sms-parse        │ 2026-09-01
+│ q6                               │ rec-sms-parse-dlq    │ 2026-09-01
+└──────────────────────────────────┴──────────────────────┴──────────
+`;
+        return '';
+      });
+
+      const config = {
+        deployment_name: 'rec',
+        account_id: 'acc123',
+        account_name: 'Recovery Acc',
+        primary_currency: 'BDT',
+        merchant_name: 'Recovery Store',
+        generate_secrets: false,
+        d1_name: 'rec-db',
+        kv_name: 'rec-kv',
+        r2_name: 'rec-r2',
+      };
+
+      // In ensureD1/etc., _executor can be passed via provisionAll or ensure*
+      const { ensureD1 } = await import('../src/wrangler.js');
+      const adoptedD1 = await ensureD1('rec-db', { adoptExisting: true, _executor: mockExec });
+      expect(adoptedD1).toBe('rec-d1-uuid');
     });
   });
 

@@ -25,9 +25,36 @@ export interface DeploymentQueueNames {
   allInTeardownOrder: string[];
 }
 
-export function getDeploymentQueueNames(deploymentName: string): DeploymentQueueNames {
-  const isDefault = deploymentName === 'edgepay-cf';
-  const prefix = isDefault ? '' : `${deploymentName}-`;
+export interface GetDeploymentQueueNamesOpts {
+  projectRoot?: string;
+  existingWranglerContent?: string;
+  forceLegacy?: boolean;
+}
+
+export function detectLegacyQueueBindings(wranglerContent: string): boolean {
+  try {
+    return (
+      /"queue"\s*:\s*"webhook-out"/i.test(wranglerContent) &&
+      !/"queue"\s*:\s*"[a-zA-Z0-9_-]+-webhook-out"/i.test(wranglerContent)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function getDeploymentQueueNames(
+  deploymentName: string,
+  opts: GetDeploymentQueueNamesOpts = {},
+): DeploymentQueueNames {
+  let isLegacy = Boolean(opts.forceLegacy);
+
+  if (!isLegacy && opts.existingWranglerContent) {
+    isLegacy = detectLegacyQueueBindings(opts.existingWranglerContent);
+  }
+
+  // Preserve unscoped names if legacy mode detected, or for default edgepay-cf
+  const isDefaultUnscoped = isLegacy || deploymentName === 'edgepay-cf';
+  const prefix = isDefaultUnscoped ? '' : `${deploymentName}-`;
 
   const webhookOut = `${prefix}webhook-out`;
   const webhookOutDlq = `${prefix}webhook-out-dlq`;
@@ -62,12 +89,25 @@ export function getDeploymentQueueNames(deploymentName: string): DeploymentQueue
   };
 }
 
+export interface ProvisionAllOpts {
+  adoptExisting?: boolean;
+  projectRoot?: string;
+  onProgress?: ProvisionProgressCallback;
+}
+
 export async function provisionAll(
   config: InitConfig,
   existingResources?: ProvisionedResources,
-  onProgress?: ProvisionProgressCallback,
+  onProgressOrOpts?: ProvisionProgressCallback | ProvisionAllOpts,
 ): Promise<ProvisionedResources> {
+  const opts: ProvisionAllOpts =
+    typeof onProgressOrOpts === 'function'
+      ? { onProgress: onProgressOrOpts }
+      : onProgressOrOpts ?? {};
+
+  const onProgress = opts.onProgress;
   const accountId = config.account_id;
+  const adoptExisting = opts.adoptExisting;
   const resources: ProvisionedResources = {
     queues: [],
   };
@@ -78,6 +118,7 @@ export async function provisionAll(
   resources.d1_id = await ensureD1(config.d1_name, {
     accountId,
     expectedExistingId: existingResources?.d1_id,
+    adoptExisting,
   });
 
   // 2. KV Namespace
@@ -86,6 +127,7 @@ export async function provisionAll(
   resources.kv_id = await ensureKv(config.kv_name, {
     accountId,
     expectedExistingId: existingResources?.kv_id,
+    adoptExisting,
   });
 
   // 3. R2 Bucket
@@ -93,15 +135,28 @@ export async function provisionAll(
   resources.r2_name = await ensureR2(config.r2_name, {
     accountId,
     expectedExistingId: existingResources?.r2_name,
+    adoptExisting,
   });
 
-  // 4. Queues & DLQs
-  const queuePlan = getDeploymentQueueNames(config.deployment_name);
+  // 4. Queues & DLQs: check for legacy unscoped queue bindings in existing project wrangler.jsonc
+  let existingWranglerContent: string | undefined;
+  if (opts.projectRoot) {
+    try {
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+      existingWranglerContent = await fs.readFile(path.join(opts.projectRoot, 'wrangler.jsonc'), 'utf-8');
+    } catch {
+      // no existing wrangler.jsonc
+    }
+  }
+
+  const queuePlan = getDeploymentQueueNames(config.deployment_name, { existingWranglerContent });
   for (const q of queuePlan.allInProvisionOrder) {
     onProgress?.('queue', q);
     await ensureQueue(q, {
       accountId,
       expectedExistingId: existingResources?.queues?.find((x) => x === q),
+      adoptExisting,
     });
     resources.queues!.push(q);
   }

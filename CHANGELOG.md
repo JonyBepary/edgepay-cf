@@ -20,20 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3. **Exact Column Parsing (`parseQueueList`)**: Replaced substring checks (`l.includes(name)`) with strict table column parsing to eliminate false positive collisions between primary queues and `-dlq` suffixes.
   4. **Strict Teardown Ordering**: Primary consumer/producer queues are always deleted before dead-letter queues.
   5. **Automated CI Regression Guards**: Unit and isolation tests verify synthetic non-default deployment queues never collide with default production queue names.
+- **Operational Recurrence Prevention**: Destroy is now gated on an account allowlist (`EDGEPAY_SCRATCH_ACCOUNTS`) and independent environment confirmation (`EDGEPAY_DESTROY_CONFIRMED=yes`); CI runs against a dedicated scratch account.
 
 ### Breaking Changes
-- **Installer `--destroy` Safety Gate**:
+- **Installer `--destroy` Safety Gate & Dual Signal**:
   - In interactive mode, users must explicitly type the deployment name (e.g. `edgepay-prod`) to confirm permanent deletion of D1, KV, R2, and Queue resources.
-  - In non-interactive mode (`--yes` or non-TTY), `--destroy` will halt with exit code 1 unless `--i-know-what-im-doing` is explicitly provided.
+  - In non-interactive mode (`--yes` or non-TTY), `--destroy` strictly requires **both** `--i-know-what-im-doing` AND the environment variable `EDGEPAY_DESTROY_CONFIRMED=yes`.
+  - If `EDGEPAY_SCRATCH_ACCOUNTS` is set, `--destroy` halts unless the target account ID is present in the allowlist.
+- **Explicit Resource Adoption (`--adopt-existing-resources`)**:
+  - Pre-existing D1, KV, R2, and Queue resources in a Cloudflare account will not be adopted without either an active session match (`expectedExistingId`) or the explicit CLI flag `--adopt-existing-resources`. Fails closed with descriptive guidance.
 - **Legacy `.dev.vars` Protection (`--adopt-legacy-dev-vars`)**:
   - The installer refuses to silently overwrite or rotate unmanaged `.dev.vars` files containing existing credentials. If an unmanaged file is detected, the installer halts to prevent accidental rotation and invalidation of active merchant JWTs/sessions. Users must pass `--adopt-legacy-dev-vars` to adopt and preserve existing secrets.
 - **Installer `--preview` vs `--dry-run` Separation**:
   - `--preview`: Pure read-only verification mode. Inspects configuration, authenticates with Cloudflare, and runs purely in-memory with zero disk state writes, zero file mutations, and zero Cloudflare changes.
   - `--dry-run`: Provisions infrastructure on Cloudflare (D1, KV, R2, Queues), generates `wrangler.jsonc`, runs database migrations, sets secrets, but stops before deploying Worker code.
-- **Foreign Resource Adoption Blocked**:
-  - `provisionAll` refuses to silently adopt pre-existing Cloudflare resources with matching names unless they were previously recorded in state during resumption. Fails closed with a descriptive error.
 - **`pushAllSecrets` Signature**:
   - Returns `Promise<InitSecrets>` instead of `Promise<void>` to return active credentials for local variable syncing.
+
+### Added
+- **Legacy Queue Compatibility**:
+  - Existing installations with `wrangler.jsonc` containing unscoped queue bindings (`"queue": "webhook-out"`) automatically retain unscoped names to preserve compatibility, while fresh installs use scoped queue naming (`${deployment_name}-webhook-out`).
 
 ### Added
 - **Private `.dev.vars` Storage**:

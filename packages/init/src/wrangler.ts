@@ -161,6 +161,7 @@ export async function login(): Promise<void> {
 export interface EnsureResourceOpts {
   accountId?: string;
   expectedExistingId?: string;
+  adoptExisting?: boolean;
   _executor?: (args: string[], opts?: any) => Promise<any>;
 }
 
@@ -175,11 +176,14 @@ export async function ensureD1(name: string, opts: EnsureResourceOpts = {}): Pro
     if (Array.isArray(list)) {
       const existing = list.find((d) => d.name === name);
       if (existing?.uuid) {
-        if (opts.expectedExistingId && opts.expectedExistingId === existing.uuid) {
+        if (
+          (opts.expectedExistingId && opts.expectedExistingId === existing.uuid) ||
+          opts.adoptExisting
+        ) {
           return existing.uuid;
         }
         throw new Error(
-          `Cannot provision D1 database "${name}": a database with this name already exists in Cloudflare account ${accountId ?? ''} (UUID: ${existing.uuid}). Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing database manually.`,
+          `Cannot provision D1 database "${name}": a database with this name already exists in Cloudflare account ${accountId ?? ''} (UUID: ${existing.uuid}). Refusing to adopt existing Cloudflare resource.\nTo adopt pre-existing Cloudflare resources into this deployment, re-run with: --adopt-existing-resources\nAlternatively, choose a different deployment name or delete the existing database manually.`,
         );
       }
     }
@@ -223,11 +227,14 @@ export async function ensureKv(title: string, opts: EnsureResourceOpts = {}): Pr
     if (Array.isArray(list)) {
       const existing = list.find((k) => k.title === title);
       if (existing?.id) {
-        if (opts.expectedExistingId && opts.expectedExistingId === existing.id) {
+        if (
+          (opts.expectedExistingId && opts.expectedExistingId === existing.id) ||
+          opts.adoptExisting
+        ) {
           return existing.id;
         }
         throw new Error(
-          `Cannot provision KV namespace "${title}": a namespace with this title already exists in Cloudflare account ${accountId ?? ''} (ID: ${existing.id}). Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing namespace manually.`,
+          `Cannot provision KV namespace "${title}": a namespace with this title already exists in Cloudflare account ${accountId ?? ''} (ID: ${existing.id}). Refusing to adopt existing Cloudflare resource.\nTo adopt pre-existing Cloudflare resources into this deployment, re-run with: --adopt-existing-resources\nAlternatively, choose a different deployment name or delete the existing namespace manually.`,
         );
       }
     }
@@ -271,11 +278,14 @@ export async function ensureR2(name: string, opts: EnsureResourceOpts = {}): Pro
       return match && match[1] === name;
     });
     if (existing) {
-      if (opts.expectedExistingId && opts.expectedExistingId === name) {
+      if (
+        (opts.expectedExistingId && opts.expectedExistingId === name) ||
+        opts.adoptExisting
+      ) {
         return name;
       }
       throw new Error(
-        `Cannot provision R2 bucket "${name}": a bucket with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing bucket manually.`,
+        `Cannot provision R2 bucket "${name}": a bucket with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource.\nTo adopt pre-existing Cloudflare resources into this deployment, re-run with: --adopt-existing-resources\nAlternatively, choose a different deployment name or delete the existing bucket manually.`,
       );
     }
   } catch (err: any) {
@@ -327,6 +337,11 @@ export function parseQueueList(rawOutput: string): Array<{ id?: string; name: st
       queues.push({ id: parts[1], name: parts[2] });
     }
   }
+
+  if (queues.length === 0 && /name/i.test(rawOutput)) {
+    console.warn('[WARN] parseQueueList: Table output contained "name" but parsed 0 queues. Cloudflare table format may have changed.');
+  }
+
   return queues;
 }
 
@@ -341,11 +356,14 @@ export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): 
     const queues = parseQueueList(rawList);
     const existing = queues.find((q) => q.name === name);
     if (existing) {
-      if (opts.expectedExistingId && opts.expectedExistingId === name) {
+      if (
+        (opts.expectedExistingId && opts.expectedExistingId === name) ||
+        opts.adoptExisting
+      ) {
         return name;
       }
       throw new Error(
-        `Cannot provision Queue "${name}": a queue with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource. Choose a different deployment name or delete the existing queue manually.`,
+        `Cannot provision Queue "${name}": a queue with this name already exists in Cloudflare account ${accountId ?? ''}. Refusing to adopt existing Cloudflare resource.\nTo adopt pre-existing Cloudflare resources into this deployment, re-run with: --adopt-existing-resources\nAlternatively, choose a different deployment name or delete the existing queue manually.`,
       );
     }
   } catch (err: any) {
@@ -369,6 +387,19 @@ export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): 
   return name;
 }
 
+/**
+ * Classifies Cloudflare errors during resource deletion.
+ *
+ * PROVISIONAL IMPLEMENTATION:
+ * Calibrated against live-captured Cloudflare v4 CLI / API responses:
+ * - D1: "Couldn't find a D1 DB with name or binding" or REST API code 7000
+ * - KV: "namespace not found [code: 10013]"
+ * - R2: "The specified bucket does not exist. [code: 10006]"
+ * - Queues: 'Queue "..." does not exist'
+ *
+ * Explicitly rejects non-404 errors (auth 10000, permission 10007, user 10008, account 10002).
+ * Covered by live fixture tests in packages/init/tests/installer.test.ts (Cloudflare Error Classification & isNotFound).
+ */
 export function isNotFound(err: any): boolean {
   const msg = `${err?.message ?? ''} ${err?.stderr ?? ''} ${err?.stdout ?? ''}`;
 
