@@ -414,14 +414,14 @@ export function isNotFound(err: any): boolean {
     return false;
   }
 
-  // Real captured Cloudflare API & Wrangler v4 CLI error patterns:
-  // - D1: "Couldn't find a D1 DB with name or binding" or "database not found [code: 7000]"
+  // Empirically captured Cloudflare CLI & API error patterns:
+  // - D1: "Couldn't find a D1 DB with name or binding"
   // - KV: "namespace not found [code: 10013]"
   // - R2: "The specified bucket does not exist. [code: 10006]"
-  // - Queues: 'Queue "..." does not exist' or 'could not find queue'
+  // - Queues: 'Queue "..." does not exist'
+  // - Workers: 'This Worker does not exist on this account. [code: 10090]'
   const capturedNotFoundPatterns = [
     /Couldn't\s+find\s+a\s+D1\s+DB/i,
-    /database\s+not\s+found\s*\[code:\s*7000\]/i,
     /namespace\s+not\s+found\s*\[code:\s*10013\]/i,
     /The\s+specified\s+bucket\s+does\s+not\s+exist\.?\s*\[code:\s*10006\]/i,
     /Queue\s+["'].*?["']\s+does\s+not\s+exist/i,

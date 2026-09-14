@@ -92,6 +92,8 @@ describe('@edgepay/init - Installer Suite', () => {
     }, 15000);
 
     it('--preview mode skips cloud auth when existing state has auth_done and config', async () => {
+      const authModule = await import('../src/auth.js');
+      const ensureAuthSpy = vi.spyOn(authModule, 'ensureAuth');
       const { runInstaller } = await import('../src/index.js');
       const testStateFile = path.join(tmpDir, '.edgepay-init-preview.json');
       await saveState(
@@ -124,6 +126,8 @@ describe('@edgepay/init - Installer Suite', () => {
       ]);
       const afterMtime = (await fs.stat(testStateFile)).mtimeMs;
       expect(afterMtime).toBe(beforeMtime);
+      expect(ensureAuthSpy).not.toHaveBeenCalled();
+      ensureAuthSpy.mockRestore();
     });
   });
 
@@ -212,6 +216,25 @@ describe('@edgepay/init - Installer Suite', () => {
       const { execa } = await import('execa');
       const { stdout } = await execa('git', ['check-ignore', '.dev.vars']);
       expect(stdout.trim()).toBe('.dev.vars');
+    });
+
+    it('readDevVars with adoptLegacyDevVars: true preserves unmanaged credentials without rotation', async () => {
+      const { readDevVars } = await import('../src/secrets.js');
+      const legacyDir = path.join(tmpDir, 'legacy-adopt-test');
+      await fs.mkdir(legacyDir, { recursive: true });
+      await fs.writeFile(
+        path.join(legacyDir, '.dev.vars'),
+        'JWT_SECRET=legacy_hex_secret_1234567890abcdef\nAPP_KEY=legacy_app_key_123\nENCRYPTION_KEY=legacy_enc_key_123\n',
+      );
+
+      // Without flag: throws
+      await expect(readDevVars(legacyDir)).rejects.toThrow(/Existing \.dev\.vars found without @edgepay\/init management header/);
+
+      // With flag: returns existing secrets intact without rotation
+      const adopted = await readDevVars(legacyDir, { adoptLegacyDevVars: true });
+      expect(adopted.jwt_secret).toBe('legacy_hex_secret_1234567890abcdef');
+      expect(adopted.app_key).toBe('legacy_app_key_123');
+      expect(adopted.encryption_key).toBe('legacy_enc_key_123');
     });
   });
 
@@ -600,7 +623,6 @@ Current Version ID: abc-123
           ),
         ),
       ).toBe(true);
-      expect(isNotFound(new Error('database not found [code: 7000]'))).toBe(true);
 
       // Live captured KV error
       expect(

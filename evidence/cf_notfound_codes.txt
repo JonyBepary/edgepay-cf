@@ -8,7 +8,6 @@ Wrangler Version: 4.127.1
 1. D1 Database (wrangler d1 delete 00000000-0000-0000-0000-000000000000 --skip-confirmation)
 --------------------------------------------------------------------------------
 ✘ [ERROR] Couldn't find a D1 DB with name or binding '00000000-0000-0000-0000-000000000000' in your config or the API. Run 'wrangler d1 create 00000000-0000-0000-0000-000000000000' to create it.
-Note: Cloudflare REST API v4 D1 endpoint returns: "database not found [code: 7000]"
 
 2. KV Namespace (wrangler kv namespace delete --namespace-id 0123456789abcdef0123456789abcdef)
 --------------------------------------------------------------------------------
