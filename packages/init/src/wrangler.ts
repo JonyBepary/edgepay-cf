@@ -161,12 +161,14 @@ export async function login(): Promise<void> {
 export interface EnsureResourceOpts {
   accountId?: string;
   expectedExistingId?: string;
+  _executor?: (args: string[], opts?: any) => Promise<any>;
 }
 
 export async function ensureD1(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
   const accountId = opts.accountId;
+  const runWrangler = opts._executor ?? wrangler;
   try {
-    const list = await wrangler<Array<{ name: string; uuid: string }>>(
+    const list = await runWrangler<Array<{ name: string; uuid: string }>>(
       ['d1', 'list', '--json'],
       { json: true, silent: true, accountId },
     );
@@ -187,36 +189,33 @@ export async function ensureD1(name: string, opts: EnsureResourceOpts = {}): Pro
     }
   }
 
-  const createOutput = (await wrangler(['d1', 'create', name], {
+  const createOutput = (await runWrangler(['d1', 'create', name], {
     silent: true,
     accountId,
   })) as string;
 
-  // Output includes: database_id = "xxxx-xxxx-xxxx" or JSON
-  const uuidMatch = createOutput.match(/database_id\s*=\s*"([a-f0-9-]+)"/i)
-    || createOutput.match(/"uuid"\s*:\s*"([a-f0-9-]+)"/i)
-    || createOutput.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
-
-  if (uuidMatch && uuidMatch[1]) {
-    return uuidMatch[1];
+  try {
+    const parsed = extractJson<{ database_id?: string; uuid?: string }>(createOutput);
+    const resolvedId = parsed.database_id ?? parsed.uuid;
+    if (resolvedId) return resolvedId;
+  } catch {
+    // fall back to regex
   }
 
-  // Fallback: list again to find newly created database
-  const retryList = await wrangler<Array<{ name: string; uuid: string }>>(
-    ['d1', 'list', '--json'],
-    { json: true, silent: true, accountId },
-  );
-  const found = Array.isArray(retryList) ? retryList.find((d) => d.name === name) : null;
-  if (found?.uuid) return found.uuid;
+  const match = createOutput.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  if (match) {
+    return match[1];
+  }
 
   throw new Error(`Failed to resolve D1 database UUID for ${name}. Output: ${createOutput}`);
 }
 
 export async function ensureKv(title: string, opts: EnsureResourceOpts = {}): Promise<string> {
   const accountId = opts.accountId;
+  const runWrangler = opts._executor ?? wrangler;
   try {
     // Note: wrangler kv namespace list returns JSON by default; passing --json is an error in wrangler v4
-    const rawList = (await wrangler(['kv', 'namespace', 'list'], {
+    const rawList = (await runWrangler(['kv', 'namespace', 'list'], {
       silent: true,
       accountId,
     })) as string;
@@ -238,17 +237,21 @@ export async function ensureKv(title: string, opts: EnsureResourceOpts = {}): Pr
     }
   }
 
-  const createOutput = (await wrangler(['kv', 'namespace', 'create', title], {
+  const createOutput = (await runWrangler(['kv', 'namespace', 'create', title], {
     silent: true,
     accountId,
   })) as string;
 
-  const idMatch = createOutput.match(/id\s*=\s*"([a-f0-9]{32})"/i)
-    || createOutput.match(/"id"\s*:\s*"([a-f0-9]{32})"/i)
-    || createOutput.match(/\b([a-f0-9]{32})\b/);
+  try {
+    const parsed = extractJson<{ id?: string }>(createOutput);
+    if (parsed.id) return parsed.id;
+  } catch {
+    // fall back to regex
+  }
 
-  if (idMatch && idMatch[1]) {
-    return idMatch[1];
+  const match = createOutput.match(/id:\s+"([a-f0-9]+)"/i) ?? createOutput.match(/([a-f0-9]{32})/i);
+  if (match) {
+    return match[1];
   }
 
   throw new Error(`Failed to resolve KV namespace ID for ${title}. Output: ${createOutput}`);
@@ -256,8 +259,9 @@ export async function ensureKv(title: string, opts: EnsureResourceOpts = {}): Pr
 
 export async function ensureR2(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
   const accountId = opts.accountId;
+  const runWrangler = opts._executor ?? wrangler;
   try {
-    const rawList = (await wrangler(['r2', 'bucket', 'list'], {
+    const rawList = (await runWrangler(['r2', 'bucket', 'list'], {
       silent: true,
       accountId,
     })) as string;
@@ -281,7 +285,7 @@ export async function ensureR2(name: string, opts: EnsureResourceOpts = {}): Pro
   }
 
   try {
-    await wrangler(['r2', 'bucket', 'create', name], {
+    await runWrangler(['r2', 'bucket', 'create', name], {
       silent: true,
       accountId,
     });
@@ -295,15 +299,47 @@ export async function ensureR2(name: string, opts: EnsureResourceOpts = {}): Pro
   return name;
 }
 
+export function parseQueueList(rawOutput: string): Array<{ id?: string; name: string }> {
+  try {
+    const json = extractJson<Array<{ id?: string; name: string }>>(rawOutput);
+    if (Array.isArray(json)) {
+      return json.filter((q) => Boolean(q?.name));
+    }
+  } catch {
+    // fall through to table parsing
+  }
+
+  const queues: Array<{ id?: string; name: string }> = [];
+  const lines = rawOutput.split('\n');
+  for (const line of lines) {
+    if (!line.includes('│')) continue;
+    const parts = line.split('│').map((p) => p.trim());
+    // Table format: | id | name | created_on | modified_on | producers | consumers |
+    // parts[0] is empty (before first |)
+    // parts[1] is 'id' or uuid
+    // parts[2] is 'name' or queue name
+    if (
+      parts.length >= 3 &&
+      parts[1].toLowerCase() !== 'id' &&
+      parts[2].toLowerCase() !== 'name' &&
+      parts[2].length > 0
+    ) {
+      queues.push({ id: parts[1], name: parts[2] });
+    }
+  }
+  return queues;
+}
+
 export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
   const accountId = opts.accountId;
+  const runWrangler = opts._executor ?? wrangler;
   try {
-    const rawList = (await wrangler(['queues', 'list'], {
+    const rawList = (await runWrangler(['queues', 'list'], {
       silent: true,
       accountId,
     })) as string;
-    const lines = rawList.split('\n');
-    const existing = lines.some((l) => l.includes(name));
+    const queues = parseQueueList(rawList);
+    const existing = queues.find((q) => q.name === name);
     if (existing) {
       if (opts.expectedExistingId && opts.expectedExistingId === name) {
         return name;
@@ -319,7 +355,7 @@ export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): 
   }
 
   try {
-    await wrangler(['queues', 'create', name], {
+    await runWrangler(['queues', 'create', name], {
       silent: true,
       accountId,
     });
@@ -335,27 +371,30 @@ export async function ensureQueue(name: string, opts: EnsureResourceOpts = {}): 
 
 export function isNotFound(err: any): boolean {
   const msg = `${err?.message ?? ''} ${err?.stderr ?? ''} ${err?.stdout ?? ''}`;
+
   // Explicitly disallow permission/auth errors from being treated as not found
-  if (/permission\s+denied|unauthorized|forbidden|authentication\s+error|10000|10007/i.test(msg)) {
+  if (/permission\s+denied|unauthorized|forbidden|authentication\s+error|\b(10000|10007)\b/i.test(msg)) {
     return false;
   }
   // Explicitly disallow user/account errors
-  if (/user\s+not\s+found|account\s+not\s+found/i.test(msg)) {
+  if (/user\s+not\s+found|account\s+not\s+found|\b(10002|10008)\b/i.test(msg)) {
     return false;
   }
 
-  const notFoundPatterns = [
-    /database\s+not\s+found/i,
-    /could\s+not\s+find\s+database/i,
-    /namespace\s+not\s+found/i,
-    /could\s+not\s+find\s+namespace/i,
-    /bucket\s+not\s+found/i,
-    /bucket\s+does\s+not\s+exist/i,
-    /queue\s+not\s+found/i,
-    /could\s+not\s+find\s+queue/i,
-    /\b(7000|10014|10006|11001)\b/,
+  // Real captured Cloudflare API & Wrangler v4 CLI error patterns:
+  // - D1: "Couldn't find a D1 DB with name or binding" or "database not found [code: 7000]"
+  // - KV: "namespace not found [code: 10013]"
+  // - R2: "The specified bucket does not exist. [code: 10006]"
+  // - Queues: 'Queue "..." does not exist' or 'could not find queue'
+  const capturedNotFoundPatterns = [
+    /Couldn't\s+find\s+a\s+D1\s+DB/i,
+    /database\s+not\s+found\s*\[code:\s*7000\]/i,
+    /namespace\s+not\s+found\s*\[code:\s*10013\]/i,
+    /The\s+specified\s+bucket\s+does\s+not\s+exist\.?\s*\[code:\s*10006\]/i,
+    /Queue\s+["'].*?["']\s+does\s+not\s+exist/i,
+    /could\s+not\s+find\s+(database|namespace|queue|bucket)/i,
   ];
-  return notFoundPatterns.some((p) => p.test(msg));
+  return capturedNotFoundPatterns.some((p) => p.test(msg));
 }
 
 export async function deleteD1(name: string, accountId?: string): Promise<void> {

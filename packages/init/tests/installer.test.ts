@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -75,6 +75,21 @@ describe('@edgepay/init - Installer Suite', () => {
       const reloaded = await loadState(stateFile);
       expect(reloaded.prereqs_done).toBeUndefined();
     });
+
+    it('--preview mode performs zero disk mutations and does not create state file', async () => {
+      const { runInstaller } = await import('../src/index.js');
+      const testStateFile = path.join(tmpDir, '.edgepay-init.json');
+
+      await runInstaller([
+        '--preview',
+        '--yes',
+        `--statePath=${testStateFile}`,
+        `--projectRoot=${tmpDir}`,
+      ]);
+
+      const fileExists = await fs.access(testStateFile).then(() => true).catch(() => false);
+      expect(fileExists).toBe(false);
+    }, 15000);
   });
 
   describe('Secret Generation & Storage', () => {
@@ -120,7 +135,7 @@ describe('@edgepay/init - Installer Suite', () => {
       expect(readBack.encryption_key).toBe(originalSecrets.encryption_key);
     });
 
-    it('refuses to read secrets from an unmanaged foreign .dev.vars file', async () => {
+    it('refuses to silently rotate secrets when an unmanaged legacy .dev.vars exists with credentials', async () => {
       const { readDevVars } = await import('../src/secrets.js');
       const foreignDir = path.join(tmpDir, 'foreign');
       await fs.mkdir(foreignDir, { recursive: true });
@@ -129,8 +144,16 @@ describe('@edgepay/init - Installer Suite', () => {
         'JWT_SECRET=foreign_jwt\nAPP_KEY=foreign_app\nENCRYPTION_KEY=foreign_enc\n',
       );
 
-      const readForeign = await readDevVars(foreignDir);
-      expect(readForeign).toEqual({});
+      // Without adoptLegacyDevVars: must throw clear error to prevent secret rotation
+      await expect(readDevVars(foreignDir)).rejects.toThrow(
+        /Existing \.dev\.vars found without @edgepay\/init management header/,
+      );
+
+      // With adoptLegacyDevVars: preserves the legacy secrets
+      const adopted = await readDevVars(foreignDir, { adoptLegacyDevVars: true });
+      expect(adopted.jwt_secret).toBe('foreign_jwt');
+      expect(adopted.app_key).toBe('foreign_app');
+      expect(adopted.encryption_key).toBe('foreign_enc');
     });
 
     it('preserves existing custom keys and comments in .dev.vars', async () => {
@@ -273,7 +296,7 @@ Current Version ID: abc-123
   });
 
   describe('CLI Argument Parsing', () => {
-    it('parses all flags correctly with distinct preview and dryRun semantics', () => {
+    it('parses all flags correctly with distinct preview, dryRun, and adoptLegacyDevVars semantics', () => {
       expect(parseArgs(['--preview', '--verbose'])).toEqual({
         dryRun: false,
         preview: true,
@@ -283,6 +306,7 @@ Current Version ID: abc-123
         yes: false,
         help: false,
         version: false,
+        adoptLegacyDevVars: false,
       });
 
       expect(parseArgs(['--dry-run'])).toEqual({
@@ -294,6 +318,7 @@ Current Version ID: abc-123
         yes: false,
         help: false,
         version: false,
+        adoptLegacyDevVars: false,
       });
 
       expect(parseArgs(['--destroy', '--i-know-what-im-doing', '-y'])).toEqual({
@@ -305,6 +330,19 @@ Current Version ID: abc-123
         yes: true,
         help: false,
         version: false,
+        adoptLegacyDevVars: false,
+      });
+
+      expect(parseArgs(['--adopt-legacy-dev-vars'])).toEqual({
+        dryRun: false,
+        preview: false,
+        destroy: false,
+        iKnowWhatImDoing: false,
+        verbose: false,
+        yes: false,
+        help: false,
+        version: false,
+        adoptLegacyDevVars: true,
       });
 
       expect(parseArgs(['--help'])).toEqual({
@@ -316,6 +354,7 @@ Current Version ID: abc-123
         yes: false,
         help: true,
         version: false,
+        adoptLegacyDevVars: false,
       });
 
       expect(parseArgs(['--version'])).toEqual({
@@ -327,18 +366,151 @@ Current Version ID: abc-123
         yes: false,
         help: false,
         version: true,
+        adoptLegacyDevVars: false,
       });
     });
   });
 
+  describe('Cloudflare Resource Adoption Protection', () => {
+    it('refuses to adopt a foreign D1 database when UUID does not match expectedExistingId', async () => {
+      const { ensureD1 } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue([{ name: 'test-db', uuid: 'foreign-d1-uuid' }]);
+      await expect(
+        ensureD1('test-db', { expectedExistingId: 'my-session-uuid', _executor: mockExec }),
+      ).rejects.toThrow(/Refusing to adopt existing Cloudflare resource/);
+    });
+
+    it('adopts existing D1 database when UUID matches expectedExistingId', async () => {
+      const { ensureD1 } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue([{ name: 'test-db', uuid: 'my-session-uuid' }]);
+      const res = await ensureD1('test-db', { expectedExistingId: 'my-session-uuid', _executor: mockExec });
+      expect(res).toBe('my-session-uuid');
+    });
+
+    it('refuses to adopt a foreign KV namespace when ID does not match expectedExistingId', async () => {
+      const { ensureKv } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue(JSON.stringify([{ id: 'foreign-kv-id', title: 'test-kv' }]));
+      await expect(
+        ensureKv('test-kv', { expectedExistingId: 'my-session-kv-id', _executor: mockExec }),
+      ).rejects.toThrow(/Refusing to adopt existing Cloudflare resource/);
+    });
+
+    it('adopts existing KV namespace when ID matches expectedExistingId', async () => {
+      const { ensureKv } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue(JSON.stringify([{ id: 'my-session-kv-id', title: 'test-kv' }]));
+      const res = await ensureKv('test-kv', { expectedExistingId: 'my-session-kv-id', _executor: mockExec });
+      expect(res).toBe('my-session-kv-id');
+    });
+
+    it('refuses to adopt a foreign R2 bucket when ID does not match expectedExistingId', async () => {
+      const { ensureR2 } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue('name: test-bucket\ncreated: 2026-09-01');
+      await expect(
+        ensureR2('test-bucket', { expectedExistingId: 'other-bucket', _executor: mockExec }),
+      ).rejects.toThrow(/Refusing to adopt existing Cloudflare resource/);
+    });
+
+    it('adopts existing R2 bucket when name matches expectedExistingId', async () => {
+      const { ensureR2 } = await import('../src/wrangler.js');
+      const mockExec = vi.fn().mockResolvedValue('name: test-bucket\ncreated: 2026-09-01');
+      const res = await ensureR2('test-bucket', { expectedExistingId: 'test-bucket', _executor: mockExec });
+      expect(res).toBe('test-bucket');
+    });
+
+    it('refuses to adopt a foreign Queue when ID does not match expectedExistingId', async () => {
+      const { ensureQueue } = await import('../src/wrangler.js');
+      const mockTable = `
+┌──────────────────────────────────┬─────────────────┬──────────
+│ id                               │ name            │ created_on
+├──────────────────────────────────┼─────────────────┼──────────
+│ queue-uuid-123                   │ test-queue      │ 2026-09-01
+└──────────────────────────────────┴─────────────────┴──────────
+`;
+      const mockExec = vi.fn().mockResolvedValue(mockTable);
+      await expect(
+        ensureQueue('test-queue', { expectedExistingId: 'other-queue', _executor: mockExec }),
+      ).rejects.toThrow(/Refusing to adopt existing Cloudflare resource/);
+    });
+
+    it('adopts existing Queue when name matches expectedExistingId', async () => {
+      const { ensureQueue } = await import('../src/wrangler.js');
+      const mockTable = `
+┌──────────────────────────────────┬─────────────────┬──────────
+│ id                               │ name            │ created_on
+├──────────────────────────────────┼─────────────────┼──────────
+│ queue-uuid-123                   │ test-queue      │ 2026-09-01
+└──────────────────────────────────┴─────────────────┴──────────
+`;
+      const mockExec = vi.fn().mockResolvedValue(mockTable);
+      const res = await ensureQueue('test-queue', { expectedExistingId: 'test-queue', _executor: mockExec });
+      expect(res).toBe('test-queue');
+    });
+
+    it('does not falsely match a dead-letter queue as a primary queue in ensureQueue', async () => {
+      const { ensureQueue, parseQueueList } = await import('../src/wrangler.js');
+      const mockTable = `
+┌──────────────────────────────────┬─────────────────┬──────────
+│ id                               │ name            │ created_on
+├──────────────────────────────────┼─────────────────┼──────────
+│ queue-uuid-dlq                   │ webhook-out-dlq │ 2026-09-01
+└──────────────────────────────────┴─────────────────┴──────────
+`;
+      const parsed = parseQueueList(mockTable);
+      expect(parsed).toEqual([{ id: 'queue-uuid-dlq', name: 'webhook-out-dlq' }]);
+      expect(parsed.find((q) => q.name === 'webhook-out')).toBeUndefined();
+
+      // ensureQueue('webhook-out') must NOT throw "Refusing to adopt" because webhook-out is not in the list!
+      const mockExec = vi.fn().mockImplementation(async (args: string[]) => {
+        if (args[0] === 'queues' && args[1] === 'list') return mockTable;
+        if (args[0] === 'queues' && args[1] === 'create') return 'Created queue webhook-out';
+        return '';
+      });
+      const res = await ensureQueue('webhook-out', { _executor: mockExec });
+      expect(res).toBe('webhook-out');
+      expect(mockExec).toHaveBeenCalledWith(['queues', 'create', 'webhook-out'], expect.anything());
+    });
+  });
+
   describe('Cloudflare Error Classification & isNotFound', () => {
-    it('accurately identifies resource-not-found errors', async () => {
+    it('accurately identifies live-captured Cloudflare resource-not-found errors', async () => {
       const { isNotFound } = await import('../src/wrangler.js');
 
-      expect(isNotFound(new Error('Database not found: edgepay-db [code: 7000]'))).toBe(true);
-      expect(isNotFound(new Error('Namespace not found [code: 10014]'))).toBe(true);
-      expect(isNotFound(new Error('The specified bucket does not exist [code: 10006]'))).toBe(true);
-      expect(isNotFound(new Error('Could not find queue: webhook-out [code: 11001]'))).toBe(true);
+      // Live captured D1 errors
+      expect(
+        isNotFound(
+          new Error(
+            "✘ [ERROR] Couldn't find a D1 DB with name or binding 'nonexistent-db-xyz-999' in your config or the API. Run 'wrangler d1 create nonexistent-db-xyz-999' to create it.",
+          ),
+        ),
+      ).toBe(true);
+      expect(isNotFound(new Error('database not found [code: 7000]'))).toBe(true);
+
+      // Live captured KV error
+      expect(
+        isNotFound(
+          new Error(
+            '✘ [ERROR] A request to the Cloudflare API (/accounts/123/storage/kv/namespaces/456) failed.\n\n  namespace not found [code: 10013]',
+          ),
+        ),
+      ).toBe(true);
+
+      // Live captured R2 error
+      expect(
+        isNotFound(
+          new Error(
+            '✘ [ERROR] A request to the Cloudflare API (/accounts/123/r2/buckets/abc) failed.\n\n  The specified bucket does not exist. [code: 10006]',
+          ),
+        ),
+      ).toBe(true);
+
+      // Live captured Queues error
+      expect(
+        isNotFound(
+          new Error(
+            '✘ [ERROR] Queue "nonexistent-queue-xyz-999" does not exist. To create it, run: wrangler queues create nonexistent-queue-xyz-999',
+          ),
+        ),
+      ).toBe(true);
     });
 
     it('refuses to treat authentication, authorization, or user errors as not-found', async () => {
@@ -348,8 +520,8 @@ Current Version ID: abc-123
       expect(isNotFound(new Error('Permission denied [code: 10007]'))).toBe(false);
       expect(isNotFound(new Error('Unauthorized access'))).toBe(false);
       expect(isNotFound(new Error('Forbidden: insufficient permissions'))).toBe(false);
-      expect(isNotFound(new Error('User not found in organization'))).toBe(false);
-      expect(isNotFound(new Error('Account not found with ID 12345'))).toBe(false);
+      expect(isNotFound(new Error('User not found [code: 10008]'))).toBe(false);
+      expect(isNotFound(new Error('Account not found with ID 12345 [code: 10002]'))).toBe(false);
     });
   });
 
@@ -361,11 +533,21 @@ Current Version ID: abc-123
       expect(defaultQueues.webhookOut).toBe('webhook-out');
       expect(defaultQueues.webhookOutDlq).toBe('webhook-out-dlq');
 
-      const scopedQueues = getDeploymentQueueNames('store-abc');
-      expect(scopedQueues.webhookOut).toBe('store-abc-webhook-out');
-      expect(scopedQueues.webhookOutDlq).toBe('store-abc-webhook-out-dlq');
-      expect(scopedQueues.emailOut).toBe('store-abc-email-out');
-      expect(scopedQueues.smsParse).toBe('store-abc-sms-parse');
+      const scopedQueues = getDeploymentQueueNames('my-shop');
+      expect(scopedQueues.webhookOut).toBe('my-shop-webhook-out');
+      expect(scopedQueues.webhookOutDlq).toBe('my-shop-webhook-out-dlq');
+      expect(scopedQueues.emailOut).toBe('my-shop-email-out');
+      expect(scopedQueues.emailOutDlq).toBe('my-shop-email-out-dlq');
+      expect(scopedQueues.smsParse).toBe('my-shop-sms-parse');
+      expect(scopedQueues.smsParseDlq).toBe('my-shop-sms-parse-dlq');
+
+      // and the teardown order preserves primary-before-dlq
+      expect(scopedQueues.allInTeardownOrder.indexOf('my-shop-webhook-out'))
+        .toBeLessThan(scopedQueues.allInTeardownOrder.indexOf('my-shop-webhook-out-dlq'));
+      expect(scopedQueues.allInTeardownOrder.indexOf('my-shop-email-out'))
+        .toBeLessThan(scopedQueues.allInTeardownOrder.indexOf('my-shop-email-out-dlq'));
+      expect(scopedQueues.allInTeardownOrder.indexOf('my-shop-sms-parse'))
+        .toBeLessThan(scopedQueues.allInTeardownOrder.indexOf('my-shop-sms-parse-dlq'));
     });
 
     it('orders primary queues before dead-letter queues in teardown order', async () => {
@@ -376,6 +558,23 @@ Current Version ID: abc-123
       expect(teardownOrder.indexOf('webhook-out')).toBeLessThan(teardownOrder.indexOf('webhook-out-dlq'));
       expect(teardownOrder.indexOf('email-out')).toBeLessThan(teardownOrder.indexOf('email-out-dlq'));
       expect(teardownOrder.indexOf('sms-parse')).toBeLessThan(teardownOrder.indexOf('sms-parse-dlq'));
+    });
+  });
+
+  describe('Safety & Isolation Regression: Account Resource Collision Guard', () => {
+    it('strictly isolates synthetic deployment queues and prevents default production queue collision', async () => {
+      const { getDeploymentQueueNames } = await import('../src/provision.js');
+      const scratchDeploymentName = 'scratch-isolation-test-123';
+      const scopedQueues = getDeploymentQueueNames(scratchDeploymentName);
+      const defaultQueues = getDeploymentQueueNames('edgepay-cf');
+
+      expect(scopedQueues.webhookOut).not.toBe(defaultQueues.webhookOut);
+      expect(scopedQueues.webhookOut).toBe('scratch-isolation-test-123-webhook-out');
+
+      for (const queueName of scopedQueues.allInTeardownOrder) {
+        expect(queueName).toContain(scratchDeploymentName);
+        expect(defaultQueues.allInTeardownOrder).not.toContain(queueName);
+      }
     });
   });
 

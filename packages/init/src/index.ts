@@ -24,6 +24,7 @@ export interface CliFlags {
   yes: boolean;
   help: boolean;
   version: boolean;
+  adoptLegacyDevVars: boolean;
   projectRoot?: string;
   statePath?: string;
 }
@@ -38,6 +39,7 @@ export function parseArgs(args: string[]): CliFlags {
     yes: args.includes('--yes') || args.includes('-y'),
     help: args.includes('--help') || args.includes('-h'),
     version: args.includes('--version') || args.includes('-v'),
+    adoptLegacyDevVars: args.includes('--adopt-legacy-dev-vars'),
   };
 }
 
@@ -57,14 +59,15 @@ USAGE:
   npx @edgepay/init [OPTIONS]
 
 OPTIONS:
-  --preview               Inspect configuration and verify auth without modifying Cloudflare
-  --dry-run               Provision Cloudflare resources and configure project without deploying Worker
-  --destroy               Tear down all provisioned resources for this deployment
-  --i-know-what-im-doing  Confirm destruction without interactive typing prompt
-  --verbose               Show detailed Wrangler command output
-  --yes, -y               Non-interactive mode (use defaults and auto-confirm)
-  --help, -h              Show this help message
-  --version, -v           Show installer version
+  --preview                Inspect configuration and verify auth without modifying Cloudflare
+  --dry-run                Provision Cloudflare resources and configure project without deploying Worker
+  --destroy                Tear down all provisioned resources for this deployment
+  --i-know-what-im-doing   Confirm destruction without interactive typing prompt
+  --adopt-legacy-dev-vars  Adopt existing unmanaged .dev.vars without regenerating/rotating secrets
+  --verbose                Show detailed Wrangler command output
+  --yes, -y                Non-interactive mode (use defaults and auto-confirm)
+  --help, -h               Show this help message
+  --version, -v            Show installer version
 `);
     return;
   }
@@ -82,6 +85,11 @@ OPTIONS:
   const projectRoot = flags.projectRoot ?? process.cwd();
   const statePath = flags.statePath ?? path.join(projectRoot, '.edgepay-init.json');
   const state: InitState = await loadState(statePath);
+
+  const persistState = async () => {
+    if (flags.preview) return; // Strictly in-memory during preview: zero disk mutations
+    await saveState(state, statePath);
+  };
 
   // -------------------------------------------------------------
   // Teardown flow (--destroy)
@@ -150,7 +158,7 @@ OPTIONS:
     stepSuccess('wrangler CLI', prereqs.wranglerVersion);
     stepSuccess('git', prereqs.gitVersion);
     state.prereqs_done = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Prerequisites already verified');
   }
@@ -171,7 +179,7 @@ OPTIONS:
     stepSuccess('Signed in as', authResult.email);
     stepSuccess('Account', `${account.name} (${account.id.slice(0, 8)}...)`);
     state.auth_done = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Authenticated with account', `${account.name} (${account.id.slice(0, 8)}...)`);
   }
@@ -184,7 +192,7 @@ OPTIONS:
     state.config = await gatherConfig(account, {
       nonInteractive: flags.yes,
     });
-    await saveState(state, statePath);
+    await persistState();
     stepSuccess('Deployment name', state.config.deployment_name);
     stepSuccess('Primary currency', state.config.primary_currency);
     stepSuccess('Merchant name', state.config.merchant_name);
@@ -219,7 +227,7 @@ OPTIONS:
     });
     s.stop('Cloudflare resources provisioned');
     state.provisioned = true;
-    await saveState(state, statePath);
+    await persistState();
 
     stepSuccess('D1 database', `${state.resources.d1_name} (${state.resources.d1_id?.slice(0, 8)}...)`);
     stepSuccess('KV namespace', `${state.resources.kv_name} (${state.resources.kv_id?.slice(0, 8)}...)`);
@@ -239,7 +247,7 @@ OPTIONS:
     await renderWranglerConfig(state.config, state.resources, { projectRoot });
     s.stop('wrangler.jsonc written');
     state.config_rendered = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Configuration already written');
   }
@@ -257,7 +265,7 @@ OPTIONS:
     });
     s.stop('All 11 migrations applied');
     state.migrations_applied = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Migrations already applied');
   }
@@ -272,10 +280,11 @@ OPTIONS:
     await pushAllSecrets(state.config, {
       accountId: state.config.account_id,
       projectRoot,
+      adoptLegacyDevVars: flags.adoptLegacyDevVars,
     });
     s.stop('Secrets safely configured');
     state.secrets_pushed = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Secrets already configured');
   }
@@ -305,7 +314,7 @@ OPTIONS:
     s.stop('Published to Cloudflare network');
     state.deployed = true;
     state.deployment_url = url;
-    await saveState(state, statePath);
+    await persistState();
     stepSuccess('Deployed Worker', url);
   } else {
     stepSuccess('Already deployed at', state.deployment_url);
@@ -321,7 +330,7 @@ OPTIONS:
     await verify(state.deployment_url);
     s.stop('Health check passed');
     state.verified = true;
-    await saveState(state, statePath);
+    await persistState();
   } else {
     stepSuccess('Deployment already verified');
   }

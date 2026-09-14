@@ -16,39 +16,64 @@ export interface PushSecretsOptions {
   accountId?: string;
   configPath?: string;
   projectRoot?: string;
+  adoptLegacyDevVars?: boolean;
 }
 
 export const DEV_VARS_MARKER = '# managed by @edgepay/init - DO NOT COMMIT TO VERSION CONTROL';
 
-export async function readDevVars(projectRoot: string = process.cwd()): Promise<Partial<InitSecrets>> {
+export interface ReadDevVarsOptions {
+  adoptLegacyDevVars?: boolean;
+}
+
+export async function readDevVars(
+  projectRoot: string = process.cwd(),
+  opts: ReadDevVarsOptions = {},
+): Promise<Partial<InitSecrets>> {
   const filePath = path.join(projectRoot, '.dev.vars');
+  let raw: string;
   try {
-    const raw = await fs.readFile(filePath, 'utf-8');
-    // Scoped safety: refuse to read an unmanaged foreign .dev.vars
-    if (!raw.includes(DEV_VARS_MARKER)) {
-      return {};
-    }
-
-    const result: Partial<InitSecrets> = {};
-    for (const line of raw.split('\n')) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('#')) continue; // Skip comments
-
-      const idx = line.indexOf('=');
-      if (idx > 0) {
-        const key = line.slice(0, idx).trim();
-        let val = line.slice(idx + 1);
-        if (val.endsWith('\r')) val = val.slice(0, -1);
-
-        if (key === 'JWT_SECRET') result.jwt_secret = val;
-        if (key === 'APP_KEY') result.app_key = val;
-        if (key === 'ENCRYPTION_KEY') result.encryption_key = val;
-      }
-    }
-    return result;
+    raw = await fs.readFile(filePath, 'utf-8');
   } catch {
     return {};
   }
+
+  const hasMarker = raw.includes(DEV_VARS_MARKER);
+  const parsedKeys: Partial<InitSecrets> = {};
+  let hasAnyKeys = false;
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const idx = line.indexOf('=');
+    if (idx > 0) {
+      hasAnyKeys = true;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1);
+      if (val.endsWith('\r')) val = val.slice(0, -1);
+
+      if (key === 'JWT_SECRET') parsedKeys.jwt_secret = val;
+      if (key === 'APP_KEY') parsedKeys.app_key = val;
+      if (key === 'ENCRYPTION_KEY') parsedKeys.encryption_key = val;
+    }
+  }
+
+  if (!hasMarker) {
+    if (hasAnyKeys) {
+      if (!opts.adoptLegacyDevVars) {
+        throw new Error(
+          `Existing .dev.vars found without @edgepay/init management header.\n` +
+          `Refusing to silently generate new secrets, which would rotate existing credentials and invalidate active JWTs/sessions.\n` +
+          `To adopt this existing file and preserve your keys, re-run with: --adopt-legacy-dev-vars\n` +
+          `Alternatively, backup and delete .dev.vars if you explicitly intend to generate fresh keys.`,
+        );
+      }
+      return parsedKeys;
+    }
+    return {};
+  }
+
+  return parsedKeys;
 }
 
 export async function syncDevVars(
@@ -123,7 +148,9 @@ export async function pushAllSecrets(
   let secrets = config.secrets;
 
   if (!secrets || !secrets.jwt_secret || !secrets.app_key || !secrets.encryption_key) {
-    const devVars = await readDevVars(opts.projectRoot);
+    const devVars = await readDevVars(opts.projectRoot, {
+      adoptLegacyDevVars: opts.adoptLegacyDevVars,
+    });
     if (devVars.jwt_secret && devVars.app_key && devVars.encryption_key) {
       secrets = devVars as InitSecrets;
     } else {
