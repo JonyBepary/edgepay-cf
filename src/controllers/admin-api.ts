@@ -141,9 +141,18 @@ adminApiRoutes.patch('/gates/:id', requireScope('admin'), async (c) => {
     }
   }
 
-  const before = await c.env.DB.prepare(
-    `SELECT id, label, mfs_number, status FROM op_gates WHERE id = ? AND merchant_id = ? LIMIT 1`
-  ).bind(gateId, merchantId).first<{ id: number; label: string; mfs_number: string | null; status: string }>();
+  const merchantRow = await c.env.DB.prepare(
+    `SELECT is_platform FROM op_merchants WHERE id = ? LIMIT 1`
+  ).bind(merchantId).first<{ is_platform: number }>();
+  const isPlatform = merchantRow?.is_platform === 1;
+
+  const before = isPlatform
+    ? await c.env.DB.prepare(
+        `SELECT id, merchant_id, label, mfs_number, status FROM op_gates WHERE id = ? LIMIT 1`
+      ).bind(gateId).first<{ id: number; merchant_id: number; label: string; mfs_number: string | null; status: string }>()
+    : await c.env.DB.prepare(
+        `SELECT id, merchant_id, label, mfs_number, status FROM op_gates WHERE id = ? AND merchant_id = ? LIMIT 1`
+      ).bind(gateId, merchantId).first<{ id: number; merchant_id: number; label: string; mfs_number: string | null; status: string }>();
 
   if (!before) {
     return c.json({ success: false, error: { code: 'GATE_NOT_FOUND', message: 'Gate not found' } }, 404);
@@ -156,11 +165,18 @@ adminApiRoutes.patch('/gates/:id', requireScope('admin'), async (c) => {
   if (body.mfs_number !== undefined) { sets.push('mfs_number = ?'); binds.push(body.mfs_number); }
   if (body.status !== undefined) { sets.push('status = ?'); binds.push(body.status); }
   sets.push("updated_at = datetime('now')");
-  binds.push(gateId, merchantId);
+  binds.push(gateId);
 
-  await c.env.DB.prepare(
-    `UPDATE op_gates SET ${sets.join(', ')} WHERE id = ? AND merchant_id = ?`
-  ).bind(...binds).run();
+  if (isPlatform) {
+    await c.env.DB.prepare(
+      `UPDATE op_gates SET ${sets.join(', ')} WHERE id = ?`
+    ).bind(...binds).run();
+  } else {
+    binds.push(merchantId);
+    await c.env.DB.prepare(
+      `UPDATE op_gates SET ${sets.join(', ')} WHERE id = ? AND merchant_id = ?`
+    ).bind(...binds).run();
+  }
 
   const after = await c.env.DB.prepare(
     `SELECT id, label, mfs_number, status FROM op_gates WHERE id = ? LIMIT 1`
@@ -173,7 +189,7 @@ adminApiRoutes.patch('/gates/:id', requireScope('admin'), async (c) => {
        old_values, new_values, ip_address, user_agent, signature, created_at
      ) VALUES (?, ?, ?, 'gate.updated', 'gate', ?, ?, ?, ?, ?, 'system', datetime('now'))`
   ).bind(
-    merchantId,
+    before.merchant_id,
     c.get('authSubject') ?? 0,
     'admin',
     String(gateId),
@@ -639,7 +655,6 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     // 4. Seed default gateways from centralized configuration
     const { getPlatformConfig } = await import('../config/platform');
     const cfg = getPlatformConfig(c.env);
-    const defaultPhone = body.phone ?? cfg.mfs.defaultPhone ?? null;
 
     for (const gw of cfg.gateways.defaultSeedGateways) {
       await c.env.DB.prepare(
@@ -654,8 +669,8 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
 
       const gwId = gwRow?.id;
       if (gw.type === 'manual' && gwId) {
-        const phone = defaultPhone ?? '';
-        const instructions = phone ? `Send Money to ${gw.name} Number: ${phone}` : `Contact merchant for ${gw.name} payment details`;
+        const phone = '';
+        const instructions = `Contact merchant for ${gw.name} payment details`;
         await c.env.DB.prepare(
           `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
            VALUES (?, ?, 'personal', ?, ?, ?)`
@@ -663,6 +678,8 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
       }
 
       // Auto-bind seeded gateway to Main store as a default gate
+      // Seed with mfs_number: null (Option A) so distinct carrier numbers
+      // are explicitly configured via PATCH /api/admin/v1/gates/:id.
       if (gwId) {
         await hierarchyService.createGate({
           store_id: storeId,
@@ -670,7 +687,7 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
           gateway_id: gwId,
           label: gw.name,
           currency: body.currency ?? 'BDT',
-          mfs_number: defaultPhone ?? null,
+          mfs_number: null,
         });
       }
     }

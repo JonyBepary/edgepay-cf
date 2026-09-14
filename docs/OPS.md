@@ -230,5 +230,99 @@ To set the primary number for a gate, use:
 
 This is the canonical fix when a merchant reports "Contact merchant" in checkout and they don't have an `op_manual_gateways` row configured.
 
+---
+
+## 7. Pilot Merchant Onboarding Checklist
+
+The complete end-to-end flow for onboarding a new merchant for the live pilot:
+
+### Step 1: Create the Merchant
+Platform administrator calls:
+```bash
+POST /api/admin/v1/merchants
+Headers:
+  Authorization: Bearer <PLATFORM_ADMIN_KEY>
+  Content-Type: application/json
+Body:
+  {
+    "name": "Acme Pilot Store",
+    "email": "pilot@acme.example.com",
+    "currency": "BDT"
+  }
+```
+**Automated Invariants:**
+- `Main` brand and `Main` store are automatically created via `provisionDefaultHierarchy`.
+- Default gateways (`bKash`, `Nagad`, `Rocket`) are seeded.
+- Default carrier gates are auto-bound to `Main` store with `mfs_number: null` (Option A: prevents cross-carrier number collisions).
+- Response returns `claim_token` (AES-256-GCM encrypted) and `merchant_id`.
+
+### Step 2: Configure Carrier Numbers Per Gate
+Platform administrator or merchant administrator fetches the auto-seeded gates:
+```bash
+GET /api/admin/v1/merchants/<merchantId>/gates
+Headers:
+  Authorization: Bearer <PLATFORM_ADMIN_KEY>
+```
+Response lists the auto-seeded gates with their IDs (e.g. `bKash` gate ID 8, `Nagad` gate ID 9, `Rocket` gate ID 10).
+
+Operator configures the distinct destination phone number for each carrier:
+```bash
+# Set bKash recipient number
+PATCH /api/admin/v1/gates/<bkashGateId>
+Headers:
+  Authorization: Bearer <PLATFORM_ADMIN_KEY>
+  Content-Type: application/json
+Body:
+  { "mfs_number": "01711111111" }
+
+# Set Nagad recipient number
+PATCH /api/admin/v1/gates/<nagadGateId>
+Headers:
+  Authorization: Bearer <PLATFORM_ADMIN_KEY>
+  Content-Type: application/json
+Body:
+  { "mfs_number": "01822222222" }
+
+# Set Rocket recipient number (or set { "status": "archived" } if unused)
+PATCH /api/admin/v1/gates/<rocketGateId>
+Headers:
+  Authorization: Bearer <PLATFORM_ADMIN_KEY>
+  Content-Type: application/json
+Body:
+  { "mfs_number": "01933333333" }
+```
+
+### Step 3: Claim the Merchant API Key
+The merchant claims their credential using the single-use `claim_token`:
+```bash
+POST /api/admin/v1/merchants/claim
+Content-Type: application/json
+Body:
+  { "claim_token": "<claim_token_from_step_1>" }
+```
+Returns the merchant's live API key (`api_key`).
+
+### Step 4: Pair Companion Android Device
+The merchant pairs their SMS listener phone with their `Main` store:
+```bash
+POST /api/mobile/v1/pair
+Content-Type: application/json
+Body:
+  {
+    "otp": "<6-digit OTP from dashboard/provisioning>",
+    "device_name": "Store POS Android",
+    "store_id": <mainStoreId>
+  }
+```
+If `store_id` is omitted, pairing defaults automatically to the merchant's `Main` store.
+
+### Step 5: End-to-End Payment Corroboration Test
+1. Create payment intent: `POST /api/v1/payments { "amount": "100.00", "currency": "BDT", "store_id": <storeId> }`.
+2. Open checkout URL (`/checkout/:token`) in a browser and verify that each carrier option displays the correct, carrier-specific recipient phone number.
+3. Submit customer TrxID.
+4. Companion device forwards incoming SMS: `POST /api/mobile/v1/sms`.
+5. Verify matching transaction transitions to `completed` and double-entry ledger entries are posted to D1.
+
+
 
 

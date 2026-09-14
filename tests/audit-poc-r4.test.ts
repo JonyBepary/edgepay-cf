@@ -304,8 +304,34 @@ describe('PoC-5: /api/admin/v1/merchants/claim platform gate (V3-010)', () => {
       headers: { Authorization: `Bearer ${platformKey}` },
     });
     expect(adminGatesRes.status).toBe(200);
-    const adminGatesData = await adminGatesRes.json<{ success: boolean; data: Array<{ id: number; label: string }> }>();
+    const adminGatesData = await adminGatesRes.json<{ success: boolean; data: Array<{ id: number; label: string; mfs_number: string | null }> }>();
     expect(adminGatesData.data.length).toBe(gatesData.data.length);
+    // Option A invariant: all auto-seeded carrier gates start with mfs_number: null to avoid cross-carrier collision
+    expect(adminGatesData.data.every(g => g.mfs_number === null)).toBe(true);
+
+    // Operator setup step: PATCH each gate with the carrier-specific number
+    const bkashGate = adminGatesData.data.find(g => g.label.includes('bKash'))!;
+    const patchRes = await SELF.fetch(`http://localhost/api/admin/v1/gates/${bkashGate.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${platformKey}`,
+      },
+      body: JSON.stringify({ mfs_number: '01711111111' }),
+    });
+    expect(patchRes.status).toBe(200);
+    const patchData = await patchRes.json<{ success: boolean; data: { id: number; mfs_number: string } }>();
+    expect(patchData.data.mfs_number).toBe('01711111111');
+
+    // Verify bKash is updated and other gates remain null (no cross-carrier leakage)
+    const refreshedGatesRes = await SELF.fetch(`http://localhost/api/v1/stores/${storeId}/gates`, {
+      headers: { Authorization: `Bearer ${claimData.data.api_key}` },
+    });
+    const refreshedGatesData = await refreshedGatesRes.json<{ success: boolean; data: Array<{ id: number; label: string; mfs_number: string | null }> }>();
+    const refreshedBkash = refreshedGatesData.data.find(g => g.id === bkashGate.id);
+    expect(refreshedBkash?.mfs_number).toBe('01711111111');
+    const otherGates = refreshedGatesData.data.filter(g => g.id !== bkashGate.id);
+    expect(otherGates.every(g => g.mfs_number === null)).toBe(true);
 
     // Platform admin check: GET /api/admin/v1/merchants/:id/gateways
     const adminGwsRes = await SELF.fetch(`http://localhost/api/admin/v1/merchants/${merchantRow!.id}/gateways`, {
@@ -395,16 +421,19 @@ describe('PoC-6: refund reserve-then-call with the CORRECT gateway spy (bkash fi
       resolveCalls++;
       return fakeAdapter as never;
     }) as never);
+    const workflowSpy = vi.spyOn(tenv.REFUND_WORKFLOW, 'create').mockResolvedValue({ id: 'mock-poc-workflow' } as never);
     const refundService = new RefundService(tenv);
     const res = await refundService.createRefund({
       merchant_id: merchantId, transaction_id: trxId, amount: '30.00', reason: 'poc-valid', initiated_by: null,
     });
     expect(resolveCalls).toBe(1);
     expect(refundCalls).toBe(1);
+    expect(workflowSpy).toHaveBeenCalledTimes(1);
     expect(res.refund_row_id).toBeGreaterThan(0);
     const row = await db.prepare(`SELECT status, gateway_refund_id FROM op_refunds WHERE id = ?`).bind(res.refund_row_id).first<{ status: string; gateway_refund_id: string | null }>();
     expect(row?.status).toBe('pending');
     expect(row?.gateway_refund_id).toBeNull();
+    workflowSpy.mockRestore();
     registrySpy.mockRestore();
   });
 });

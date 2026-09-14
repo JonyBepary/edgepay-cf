@@ -140,8 +140,8 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
 
       const newGwId = gwRow?.id;
       if (gw.type === 'manual' && newGwId) {
-        const phone = defaultPhone ?? '';
-        const instructions = phone ? `Send Money to ${gw.name} Number: ${phone}` : `Contact merchant for ${gw.name} payment details`;
+        const phone = '';
+        const instructions = `Contact merchant for ${gw.name} payment details`;
         await env.DB.prepare(
           `INSERT INTO op_manual_gateways (gateway_id, merchant_id, account_name, account_number, instructions, created_at)
            VALUES (?, ?, 'personal', ?, ?, ?)`
@@ -149,6 +149,8 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
       }
 
       // Auto-bind seeded gateway to Main store as a default gate
+      // Seed with mfs_number: null (Option A) so distinct carrier numbers
+      // are explicitly configured via PATCH /api/admin/v1/gates/:id.
       if (newGwId) {
         const existingGate = await env.DB.prepare(
           `SELECT id FROM op_gates WHERE store_id = ? AND gateway_id = ? LIMIT 1`
@@ -160,7 +162,7 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
             gateway_id: newGwId,
             label: gw.name,
             currency: cfg.financial.defaultCurrency ?? 'BDT',
-            mfs_number: defaultPhone ?? null,
+            mfs_number: null,
           });
         }
       }

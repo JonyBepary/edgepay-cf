@@ -212,7 +212,7 @@ installRoutes.post('/', async (c) => {
         gateway_id: gwRow.id,
         label: gw.name,
         currency: body.currency ?? 'BDT',
-        mfs_number: cfg.mfs.defaultPhone ?? null,
+        mfs_number: null,
       });
     }
   }
