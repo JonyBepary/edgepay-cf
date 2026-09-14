@@ -22,6 +22,7 @@ import m11 from '../migrations/0011_device_policy_overrides.sql?raw';
 import m12 from '../migrations/0012_hierarchy.sql?raw';
 import m13 from '../migrations/0013_hierarchy_columns.sql?raw';
 import m14 from '../migrations/0014_hierarchy_backfill.sql?raw';
+import m15 from '../migrations/0015_repair_orphan_hierarchy.sql?raw';
 
 const db = (env as unknown as { DB: D1Database }).DB;
 
@@ -430,7 +431,7 @@ describe('D1 Migration Protocol (0001 -> 0006)', () => {
   });
 
   it('0014 is idempotent — running it twice does not duplicate Main brands, Main stores, or gates', async () => {
-    const testMerchantId = 841001;
+    const testMerchantId = 810001;
     const now = Date.now();
     const uuid = `mig-m14-uuid-${now}`;
     const slug = `mig-m14-${now}`;
@@ -472,6 +473,56 @@ describe('D1 Migration Protocol (0001 -> 0006)', () => {
     expect(brandsCount2?.count).toBe(1);
     expect(storesCount2?.count).toBe(1);
     expect(gatesCount2?.count).toBe(1);
+  });
+
+  it('0015 repairs orphan merchants by backfilling Main brand and Main store idempotently', async () => {
+    const orphanMerchantId = 810002;
+    const now = Date.now();
+    const uuid = `mig-m15-orphan-${now}`;
+    const slug = `mig-m15-orphan-${now}`;
+    const email = `mig-m15-${now}@example.com`;
+
+    // Seed an orphan merchant without brand or store
+    await db.prepare(
+      `INSERT OR IGNORE INTO op_merchants (id, uuid, name, slug, email, default_currency, status)
+       VALUES (?, ?, ?, ?, ?, 'BDT', 'active')`
+    ).bind(orphanMerchantId, uuid, 'Orphan Test Merchant', slug, email).run();
+
+    // Verify merchant is an orphan
+    const brandsBefore = await db.prepare(`SELECT count(*) as count FROM op_brands WHERE merchant_id = ?`).bind(orphanMerchantId).first<{ count: number }>();
+    const storesBefore = await db.prepare(`SELECT count(*) as count FROM op_stores WHERE merchant_id = ?`).bind(orphanMerchantId).first<{ count: number }>();
+    expect(brandsBefore?.count).toBe(0);
+    expect(storesBefore?.count).toBe(0);
+
+    // Apply migration 0015
+    const m15Stmts = splitStatements(m15);
+    for (const stmt of m15Stmts) {
+      await db.prepare(stmt).run();
+    }
+
+    // Verify orphan merchant is repaired with Main brand and Main store
+    const brand = await db.prepare(`SELECT * FROM op_brands WHERE merchant_id = ? AND slug = 'main'`).bind(orphanMerchantId).first<{ id: number; name: string; slug: string }>();
+    const store = await db.prepare(`SELECT * FROM op_stores WHERE merchant_id = ? AND slug = 'main'`).bind(orphanMerchantId).first<{ id: number; name: string; slug: string; brand_id: number; default_currency: string }>();
+
+    expect(brand).toBeDefined();
+    expect(brand?.name).toBe('Main');
+    expect(brand?.slug).toBe('main');
+
+    expect(store).toBeDefined();
+    expect(store?.name).toBe('Main');
+    expect(store?.slug).toBe('main');
+    expect(store?.brand_id).toBe(brand?.id);
+    expect(store?.default_currency).toBe('BDT');
+
+    // Idempotency: re-running 0015 does not duplicate brands or stores
+    for (const stmt of m15Stmts) {
+      await db.prepare(stmt).run();
+    }
+
+    const brandsAfter = await db.prepare(`SELECT count(*) as count FROM op_brands WHERE merchant_id = ?`).bind(orphanMerchantId).first<{ count: number }>();
+    const storesAfter = await db.prepare(`SELECT count(*) as count FROM op_stores WHERE merchant_id = ?`).bind(orphanMerchantId).first<{ count: number }>();
+    expect(brandsAfter?.count).toBe(1);
+    expect(storesAfter?.count).toBe(1);
   });
 });
 

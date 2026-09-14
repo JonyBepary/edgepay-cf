@@ -449,4 +449,39 @@ describe('Domain Hierarchy (Phase 6a)', () => {
     expect(jsonA.success).toBe(true);
     expect(jsonA.data.some(s => s.slug === 'store-a-13')).toBe(true);
   });
+
+  // 14. HierarchyService.provisionDefaultHierarchy is race-safe under concurrent execution
+  it('14. HierarchyService.provisionDefaultHierarchy is race-safe under concurrent execution', async () => {
+    const testM = range.start + 115;
+    await db.prepare(
+      `INSERT INTO op_merchants (id, uuid, name, slug, email, timezone, default_currency, status)
+       VALUES (?, ?, 'Merchant 115', 'm-115', 'm115@test.local', 'Asia/Dhaka', 'BDT', 'active')
+       ON CONFLICT(id) DO NOTHING`
+    ).bind(testM, crypto.randomUUID()).run();
+
+    const svc = new HierarchyService(db);
+    // Simulate concurrent cold-start race: 5 parallel calls to provisionDefaultHierarchy
+    const results = await Promise.all([
+      svc.provisionDefaultHierarchy(testM, 'BDT'),
+      svc.provisionDefaultHierarchy(testM, 'BDT'),
+      svc.provisionDefaultHierarchy(testM, 'BDT'),
+      svc.provisionDefaultHierarchy(testM, 'BDT'),
+      svc.provisionDefaultHierarchy(testM, 'BDT'),
+    ]);
+
+    // All return identical brandId and storeId
+    const first = results[0];
+    expect(first.brandId).toBeGreaterThan(0);
+    expect(first.storeId).toBeGreaterThan(0);
+    for (const r of results) {
+      expect(r.brandId).toBe(first.brandId);
+      expect(r.storeId).toBe(first.storeId);
+    }
+
+    // Only one brand and store exist
+    const brands = await db.prepare(`SELECT count(*) as count FROM op_brands WHERE merchant_id = ?`).bind(testM).first<{ count: number }>();
+    const stores = await db.prepare(`SELECT count(*) as count FROM op_stores WHERE merchant_id = ?`).bind(testM).first<{ count: number }>();
+    expect(brands?.count).toBe(1);
+    expect(stores?.count).toBe(1);
+  });
 });

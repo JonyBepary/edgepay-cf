@@ -15,6 +15,10 @@
  * 2. Gateway credentials are NOT in op_gateways. They live in op_gateway_configs,
  *    keyed by gateway_id. Seeding an op_gateways row for a test does not require
  *    seeding credentials — the createIntent path tolerates a missing config row.
+ * 3. Merchant fixtures for tests that exercise device pairing or checkout
+ *    must call HierarchyService.provisionDefaultHierarchy(merchantId) after
+ *    inserting the op_merchants row. Tests that only exercise API key auth
+ *    or ledger logic don't need it.
  */
 
 import { beforeAll } from 'vitest';
@@ -34,6 +38,7 @@ import m11 from '../../migrations/0011_device_policy_overrides.sql?raw';
 import m12 from '../../migrations/0012_hierarchy.sql?raw';
 import m13 from '../../migrations/0013_hierarchy_columns.sql?raw';
 import m14 from '../../migrations/0014_hierarchy_backfill.sql?raw';
+import m15 from '../../migrations/0015_repair_orphan_hierarchy.sql?raw';
 
 function splitStatements(sql: string): string[] {
   return sql
@@ -53,7 +58,7 @@ beforeAll(async () => {
 
   if (marker) return; // already migrated by an earlier test file
 
-  const statements = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14]
+  const statements = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15]
     .flatMap(sql => splitStatements(sql))
     .map(sql => db.prepare(sql));
 

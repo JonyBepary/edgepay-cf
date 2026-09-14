@@ -267,6 +267,16 @@ describe('PoC-5: /api/admin/v1/merchants/claim platform gate (V3-010)', () => {
 
     // Verify one-time consumption: token deleted from KV
     expect(await tenv.KV.get(`claim:${claimToken}`)).toBeNull();
+
+    // Phase 6e pilot health check: newly provisioned merchant has Main brand initialized
+    const brandsRes = await SELF.fetch('http://localhost/api/v1/brands', {
+      headers: { Authorization: `Bearer ${claimData.data.api_key}` },
+    });
+    expect(brandsRes.status).toBe(200);
+    const brandsData = await brandsRes.json<{ success: boolean; data: Array<{ name: string; slug: string }> }>();
+    expect(brandsData.data).toHaveLength(1);
+    expect(brandsData.data[0].slug).toBe('main');
+    expect(brandsData.data[0].name).toBe('Main');
   });
 });
 

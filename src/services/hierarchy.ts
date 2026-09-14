@@ -183,12 +183,10 @@ export class HierarchyService {
 
     // 1. Ensure Main brand
     await this.db.prepare(
-      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
-       SELECT ?, lower(hex(randomblob(16))), 'Main', 'main', 'active', ?, ?
-       WHERE NOT EXISTS (
-         SELECT 1 FROM op_brands WHERE merchant_id = ? AND slug = 'main'
-       )`
-    ).bind(merchantId, now, now, merchantId).run();
+      `INSERT OR IGNORE INTO op_brands
+         (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       VALUES (?, lower(hex(randomblob(16))), 'Main', 'main', 'active', ?, ?)`
+    ).bind(merchantId, now, now).run();
 
     let brand = await this.db.prepare(
       `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main' LIMIT 1`
@@ -203,12 +201,10 @@ export class HierarchyService {
 
     // 2. Ensure Main store
     await this.db.prepare(
-      `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
-       SELECT ?, ?, lower(hex(randomblob(16))), 'Main', 'main', ?, 'active', ?, ?
-       WHERE NOT EXISTS (
-         SELECT 1 FROM op_stores WHERE merchant_id = ? AND slug = 'main'
-       )`
-    ).bind(brand.id, merchantId, defaultCurrency, now, now, merchantId).run();
+      `INSERT OR IGNORE INTO op_stores
+         (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+       VALUES (?, ?, lower(hex(randomblob(16))), 'Main', 'main', ?, 'active', ?, ?)`
+    ).bind(brand.id, merchantId, defaultCurrency, now, now).run();
 
     let store = await this.db.prepare(
       `SELECT id FROM op_stores WHERE merchant_id = ? AND slug = 'main' LIMIT 1`

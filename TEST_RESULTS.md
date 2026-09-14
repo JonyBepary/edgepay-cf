@@ -4,7 +4,7 @@
 
 ```text
 Test Files  45 passed (45)
-Tests       453 passed (453) — 100% green across all unit, integration, security, bff, and PoC suites
+Tests       455 passed (455) — 100% green across all unit, integration, security, bff, and PoC suites
 Typecheck   0 errors (tsc --noEmit covering src, tests, and frontend in strict mode)
 Lint        0 errors, 0 warnings (ESLint 9 flat config covering src, tests, and frontend)
 Audit Gate  node scripts/verify-remediations.mjs & node scripts/verify-config.mjs (PASS)

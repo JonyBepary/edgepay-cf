@@ -30,4 +30,5 @@ export const TEST_MERCHANT_RANGES = {
   CHECKOUT_GATE_SELECTION: { start: 830001, end: 839999, file: 'tests/checkout-gate-selection.test.ts' },
   PAIRING_STORE_SELECTION: { start: 820001, end: 824999, file: 'tests/pairing-store-selection.test.ts' },
   GATE_ADMIN: { start: 825001, end: 829999, file: 'tests/gate-admin.test.ts' },
+  MIGRATIONS: { start: 810001, end: 819999, file: 'tests/migrations.test.ts' },
 } as const;
