@@ -10,7 +10,7 @@
  */
 
 export const TEST_MERCHANT_RANGES = {
-  LEDGER_DO: { start: 910001, end: 919999, file: 'tests/ledger-do.test.ts' },
+  LEDGER_DO: { start: 910001, end: 910099, file: 'tests/ledger-do.test.ts' },
   PAYMENT_INTEGRITY: { start: 920001, end: 929999, file: 'tests/payment-integrity.test.ts' },
   OUTBOX_DRAIN: { start: 930001, end: 939999, file: 'tests/outbox-drain.test.ts' },
   REFUND_ORDERING: { start: 940001, end: 949999, file: 'tests/refund-ordering.test.ts' },
@@ -25,5 +25,5 @@ export const TEST_MERCHANT_RANGES = {
   DEVICE_POLICY: { start: 880001, end: 889999, file: 'tests/device-policy.test.ts' },
   DEVICE_POLICY_MODES: { start: 890001, end: 899999, file: 'tests/device-policy-modes.test.ts' },
   DEVICE_POLICY_OVERRIDES: { start: 900001, end: 909999, file: 'tests/device-policy-overrides.test.ts' },
-  HIERARCHY: { start: 910001, end: 919999, file: 'tests/hierarchy.test.ts' },
+  HIERARCHY: { start: 910100, end: 919999, file: 'tests/hierarchy.test.ts' },
 } as const;
