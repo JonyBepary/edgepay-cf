@@ -1,0 +1,6 @@
+[allowlist]
+description = "Ignore test fixtures and test mock secrets in installer and unit tests"
+paths = [
+  '''packages/init/tests/installer\.test\.ts''',
+  '''tests/.*''',
+]

@@ -222,9 +222,10 @@ describe('@edgepay/init - Installer Suite', () => {
       const { readDevVars, syncDevVars } = await import('../src/secrets.js');
       const legacyDir = path.join(tmpDir, 'legacy-adopt-test');
       await fs.mkdir(legacyDir, { recursive: true });
+      // Realistic secret formats for high-fidelity testing
       await fs.writeFile(
         path.join(legacyDir, '.dev.vars'),
-        'JWT_SECRET=legacy_jwt_val\nAPP_KEY=legacy_app_val\nENCRYPTION_KEY=legacy_enc_val\n',
+        'JWT_SECRET=legacy_hex_secret_1234567890abcdef\nAPP_KEY=legacy_app_key_123\nENCRYPTION_KEY=legacy_enc_key_123\n', // gitleaks:allow
       );
 
       // Without flag: throws
@@ -234,16 +235,49 @@ describe('@edgepay/init - Installer Suite', () => {
 
       // With flag: returns existing secrets intact without rotation
       const adopted = await readDevVars(legacyDir, { adoptLegacyDevVars: true });
-      expect(adopted.jwt_secret).toBe('legacy_jwt_val');
-      expect(adopted.app_key).toBe('legacy_app_val');
-      expect(adopted.encryption_key).toBe('legacy_enc_val');
+      expect(adopted.jwt_secret).toBe('legacy_hex_secret_1234567890abcdef');
+      expect(adopted.app_key).toBe('legacy_app_key_123');
+      expect(adopted.encryption_key).toBe('legacy_enc_key_123');
 
       // Syncing writes management header preserving the adopted credentials
       await syncDevVars(adopted as any, legacyDir);
       const reRead = await readDevVars(legacyDir);
-      expect(reRead.jwt_secret).toBe('legacy_jwt_val');
-      expect(reRead.app_key).toBe('legacy_app_val');
-      expect(reRead.encryption_key).toBe('legacy_enc_val');
+      expect(reRead.jwt_secret).toBe('legacy_hex_secret_1234567890abcdef');
+      expect(reRead.app_key).toBe('legacy_app_key_123');
+      expect(reRead.encryption_key).toBe('legacy_enc_key_123');
+    });
+
+    it('pushAllSecrets respects PushSecretsOptions.adoptLegacyDevVars', async () => {
+      const { pushAllSecrets } = await import('../src/secrets.js');
+      const wranglerModule = await import('../src/wrangler.js');
+      const wranglerSpy = vi.spyOn(wranglerModule, 'wrangler').mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 } as any);
+
+      const legacyDir = path.join(tmpDir, 'push-secrets-test');
+      await fs.mkdir(legacyDir, { recursive: true });
+      await fs.writeFile(
+        path.join(legacyDir, '.dev.vars'),
+        'JWT_SECRET=legacy_hex_secret_1234567890abcdef\nAPP_KEY=legacy_app_key_123\nENCRYPTION_KEY=legacy_enc_key_123\n', // gitleaks:allow
+      );
+
+      const configWithoutFlag: any = { deployment_name: 'test-dep', account_id: 'acc1' };
+      // 1. Without adoptLegacyDevVars: throws error and refuses to rotate
+      await expect(
+        pushAllSecrets(configWithoutFlag, { projectRoot: legacyDir, adoptLegacyDevVars: false }),
+      ).rejects.toThrow(/Existing \.dev\.vars found without @edgepay\/init management header/);
+
+      // 2. With adoptLegacyDevVars: true: successfully adopts credentials without generating new ones
+      const configWithFlag: any = { deployment_name: 'test-dep', account_id: 'acc1' };
+      const secrets = await pushAllSecrets(configWithFlag, {
+        projectRoot: legacyDir,
+        adoptLegacyDevVars: true,
+      });
+
+      expect(secrets.jwt_secret).toBe('legacy_hex_secret_1234567890abcdef');
+      expect(secrets.app_key).toBe('legacy_app_key_123');
+      expect(secrets.encryption_key).toBe('legacy_enc_key_123');
+      expect(configWithFlag.secrets).toEqual(secrets);
+
+      wranglerSpy.mockRestore();
     });
   });
 

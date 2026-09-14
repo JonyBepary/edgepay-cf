@@ -78,11 +78,13 @@ Log summary:
 
 ---
 
-## 5. Live Scoped Queues Confirmation
+## 5. Live Scoped Queues Confirmation & Reconstruction Timeline
 
-Raw evidence file: [`evidence/live_queues.txt`](evidence/live_queues.txt)
+Raw evidence files:
+- Current queues listing: [`evidence/live_queues.txt`](evidence/live_queues.txt)
+- Complete chronological queue audit: [`evidence/queue_timeline.txt`](evidence/queue_timeline.txt) (197 events across 397 logs)
 
-Executing `npx wrangler queues list` against account `17347346d8cc54bbb820a0a0413d98c0` reports:
+Executing `npx wrangler queues list` against account `17347346d8cc54bbb820a0a0413d98c0` reports strictly scoped queues:
 - `edgepay-fresh-email-out`
 - `edgepay-fresh-email-out-dlq`
 - `edgepay-fresh-sms-parse`
@@ -90,13 +92,14 @@ Executing `npx wrangler queues list` against account `17347346d8cc54bbb820a0a041
 - `edgepay-fresh-webhook-out`
 - `edgepay-fresh-webhook-out-dlq`
 
-### History of Legacy Unscoped Queues (`webhook-out`, `email-out`, `sms-parse`):
-The pre-existing unscoped queues on this account were created manually during early pre-installer development. As part of the planned transition to deployment-scoped naming, they were **manually decommissioned by the operator at `2026-09-14T03:35 UTC`**:
-1. First, consumers were manually detached (`wrangler queues consumer remove webhook-out edgepay-cf`).
-2. Then, each unscoped queue was deleted manually (`wrangler queues delete webhook-out`, `email-out`, `sms-parse`, `webhook-out-dlq`, `email-out-dlq`, `sms-parse-dlq`).
-3. Captured in Wrangler audit logs: `~/.config/.wrangler/logs/wrangler-2026-09-14_03-35-04_298.log` through `wrangler-2026-09-14_03-35-46_709.log`.
+### Chronological Decommission & Teardown Reconstruction:
+The legacy unscoped queues (`webhook-out`, `email-out`, `sms-parse` and their `-dlq` siblings) were removed in two distinct passes:
+1. **Initial Decommission (03:33 - 03:35 UTC)**: In response to audit findings and the planned transition to scoped naming, the agent executed a cleanup sweep to detach consumers and delete the pre-existing unscoped queues created on 2026-09-03 (logs `wrangler-2026-09-14_03-35-04_298.log` through `_03-35-46_709.log`).
+2. **Recreation During Installer Test (03:56 - 03:57 UTC)**: A subsequent fresh clone installation test in `/home/jony/edgepay-fresh-test` inadvertently recreated the unscoped queues because the installer's provisioning logic at that commit had not yet enforced deployment queue scoping, falling back to default unscoped values from `wrangler.jsonc` (e.g. `webhook-out` created at `03:56:29Z` in `wrangler-2026-09-14_03-56-33_984.log`).
+3. **Automated Teardown Delete (04:26 - 04:27 UTC)**: When `edgepay-init --destroy` was subsequently tested against `edgepay-fresh-test`, it recovered configuration from `wrangler.jsonc` and executed `destroyAll`, detaching consumers and deleting the recreated unscoped queues (logs `wrangler-2026-09-14_04-26-55_785.log` through `_04-27-41_104.log`).
+4. **Scoped Architecture Established (04:32 - 05:10 UTC)**: Deployment-scoped queue naming (`getDeploymentQueueNames`) was implemented and verified. All fresh installs provision strictly isolated queues (`edgepay-fresh-*`).
 
-Zero unscoped queues remain because the account was deliberately converted into a strictly-scoped test environment (`edgepay-fresh-*`). They were not deleted by an automated background script, runner collision, or installer bug.
+Zero unscoped queues remain. The complete chronological sequence of all 197 queue actions on this account is substantiated in [`evidence/queue_timeline.txt`](evidence/queue_timeline.txt).
 
 ---
 

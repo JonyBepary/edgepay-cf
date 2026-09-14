@@ -1,0 +1,204 @@
+# EdgePay-CF Cloudflare Queue Audit & Reconstruction Timeline (2026-09-14 UTC)
+
+Total Wrangler log files inspected: 397
+Total Queue events recorded: 197
+
+| Log Timestamp (UTC) | Log File | Action | Target / Queue Name | Details |
+| :--- | :--- | :--- | :--- | :--- |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:09:40.511Z` | `wrangler-2026-09-14_02-09-40_020.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:35:57.274Z` | `wrangler-2026-09-14_02-35-56_753.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:00.871Z` | `wrangler-2026-09-14_02-36-00_424.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:04.839Z` | `wrangler-2026-09-14_02-36-04_326.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:09.930Z` | `wrangler-2026-09-14_02-36-09_420.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:16.156Z` | `wrangler-2026-09-14_02-36-15_648.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:22.379Z` | `wrangler-2026-09-14_02-36-21_889.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T02:36:29.814Z` | `wrangler-2026-09-14_02-36-29_308.log` | `DELETE` | `webhook-out-dlq` | Queue deletion (ATTEMPT/FAIL) |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T02:36:54.622Z` | `wrangler-2026-09-14_02-36-54_111.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T03:01:59.295Z` | `wrangler-2026-09-14_03-01-58_749.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T03:02:55.338Z` | `wrangler-2026-09-14_03-02-55_011.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T03:03:58.517Z` | `wrangler-2026-09-14_03-03-57_880.log` | `DELETE` | `nonexistent-queue-xyz-999` | Queue deletion (ATTEMPT/FAIL) |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `email-out` | ID: b284ba3b... Created: 2026-09-03T17:18:55.051233Z |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `email-out-dlq` | ID: feaf2c01... Created: 2026-09-03T17:20:15.719034Z |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `sms-parse` | ID: 27342b31... Created: 2026-09-03T17:18:57.328103Z |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `sms-parse-dlq` | ID: e29b5858... Created: 2026-09-03T17:20:17.066556Z |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `webhook-out` | ID: 5e830d64... Created: 2026-09-03T17:18:52.523142Z |
+| `2026-09-14T03:31:00.307Z` | `wrangler-2026-09-14_03-30-59_782.log` | `LIST` | `webhook-out-dlq` | ID: f28b7658... Created: 2026-09-03T17:20:14.087506Z |
+| `2026-09-14T03:33:09.549Z` | `wrangler-2026-09-14_03-33-09_282.log` | `CONSUMER_REMOVE` | `webhook-out` | Consumer detach attempt |
+| `2026-09-14T03:33:13.822Z` | `wrangler-2026-09-14_03-33-13_550.log` | `CONSUMER_REMOVE` | `email-out` | Consumer detach attempt |
+| `2026-09-14T03:33:18.368Z` | `wrangler-2026-09-14_03-33-18_070.log` | `CONSUMER_REMOVE` | `sms-parse` | Consumer detach attempt |
+| `2026-09-14T03:35:04.824Z` | `wrangler-2026-09-14_03-35-04_298.log` | `DELETE` | `webhook-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:35:11.893Z` | `wrangler-2026-09-14_03-35-11_383.log` | `DELETE` | `email-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:35:20.866Z` | `wrangler-2026-09-14_03-35-20_376.log` | `DELETE` | `sms-parse` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:35:29.671Z` | `wrangler-2026-09-14_03-35-29_125.log` | `DELETE` | `webhook-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:35:37.356Z` | `wrangler-2026-09-14_03-35-36_866.log` | `DELETE` | `email-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:35:47.236Z` | `wrangler-2026-09-14_03-35-46_709.log` | `DELETE` | `sms-parse-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T03:56:15.566Z` | `wrangler-2026-09-14_03-56-14_435.log` | `CREATE` | `webhook-out-dlq` | Queue created |
+| `2026-09-14T03:56:21.712Z` | `wrangler-2026-09-14_03-56-20_550.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T03:56:29.077Z` | `wrangler-2026-09-14_03-56-28_048.log` | `CREATE` | `webhook-out` | Queue created |
+| `2026-09-14T03:56:34.931Z` | `wrangler-2026-09-14_03-56-33_984.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T03:56:34.931Z` | `wrangler-2026-09-14_03-56-33_984.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T03:56:41.611Z` | `wrangler-2026-09-14_03-56-40_425.log` | `CREATE` | `email-out-dlq` | Queue created |
+| `2026-09-14T03:56:47.627Z` | `wrangler-2026-09-14_03-56-46_700.log` | `LIST` | `email-out-dlq` | ID: 32bb5407... Created: 2026-09-14T03:56:42.012489Z |
+| `2026-09-14T03:56:47.627Z` | `wrangler-2026-09-14_03-56-46_700.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T03:56:47.627Z` | `wrangler-2026-09-14_03-56-46_700.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T03:56:53.535Z` | `wrangler-2026-09-14_03-56-52_634.log` | `CREATE` | `email-out` | Queue created |
+| `2026-09-14T03:56:59.554Z` | `wrangler-2026-09-14_03-56-58_571.log` | `LIST` | `email-out` | ID: 597611f6... Created: 2026-09-14T03:56:54.01079Z |
+| `2026-09-14T03:56:59.554Z` | `wrangler-2026-09-14_03-56-58_571.log` | `LIST` | `email-out-dlq` | ID: 32bb5407... Created: 2026-09-14T03:56:42.012489Z |
+| `2026-09-14T03:56:59.554Z` | `wrangler-2026-09-14_03-56-58_571.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T03:56:59.554Z` | `wrangler-2026-09-14_03-56-58_571.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T03:57:07.573Z` | `wrangler-2026-09-14_03-57-06_150.log` | `CREATE` | `sms-parse-dlq` | Queue created |
+| `2026-09-14T03:57:14.343Z` | `wrangler-2026-09-14_03-57-13_369.log` | `LIST` | `email-out` | ID: 597611f6... Created: 2026-09-14T03:56:54.01079Z |
+| `2026-09-14T03:57:14.343Z` | `wrangler-2026-09-14_03-57-13_369.log` | `LIST` | `email-out-dlq` | ID: 32bb5407... Created: 2026-09-14T03:56:42.012489Z |
+| `2026-09-14T03:57:14.343Z` | `wrangler-2026-09-14_03-57-13_369.log` | `LIST` | `sms-parse-dlq` | ID: 00f9dc8b... Created: 2026-09-14T03:57:08.04365Z |
+| `2026-09-14T03:57:14.343Z` | `wrangler-2026-09-14_03-57-13_369.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T03:57:14.343Z` | `wrangler-2026-09-14_03-57-13_369.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T03:57:20.645Z` | `wrangler-2026-09-14_03-57-19_739.log` | `CREATE` | `sms-parse` | Queue created |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `email-out` | ID: 597611f6... Created: 2026-09-14T03:56:54.01079Z |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `email-out-dlq` | ID: 32bb5407... Created: 2026-09-14T03:56:42.012489Z |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `sms-parse` | ID: c31e0c77... Created: 2026-09-14T03:57:21.107Z |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `sms-parse-dlq` | ID: 00f9dc8b... Created: 2026-09-14T03:57:08.04365Z |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T04:00:10.893Z` | `wrangler-2026-09-14_04-00-10_187.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T04:18:38.763Z` | `wrangler-2026-09-14_04-18-38_098.log` | `CONSUMER_REMOVE` | `test-dep-webhook-out` | Consumer detach attempt |
+| `2026-09-14T04:18:41.418Z` | `wrangler-2026-09-14_04-18-40_670.log` | `CONSUMER_REMOVE` | `test-dep-webhook-out-dlq` | Consumer detach attempt |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `email-out` | ID: 597611f6... Created: 2026-09-14T03:56:54.01079Z |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `email-out-dlq` | ID: 32bb5407... Created: 2026-09-14T03:56:42.012489Z |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `sms-parse` | ID: c31e0c77... Created: 2026-09-14T03:57:21.107Z |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `sms-parse-dlq` | ID: 00f9dc8b... Created: 2026-09-14T03:57:08.04365Z |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `webhook-out` | ID: 65e0c61e... Created: 2026-09-14T03:56:29.670236Z |
+| `2026-09-14T04:23:24.362Z` | `wrangler-2026-09-14_04-23-23_724.log` | `LIST` | `webhook-out-dlq` | ID: 82ac9ded... Created: 2026-09-14T03:56:16.19103Z |
+| `2026-09-14T04:26:02.854Z` | `wrangler-2026-09-14_04-26-01_170.log` | `CONSUMER_REMOVE` | `webhook-out` | Consumer detach attempt |
+| `2026-09-14T04:26:10.845Z` | `wrangler-2026-09-14_04-26-09_489.log` | `CONSUMER_REMOVE` | `email-out` | Consumer detach attempt |
+| `2026-09-14T04:26:18.957Z` | `wrangler-2026-09-14_04-26-17_528.log` | `CONSUMER_REMOVE` | `sms-parse` | Consumer detach attempt |
+| `2026-09-14T04:26:28.749Z` | `wrangler-2026-09-14_04-26-27_582.log` | `CONSUMER_REMOVE` | `webhook-out-dlq` | Consumer detach attempt |
+| `2026-09-14T04:26:36.622Z` | `wrangler-2026-09-14_04-26-35_435.log` | `CONSUMER_REMOVE` | `email-out-dlq` | Consumer detach attempt |
+| `2026-09-14T04:26:43.335Z` | `wrangler-2026-09-14_04-26-42_186.log` | `CONSUMER_REMOVE` | `sms-parse-dlq` | Consumer detach attempt |
+| `2026-09-14T04:26:57.209Z` | `wrangler-2026-09-14_04-26-55_785.log` | `DELETE` | `webhook-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:27:05.318Z` | `wrangler-2026-09-14_04-27-03_893.log` | `DELETE` | `email-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:27:14.590Z` | `wrangler-2026-09-14_04-27-13_069.log` | `DELETE` | `sms-parse` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:27:23.601Z` | `wrangler-2026-09-14_04-27-22_466.log` | `DELETE` | `webhook-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:27:33.584Z` | `wrangler-2026-09-14_04-27-32_029.log` | `DELETE` | `email-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:27:42.453Z` | `wrangler-2026-09-14_04-27-41_104.log` | `DELETE` | `sms-parse-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:29:02.301Z` | `wrangler-2026-09-14_04-29-01_601.log` | `CONSUMER_REMOVE` | `dummy-queue` | Consumer detach attempt |
+| `2026-09-14T04:32:41.513Z` | `wrangler-2026-09-14_04-32-40_315.log` | `CREATE` | `edgepay-fresh-webhook-out-dlq` | Queue created |
+| `2026-09-14T04:32:48.925Z` | `wrangler-2026-09-14_04-32-47_238.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:32:57.924Z` | `wrangler-2026-09-14_04-32-56_202.log` | `CREATE` | `edgepay-fresh-webhook-out` | Queue created |
+| `2026-09-14T04:33:05.089Z` | `wrangler-2026-09-14_04-33-03_620.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: c0fd75a8... Created: 2026-09-14T04:32:58.598094Z |
+| `2026-09-14T04:33:05.089Z` | `wrangler-2026-09-14_04-33-03_620.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:33:12.566Z` | `wrangler-2026-09-14_04-33-10_965.log` | `CREATE` | `edgepay-fresh-email-out-dlq` | Queue created |
+| `2026-09-14T04:33:20.075Z` | `wrangler-2026-09-14_04-33-18_607.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 6b4fa535... Created: 2026-09-14T04:33:13.110832Z |
+| `2026-09-14T04:33:20.075Z` | `wrangler-2026-09-14_04-33-18_607.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: c0fd75a8... Created: 2026-09-14T04:32:58.598094Z |
+| `2026-09-14T04:33:20.075Z` | `wrangler-2026-09-14_04-33-18_607.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:33:28.556Z` | `wrangler-2026-09-14_04-33-27_237.log` | `CREATE` | `edgepay-fresh-email-out` | Queue created |
+| `2026-09-14T04:33:35.865Z` | `wrangler-2026-09-14_04-33-34_306.log` | `LIST` | `edgepay-fresh-email-out` | ID: 9ddd19f2... Created: 2026-09-14T04:33:29.196744Z |
+| `2026-09-14T04:33:35.865Z` | `wrangler-2026-09-14_04-33-34_306.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 6b4fa535... Created: 2026-09-14T04:33:13.110832Z |
+| `2026-09-14T04:33:35.865Z` | `wrangler-2026-09-14_04-33-34_306.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: c0fd75a8... Created: 2026-09-14T04:32:58.598094Z |
+| `2026-09-14T04:33:35.865Z` | `wrangler-2026-09-14_04-33-34_306.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:33:44.046Z` | `wrangler-2026-09-14_04-33-42_521.log` | `CREATE` | `edgepay-fresh-sms-parse-dlq` | Queue created |
+| `2026-09-14T04:33:52.706Z` | `wrangler-2026-09-14_04-33-51_294.log` | `LIST` | `edgepay-fresh-email-out` | ID: 9ddd19f2... Created: 2026-09-14T04:33:29.196744Z |
+| `2026-09-14T04:33:52.706Z` | `wrangler-2026-09-14_04-33-51_294.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 6b4fa535... Created: 2026-09-14T04:33:13.110832Z |
+| `2026-09-14T04:33:52.706Z` | `wrangler-2026-09-14_04-33-51_294.log` | `LIST` | `edgepay-fresh-sms-parse-dlq` | ID: a1729c52... Created: 2026-09-14T04:33:46.043944Z |
+| `2026-09-14T04:33:52.706Z` | `wrangler-2026-09-14_04-33-51_294.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: c0fd75a8... Created: 2026-09-14T04:32:58.598094Z |
+| `2026-09-14T04:33:52.706Z` | `wrangler-2026-09-14_04-33-51_294.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:34:00.676Z` | `wrangler-2026-09-14_04-33-59_224.log` | `CREATE` | `edgepay-fresh-sms-parse` | Queue created |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-email-out` | ID: 9ddd19f2... Created: 2026-09-14T04:33:29.196744Z |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 6b4fa535... Created: 2026-09-14T04:33:13.110832Z |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-sms-parse` | ID: fa14b9c9... Created: 2026-09-14T04:34:01.240296Z |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-sms-parse-dlq` | ID: a1729c52... Created: 2026-09-14T04:33:46.043944Z |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: c0fd75a8... Created: 2026-09-14T04:32:58.598094Z |
+| `2026-09-14T04:35:30.082Z` | `wrangler-2026-09-14_04-35-29_206.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 27714288... Created: 2026-09-14T04:32:42.149296Z |
+| `2026-09-14T04:48:28.488Z` | `wrangler-2026-09-14_04-48-26_596.log` | `CONSUMER_REMOVE` | `edgepay-fresh-webhook-out` | Consumer detach attempt |
+| `2026-09-14T04:48:36.592Z` | `wrangler-2026-09-14_04-48-35_580.log` | `CONSUMER_REMOVE` | `edgepay-fresh-email-out` | Consumer detach attempt |
+| `2026-09-14T04:48:44.883Z` | `wrangler-2026-09-14_04-48-43_491.log` | `CONSUMER_REMOVE` | `edgepay-fresh-sms-parse` | Consumer detach attempt |
+| `2026-09-14T04:48:58.728Z` | `wrangler-2026-09-14_04-48-57_380.log` | `DELETE` | `edgepay-fresh-webhook-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:49:05.420Z` | `wrangler-2026-09-14_04-49-04_336.log` | `DELETE` | `edgepay-fresh-email-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:49:12.579Z` | `wrangler-2026-09-14_04-49-11_526.log` | `DELETE` | `edgepay-fresh-sms-parse` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:49:19.471Z` | `wrangler-2026-09-14_04-49-18_399.log` | `DELETE` | `edgepay-fresh-webhook-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:49:26.302Z` | `wrangler-2026-09-14_04-49-24_955.log` | `DELETE` | `edgepay-fresh-email-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:49:35.709Z` | `wrangler-2026-09-14_04-49-34_360.log` | `DELETE` | `edgepay-fresh-sms-parse-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T04:51:53.569Z` | `wrangler-2026-09-14_04-51-50_515.log` | `CREATE` | `edgepay-fresh-email-out` | Queue created |
+| `2026-09-14T04:51:54.159Z` | `wrangler-2026-09-14_04-51-50_615.log` | `CREATE` | `edgepay-fresh-webhook-out-dlq` | Queue created |
+| `2026-09-14T04:51:56.356Z` | `wrangler-2026-09-14_04-51-54_262.log` | `CREATE` | `edgepay-fresh-email-out-dlq` | Queue created |
+| `2026-09-14T04:51:57.540Z` | `wrangler-2026-09-14_04-51-55_805.log` | `CREATE` | `edgepay-fresh-sms-parse` | Queue created |
+| `2026-09-14T04:51:58.940Z` | `wrangler-2026-09-14_04-51-56_521.log` | `CREATE` | `edgepay-fresh-sms-parse-dlq` | Queue created |
+| `2026-09-14T04:51:58.972Z` | `wrangler-2026-09-14_04-51-57_005.log` | `CREATE` | `edgepay-fresh-webhook-out` | Queue created |
+| `2026-09-14T05:06:46.222Z` | `wrangler-2026-09-14_05-06-45_198.log` | `CONSUMER_REMOVE` | `edgepay-fresh-webhook-out` | Consumer detach attempt |
+| `2026-09-14T05:06:53.371Z` | `wrangler-2026-09-14_05-06-52_185.log` | `CONSUMER_REMOVE` | `edgepay-fresh-email-out` | Consumer detach attempt |
+| `2026-09-14T05:07:01.016Z` | `wrangler-2026-09-14_05-06-59_839.log` | `CONSUMER_REMOVE` | `edgepay-fresh-sms-parse` | Consumer detach attempt |
+| `2026-09-14T05:07:17.296Z` | `wrangler-2026-09-14_05-07-15_946.log` | `DELETE` | `edgepay-fresh-webhook-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:08:09.926Z` | `wrangler-2026-09-14_05-08-08_583.log` | `DELETE` | `edgepay-fresh-email-out` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:08:19.557Z` | `wrangler-2026-09-14_05-08-18_370.log` | `DELETE` | `edgepay-fresh-sms-parse` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:08:27.559Z` | `wrangler-2026-09-14_05-08-26_298.log` | `DELETE` | `edgepay-fresh-webhook-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:08:36.413Z` | `wrangler-2026-09-14_05-08-35_189.log` | `DELETE` | `edgepay-fresh-email-out-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:08:45.548Z` | `wrangler-2026-09-14_05-08-44_391.log` | `DELETE` | `edgepay-fresh-sms-parse-dlq` | Queue deletion (SUCCESS) |
+| `2026-09-14T05:10:41.181Z` | `wrangler-2026-09-14_05-10-39_121.log` | `CREATE` | `edgepay-fresh-email-out-dlq` | Queue created |
+| `2026-09-14T05:10:42.634Z` | `wrangler-2026-09-14_05-10-38_800.log` | `CREATE` | `edgepay-fresh-sms-parse` | Queue created |
+| `2026-09-14T05:10:43.409Z` | `wrangler-2026-09-14_05-10-41_574.log` | `CREATE` | `edgepay-fresh-webhook-out` | Queue created |
+| `2026-09-14T05:10:44.851Z` | `wrangler-2026-09-14_05-10-42_843.log` | `CREATE` | `edgepay-fresh-email-out` | Queue created |
+| `2026-09-14T05:10:44.968Z` | `wrangler-2026-09-14_05-10-42_507.log` | `CREATE` | `edgepay-fresh-webhook-out-dlq` | Queue created |
+| `2026-09-14T05:10:45.186Z` | `wrangler-2026-09-14_05-10-42_611.log` | `CREATE` | `edgepay-fresh-sms-parse-dlq` | Queue created |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-email-out` | ID: ece318e0... Created: 2026-09-14T05:10:45.355493Z |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 1721e114... Created: 2026-09-14T05:10:41.749408Z |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-sms-parse` | ID: f147eb93... Created: 2026-09-14T05:10:43.537903Z |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-sms-parse-dlq` | ID: a5f8f0f5... Created: 2026-09-14T05:10:45.841589Z |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: f9f32f09... Created: 2026-09-14T05:10:43.979073Z |
+| `2026-09-14T05:45:32.150Z` | `wrangler-2026-09-14_05-45-31_561.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 50f41de0... Created: 2026-09-14T05:10:45.60195Z |
+| `2026-09-14T05:46:03.763Z` | `wrangler-2026-09-14_05-46-03_008.log` | `DELETE` | `xxx` | Queue deletion (ATTEMPT/FAIL) |
+| `2026-09-14T05:46:26.071Z` | `wrangler-2026-09-14_05-46-25_416.log` | `DELETE` | `xxx` | Queue deletion (ATTEMPT/FAIL) |
+| `2026-09-14T05:47:20.988Z` | `wrangler-2026-09-14_05-47-20_403.log` | `CONSUMER_REMOVE` | `nonexistent-queue-12345` | Consumer detach attempt |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-email-out` | ID: ece318e0... Created: 2026-09-14T05:10:45.355493Z |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-email-out-dlq` | ID: 1721e114... Created: 2026-09-14T05:10:41.749408Z |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-sms-parse` | ID: f147eb93... Created: 2026-09-14T05:10:43.537903Z |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-sms-parse-dlq` | ID: a5f8f0f5... Created: 2026-09-14T05:10:45.841589Z |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-webhook-out` | ID: f9f32f09... Created: 2026-09-14T05:10:43.979073Z |
+| `2026-09-14T05:51:56.174Z` | `wrangler-2026-09-14_05-51-55_492.log` | `LIST` | `edgepay-fresh-webhook-out-dlq` | ID: 50f41de0... Created: 2026-09-14T05:10:45.60195Z |

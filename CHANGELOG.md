@@ -7,20 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2026-09-14
 
-### Security & Safety Incident Report: Pre-Release Queue Collision Near-Miss (Mitigated by External Validation, Root Cause Fixed)
-- **Incident Summary**: During automated verification of pre-release installer teardown routines (`node packages/init/bin/edgepay-init.mjs --destroy`), scratch testing passed un-scoped production queue names (`webhook-out`, `webhook-out-dlq`, `email-out`, `sms-parse`). `destroyAll` attempted to execute `wrangler queues delete webhook-out-dlq` on the live Cloudflare account.
-- **Mitigating Factor**: Cloudflare API error `11005` (`Cannot delete queue that serves as dead letter queue for consumers`) aborted the destructive command because teardown attempted to delete DLQs while primary consumers were still referencing them.
+### Security & Safety Incident Report: Pre-Release Queue Deletion and Cross-Deployment Teardown Collision (Resolved & Architecturally Hardened)
+- **Incident Summary**: During automated verification and decommissioning of pre-release installer routines on Cloudflare account `17347346d8cc54bbb820a0a0413d98c0`, cross-deployment naming collisions occurred across two distinct deletion events:
+  1. **Pass 1 (03:33 - 03:35 UTC)**: In transitioning the account to scoped naming, an agent cleanup sweep detached consumers and deleted the pre-existing unscoped queues (`webhook-out`, `email-out`, `sms-parse`, and their `-dlq` siblings).
+  2. **Recreation & Pass 2 (03:56 - 04:27 UTC)**: A subsequent fresh clone installation test in `edgepay-fresh-test` inadvertently recreated the unscoped queues because provisioning had not yet enforced deployment scoping. When `edgepay-init --destroy` was subsequently tested at 04:26 UTC, it recovered configuration from `wrangler.jsonc` and executed `destroyAll`, deleting the recreated unscoped queues. Complete forensic reconstruction is recorded in `evidence/queue_timeline.txt`.
+- **Blast Radius**: Unscoped queues on the test account were deleted. While early runs at 02:36 UTC were partially halted by Cloudflare API code `11005` on DLQs, subsequent scripted sweeps explicitly detached consumers and executed the deletions.
 - **Root Causes**:
   1. Queues lacked mandatory deployment-name scoping and were not isolated per deployment.
   2. `ensureQueue` and `provisionAll` silently adopted foreign pre-existing account resources when names matched.
   3. Scratch tests did not enforce random synthetic isolation prefixes.
-- **Permanent Remediation**:
-  1. **Deployment Scoping**: All queues are strictly scoped via `getDeploymentQueueNames(deploymentName)` (e.g. `my-shop-webhook-out`).
-  2. **Fail-Closed Resource Adoption Protection**: `ensureD1`, `ensureKv`, `ensureR2`, and `ensureQueue` throw explicit fatal errors refusing to adopt existing account resources unless the resource ID matches the active installer session (`expectedExistingId`).
-  3. **Exact Column Parsing (`parseQueueList`)**: Replaced substring checks (`l.includes(name)`) with strict table column parsing to eliminate false positive collisions between primary queues and `-dlq` suffixes.
-  4. **Strict Teardown Ordering**: Primary consumer/producer queues are always deleted before dead-letter queues.
-  5. **Automated CI Regression Guards**: Unit and isolation tests verify synthetic non-default deployment queues never collide with default production queue names.
-- **Operational Recurrence Prevention**: Destroy is now gated on an account allowlist (`EDGEPAY_SCRATCH_ACCOUNTS`) and independent environment confirmation (`EDGEPAY_DESTROY_CONFIRMED=yes`); CI runs against a dedicated scratch account.
+  4. Destroy routines lacked fail-closed account allowlists and explicit dual-confirmation flags.
+- **Permanent Architectural Remediation**:
+  1. **Mandatory Deployment Scoping**: All queues are strictly scoped via `getDeploymentQueueNames(deploymentName)` (e.g. `edgepay-fresh-webhook-out`).
+  2. **Fail-Closed Resource Adoption Protection**: `ensureD1`, `ensureKv`, `ensureR2`, and `ensureQueue` throw explicit fatal errors refusing to adopt existing account resources unless the resource ID matches the active installer session (`expectedExistingId`) or `--adopt-existing-resources` is explicitly passed.
+  3. **Exact Column Parsing (`parseQueueList`)**: Replaced substring checks with strict ASCII table column parsing, completely eliminating substring collisions between primary queues and `-dlq` suffixes.
+  4. **Strict Teardown Ordering**: Consumer workers are detached from primary queues before worker deletion, and primary queues are always deleted before dead-letter queues.
+  5. **Safety Gates & Account Allowlist**: Non-interactive destroy strictly requires `--i-know-what-im-doing` AND `EDGEPAY_DESTROY_CONFIRMED=yes`, and refuses execution unless the account is explicitly listed in `EDGEPAY_SCRATCH_ACCOUNTS`.
 
 ### Breaking Changes
 - **Installer `--destroy` Safety Gate & Dual Signal**:
