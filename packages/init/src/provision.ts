@@ -56,40 +56,79 @@ export async function provisionAll(
   return resources;
 }
 
+export interface DestroyResult {
+  deleted: string[];
+  errors: Array<{ resource: string; error: string }>;
+}
+
 export async function destroyAll(
   config: InitConfig,
   resources?: ProvisionedResources,
   onProgress?: ProvisionProgressCallback,
-): Promise<void> {
+): Promise<DestroyResult> {
   const accountId = config.account_id;
+  const deleted: string[] = [];
+  const errors: Array<{ resource: string; error: string }> = [];
 
-  // Queues
-  const queues = resources?.queues ?? [
-    'webhook-out',
-    'webhook-out-dlq',
-    'email-out',
-    'email-out-dlq',
-    'sms-parse',
-    'sms-parse-dlq',
-  ];
-  for (const q of queues) {
-    onProgress?.('delete-queue', q);
-    await deleteQueue(q, accountId);
-  }
-
-  // R2
-  const r2Name = resources?.r2_name ?? config.r2_name;
-  onProgress?.('delete-r2', r2Name);
-  await deleteR2(r2Name, accountId);
-
-  // KV
-  if (resources?.kv_id) {
-    onProgress?.('delete-kv', resources.kv_id);
-    await deleteKv(resources.kv_id, accountId);
-  }
-
-  // D1
+  // 1. D1 Database
   const d1Name = resources?.d1_name ?? config.d1_name;
-  onProgress?.('delete-d1', d1Name);
-  await deleteD1(d1Name, accountId);
+  if (d1Name) {
+    onProgress?.('delete-d1', d1Name);
+    try {
+      await deleteD1(d1Name, accountId);
+      deleted.push(`d1:${d1Name}`);
+    } catch (err: any) {
+      errors.push({ resource: `d1:${d1Name}`, error: err.message });
+    }
+  }
+
+  // 2. KV Namespace
+  const kvTarget = resources?.kv_id ?? config.kv_name;
+  if (kvTarget) {
+    onProgress?.('delete-kv', kvTarget);
+    try {
+      await deleteKv(kvTarget, accountId);
+      deleted.push(`kv:${kvTarget}`);
+    } catch (err: any) {
+      errors.push({ resource: `kv:${kvTarget}`, error: err.message });
+    }
+  }
+
+  // 3. R2 Bucket
+  const r2Name = resources?.r2_name ?? config.r2_name;
+  if (r2Name) {
+    onProgress?.('delete-r2', r2Name);
+    try {
+      await deleteR2(r2Name, accountId);
+      deleted.push(`r2:${r2Name}`);
+    } catch (err: any) {
+      errors.push({ resource: `r2:${r2Name}`, error: err.message });
+    }
+  }
+
+  // 4. Queues: Primary queues FIRST, then dead-letter queues
+  const primaryQueues = ['webhook-out', 'email-out', 'sms-parse'];
+  const dlqQueues = ['webhook-out-dlq', 'email-out-dlq', 'sms-parse-dlq'];
+
+  for (const q of primaryQueues) {
+    onProgress?.('delete-queue', q);
+    try {
+      await deleteQueue(q, accountId);
+      deleted.push(`queue:${q}`);
+    } catch (err: any) {
+      errors.push({ resource: `queue:${q}`, error: err.message });
+    }
+  }
+
+  for (const q of dlqQueues) {
+    onProgress?.('delete-queue', q);
+    try {
+      await deleteQueue(q, accountId);
+      deleted.push(`queue:${q}`);
+    } catch (err: any) {
+      errors.push({ resource: `queue:${q}`, error: err.message });
+    }
+  }
+
+  return { deleted, errors };
 }

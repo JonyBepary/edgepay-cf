@@ -19,7 +19,7 @@ export interface InitConfig {
   d1_name: string;
   kv_name: string;
   r2_name: string;
-  secrets: InitSecrets;
+  secrets?: InitSecrets;
 }
 
 export interface ProvisionedResources {
@@ -47,6 +47,14 @@ export interface InitState {
   verified?: boolean;
 }
 
+export function sanitizeState(state: InitState): InitState {
+  const copy: InitState = JSON.parse(JSON.stringify(state));
+  if (copy.config && copy.config.secrets) {
+    delete copy.config.secrets;
+  }
+  return copy;
+}
+
 export async function loadState(filePath: string = DEFAULT_STATE_FILE): Promise<InitState> {
   try {
     const raw = await fs.readFile(filePath, 'utf-8');
@@ -63,7 +71,8 @@ export async function loadState(filePath: string = DEFAULT_STATE_FILE): Promise<
 export async function saveState(state: InitState, filePath: string = DEFAULT_STATE_FILE): Promise<void> {
   const dir = path.dirname(path.resolve(filePath));
   await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8');
+  const sanitized = sanitizeState(state);
+  await fs.writeFile(filePath, JSON.stringify(sanitized, null, 2), 'utf-8');
 }
 
 export async function clearState(filePath: string = DEFAULT_STATE_FILE): Promise<void> {

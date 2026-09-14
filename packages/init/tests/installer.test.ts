@@ -58,7 +58,12 @@ describe('@edgepay/init - Installer Suite', () => {
       expect(resumed.prereqs_done).toBe(true);
       expect(resumed.auth_done).toBe(true);
       expect(resumed.config?.deployment_name).toBe('test-edgepay');
-      expect(resumed.config?.secrets.jwt_secret).toBe(partialState.config!.secrets.jwt_secret);
+      // Secrets must NEVER be written to the state file
+      expect(resumed.config?.secrets).toBeUndefined();
+      const rawJson = await fs.readFile(stateFile, 'utf-8');
+      expect(rawJson).not.toContain('jwt_secret');
+      expect(rawJson).not.toContain('app_key');
+      expect(rawJson).not.toContain('encryption_key');
     });
 
     it('clears state file when clearState is called', async () => {
@@ -72,7 +77,7 @@ describe('@edgepay/init - Installer Suite', () => {
     });
   });
 
-  describe('Secret Generation', () => {
+  describe('Secret Generation & Storage', () => {
     it('generates cryptographically secure secrets with correct lengths and encodings', () => {
       const s = generateSecrets();
 
@@ -93,6 +98,18 @@ describe('@edgepay/init - Installer Suite', () => {
       expect(s.jwt_secret).not.toBe(s2.jwt_secret);
       expect(s.app_key).not.toBe(s2.app_key);
       expect(s.encryption_key).not.toBe(s2.encryption_key);
+    });
+
+    it('syncs and reads secrets from .dev.vars safely', async () => {
+      const { syncDevVars, readDevVars } = await import('../src/secrets.js');
+      const originalSecrets = generateSecrets();
+
+      await syncDevVars(originalSecrets, tmpDir);
+      const readBack = await readDevVars(tmpDir);
+
+      expect(readBack.jwt_secret).toBe(originalSecrets.jwt_secret);
+      expect(readBack.app_key).toBe(originalSecrets.app_key);
+      expect(readBack.encryption_key).toBe(originalSecrets.encryption_key);
     });
   });
 
@@ -213,18 +230,22 @@ Current Version ID: abc-123
 
   describe('CLI Argument Parsing', () => {
     it('parses all flags correctly', () => {
-      expect(parseArgs(['--dry-run', '--verbose'])).toEqual({
+      expect(parseArgs(['--preview', '--verbose'])).toEqual({
         dryRun: true,
+        preview: true,
         destroy: false,
+        iKnowWhatImDoing: false,
         verbose: true,
         yes: false,
         help: false,
         version: false,
       });
 
-      expect(parseArgs(['--destroy', '-y'])).toEqual({
+      expect(parseArgs(['--destroy', '--i-know-what-im-doing', '-y'])).toEqual({
         dryRun: false,
+        preview: false,
         destroy: true,
+        iKnowWhatImDoing: true,
         verbose: false,
         yes: true,
         help: false,
@@ -233,7 +254,9 @@ Current Version ID: abc-123
 
       expect(parseArgs(['--help'])).toEqual({
         dryRun: false,
+        preview: false,
         destroy: false,
+        iKnowWhatImDoing: false,
         verbose: false,
         yes: false,
         help: true,
@@ -242,7 +265,9 @@ Current Version ID: abc-123
 
       expect(parseArgs(['--version'])).toEqual({
         dryRun: false,
+        preview: false,
         destroy: false,
+        iKnowWhatImDoing: false,
         verbose: false,
         yes: false,
         help: false,

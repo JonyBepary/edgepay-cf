@@ -34,6 +34,28 @@ export function extractJson<T = unknown>(raw: string): T {
   return JSON.parse(trimmed) as T;
 }
 
+function isTransientError(err: any): boolean {
+  const msg = `${err?.message ?? ''} ${err?.stderr ?? ''} ${err?.stdout ?? ''}`;
+  const transientPatterns = [
+    /ETIMEDOUT/i,
+    /ECONNRESET/i,
+    /ECONNREFUSED/i,
+    /socket hang up/i,
+    /rate limit/i,
+    /status[:\s]+429/i,
+    /status[:\s]+50[0234]/i,
+    /gateway timeout/i,
+    /service unavailable/i,
+    /network timeout/i,
+    /fetch failed/i,
+  ];
+  return transientPatterns.some((p) => p.test(msg));
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function wrangler<T = unknown>(
   args: string[],
   opts: WranglerOpts = {},
@@ -56,18 +78,37 @@ export async function wrangler<T = unknown>(
     ...(opts.input !== undefined ? { input: opts.input } : {}),
   };
 
-  const result = await execa('npx', ['wrangler', ...args], execOpts);
-  const stdoutStr = String(result.stdout ?? '');
+  let lastError: any = null;
+  const maxAttempts = 2;
 
-  if (opts.json) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return extractJson<T>(stdoutStr);
-    } catch (err) {
-      throw new Error(`Failed to parse JSON from wrangler output: ${stdoutStr} (${String(err)})`);
+      const result = await execa('npx', ['wrangler', ...args], execOpts);
+      const stdoutStr = String(result.stdout ?? '');
+
+      if (opts.json) {
+        try {
+          return extractJson<T>(stdoutStr);
+        } catch (err) {
+          throw new Error(`Failed to parse JSON from wrangler output: ${stdoutStr} (${String(err)})`);
+        }
+      }
+
+      return stdoutStr;
+    } catch (err: any) {
+      lastError = err;
+      if (attempt < maxAttempts && isTransientError(err)) {
+        await delay(2000);
+        continue;
+      }
+      break;
     }
   }
 
-  return stdoutStr;
+  const stderr = lastError?.stderr ? String(lastError.stderr).trim() : '';
+  const stdout = lastError?.stdout ? String(lastError.stdout).trim() : '';
+  const detail = stderr || stdout || lastError?.message || 'Unknown error';
+  throw new Error(`wrangler ${args.join(' ')} failed:\n${detail}`);
 }
 
 export interface WhoamiAccount {
@@ -246,30 +287,70 @@ export async function ensureQueue(name: string, accountId?: string): Promise<str
   return name;
 }
 
-export async function deleteD1(name: string, accountId?: string): Promise<void> {
-  await wrangler(['d1', 'delete', name, '--skip-confirmation'], {
-    silent: true,
-    accountId,
-  }).catch(() => {});
+function isNotFound(err: any): boolean {
+  const msg = `${err?.message ?? ''} ${err?.stderr ?? ''} ${err?.stdout ?? ''}`;
+  return /not found|does not exist|10007|10008|could not find/i.test(msg);
 }
 
-export async function deleteKv(id: string, accountId?: string): Promise<void> {
-  await wrangler(['kv', 'namespace', 'delete', '--namespace-id', id], {
-    silent: true,
-    accountId,
-  }).catch(() => {});
+export async function deleteD1(name: string, accountId?: string): Promise<void> {
+  try {
+    await wrangler(['d1', 'delete', name, '--skip-confirmation'], {
+      silent: true,
+      accountId,
+    });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
+}
+
+export async function deleteKv(idOrTitle: string, accountId?: string): Promise<void> {
+  let id = idOrTitle;
+  if (!/^[a-f0-9]{32}$/i.test(idOrTitle)) {
+    try {
+      const rawList = (await wrangler(['kv', 'namespace', 'list'], {
+        silent: true,
+        accountId,
+      })) as string;
+      const list = extractJson<Array<{ id: string; title: string }>>(rawList);
+      if (Array.isArray(list)) {
+        const found = list.find((k) => k.title === idOrTitle);
+        if (!found) return;
+        id = found.id;
+      }
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      return;
+    }
+  }
+
+  try {
+    await wrangler(['kv', 'namespace', 'delete', '--namespace-id', id], {
+      silent: true,
+      accountId,
+    });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
 }
 
 export async function deleteR2(name: string, accountId?: string): Promise<void> {
-  await wrangler(['r2', 'bucket', 'delete', name], {
-    silent: true,
-    accountId,
-  }).catch(() => {});
+  try {
+    await wrangler(['r2', 'bucket', 'delete', name], {
+      silent: true,
+      accountId,
+    });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
 }
 
 export async function deleteQueue(name: string, accountId?: string): Promise<void> {
-  await wrangler(['queues', 'delete', name], {
-    silent: true,
-    accountId,
-  }).catch(() => {});
+  try {
+    await wrangler(['queues', 'delete', name], {
+      silent: true,
+      accountId,
+    });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
 }

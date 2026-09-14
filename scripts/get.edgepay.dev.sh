@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
-# EdgePay Self-Hosted Installer Bootstrapper (https://get.edgepay.dev)
+# EdgePay Self-Hosted Installer Bootstrapper
 # Usage:
-#   curl -fsSL https://get.edgepay.dev | bash
+#   curl -fsSL https://raw.githubusercontent.com/JonyBepary/edgepay-cf/main/scripts/get.edgepay.dev.sh | bash
+#   (or https://get.edgepay.dev once DNS configured)
 # ============================================================
 set -euo pipefail
 

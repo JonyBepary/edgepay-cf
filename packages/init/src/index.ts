@@ -17,7 +17,9 @@ import { renderSuccessSummary, renderDryRunSummary, renderDestroySummary } from 
 
 export interface CliFlags {
   dryRun: boolean;
+  preview: boolean;
   destroy: boolean;
+  iKnowWhatImDoing: boolean;
   verbose: boolean;
   yes: boolean;
   help: boolean;
@@ -28,8 +30,10 @@ export interface CliFlags {
 
 export function parseArgs(args: string[]): CliFlags {
   return {
-    dryRun: args.includes('--dry-run'),
+    dryRun: args.includes('--dry-run') || args.includes('--preview'),
+    preview: args.includes('--preview') || args.includes('--dry-run'),
     destroy: args.includes('--destroy'),
+    iKnowWhatImDoing: args.includes('--i-know-what-im-doing') || args.includes('--force'),
     verbose: args.includes('--verbose'),
     yes: args.includes('--yes') || args.includes('-y'),
     help: args.includes('--help') || args.includes('-h'),
@@ -53,13 +57,22 @@ USAGE:
   npx @edgepay/init [OPTIONS]
 
 OPTIONS:
-  --dry-run   Provision Cloudflare resources without deploying Worker
-  --destroy   Tear down all provisioned resources for this deployment
-  --verbose   Show detailed Wrangler command output
-  --yes, -y   Non-interactive mode (use defaults and auto-confirm)
-  --help, -h  Show this help message
-  --version   Show installer version
+  --preview, --dry-run    Verify prerequisites and preview actions without modifying Cloudflare
+  --destroy               Tear down all provisioned resources for this deployment
+  --i-know-what-im-doing  Confirm destruction without interactive typing prompt
+  --verbose               Show detailed Wrangler command output
+  --yes, -y               Non-interactive mode (use defaults and auto-confirm)
+  --help, -h              Show this help message
+  --version, -v           Show installer version
 `);
+    return;
+  }
+
+  // Non-TTY guard: refuse to hang if running in automated CI without --yes
+  if (!process.stdin.isTTY && !flags.yes) {
+    console.error(pc.red('Error: Interactive prompt cannot run in a non-interactive (non-TTY) environment.'));
+    console.error(pc.yellow('Run with --yes (or -y) to proceed using defaults, or provide an interactive terminal.'));
+    process.exitCode = 1;
     return;
   }
 
@@ -75,29 +88,50 @@ OPTIONS:
   if (flags.destroy) {
     if (!state.config) {
       p.log.error('No configuration found in .edgepay-init.json to destroy.');
+      process.exitCode = 1;
       return;
     }
 
-    if (!flags.yes) {
-      const confirmDestroy = await p.confirm({
-        message: `Are you sure you want to permanently delete resources for ${state.config.deployment_name}? (D1 database, KV, R2, queues)`,
-        initialValue: false,
+    const depName = state.config.deployment_name;
+
+    if (!flags.iKnowWhatImDoing) {
+      if (flags.yes || !process.stdin.isTTY) {
+        console.error(pc.red(`Error: Refusing to destroy resources in non-interactive mode without --i-know-what-im-doing flag.`));
+        process.exitCode = 1;
+        return;
+      }
+
+      const typedConfirmation = await p.text({
+        message: `DANGER: Permanent deletion of D1 database (${state.resources?.d1_name ?? depName}), KV, R2 bucket, and queues.\nType "${depName}" to confirm deletion:`,
+        validate(val) {
+          if (val !== depName) {
+            return `You must type "${depName}" exactly to confirm deletion.`;
+          }
+        },
       });
-      if (p.isCancel(confirmDestroy) || !confirmDestroy) {
-        p.cancel('Teardown cancelled.');
+
+      if (p.isCancel(typedConfirmation) || typedConfirmation !== depName) {
+        p.cancel('Teardown cancelled. No resources were deleted.');
         return;
       }
     }
 
     const s = p.spinner();
-    s.start('Tearing down Cloudflare resources...');
-    await destroyAll(state.config, state.resources, (step, name) => {
+    s.start(`Tearing down Cloudflare resources for ${depName}...`);
+    const destroyResult = await destroyAll(state.config, state.resources, (step, name) => {
       s.message(`Deleting ${step}: ${name}...`);
     });
-    s.stop('Resources deleted');
+    s.stop('Cloudflare resources teardown finished');
+
+    if (destroyResult.errors.length > 0) {
+      p.log.warn('Some resources could not be automatically deleted:');
+      for (const err of destroyResult.errors) {
+        p.log.warn(`  - ${err.resource}: ${err.error.split('\n')[0]}`);
+      }
+    }
 
     await clearState(statePath);
-    renderDestroySummary(state.config.deployment_name);
+    renderDestroySummary(depName);
     return;
   }
 
@@ -156,6 +190,21 @@ OPTIONS:
     stepSuccess('Using saved configuration', state.config.deployment_name);
   }
 
+  // If in preview or dry-run mode, exit before mutating Cloudflare resources
+  if (flags.preview || flags.dryRun) {
+    renderDryRunSummary({
+      url: `https://${state.config.deployment_name}.workers.dev`,
+      deploymentName: state.config.deployment_name,
+      currency: state.config.primary_currency,
+      accountName: state.config.account_name,
+      d1Name: state.config.d1_name,
+      kvName: state.config.kv_name,
+      r2Name: state.config.r2_name,
+    });
+    await clearState(statePath);
+    return;
+  }
+
   // -------------------------------------------------------------
   // Step 4: Provisioning Cloudflare Resources
   // -------------------------------------------------------------
@@ -193,16 +242,6 @@ OPTIONS:
     stepSuccess('Configuration already written');
   }
 
-  if (flags.dryRun) {
-    renderDryRunSummary({
-      url: `https://${state.config.deployment_name}.workers.dev`,
-      deploymentName: state.config.deployment_name,
-      currency: state.config.primary_currency,
-      accountName: state.config.account_name,
-    });
-    return;
-  }
-
   // -------------------------------------------------------------
   // Step 6: Applying Database Migrations
   // -------------------------------------------------------------
@@ -230,6 +269,7 @@ OPTIONS:
     s.start('Pushing JWT_SECRET, APP_KEY, and ENCRYPTION_KEY...');
     await pushAllSecrets(state.config, {
       accountId: state.config.account_id,
+      projectRoot,
     });
     s.stop('Secrets safely configured');
     state.secrets_pushed = true;
