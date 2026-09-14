@@ -218,23 +218,32 @@ describe('@edgepay/init - Installer Suite', () => {
       expect(stdout.trim()).toBe('.dev.vars');
     });
 
-    it('readDevVars with adoptLegacyDevVars: true preserves unmanaged credentials without rotation', async () => {
-      const { readDevVars } = await import('../src/secrets.js');
+    it('--adopt-legacy-dev-vars preserves unmanaged credentials without rotation', async () => {
+      const { readDevVars, syncDevVars } = await import('../src/secrets.js');
       const legacyDir = path.join(tmpDir, 'legacy-adopt-test');
       await fs.mkdir(legacyDir, { recursive: true });
       await fs.writeFile(
         path.join(legacyDir, '.dev.vars'),
-        'JWT_SECRET=legacy_hex_secret_1234567890abcdef\nAPP_KEY=legacy_app_key_123\nENCRYPTION_KEY=legacy_enc_key_123\n',
+        'JWT_SECRET=legacy_jwt_val\nAPP_KEY=legacy_app_val\nENCRYPTION_KEY=legacy_enc_val\n',
       );
 
       // Without flag: throws
-      await expect(readDevVars(legacyDir)).rejects.toThrow(/Existing \.dev\.vars found without @edgepay\/init management header/);
+      await expect(readDevVars(legacyDir, { adoptLegacyDevVars: false })).rejects.toThrow(
+        /Existing \.dev\.vars found without @edgepay\/init management header/,
+      );
 
       // With flag: returns existing secrets intact without rotation
       const adopted = await readDevVars(legacyDir, { adoptLegacyDevVars: true });
-      expect(adopted.jwt_secret).toBe('legacy_hex_secret_1234567890abcdef');
-      expect(adopted.app_key).toBe('legacy_app_key_123');
-      expect(adopted.encryption_key).toBe('legacy_enc_key_123');
+      expect(adopted.jwt_secret).toBe('legacy_jwt_val');
+      expect(adopted.app_key).toBe('legacy_app_val');
+      expect(adopted.encryption_key).toBe('legacy_enc_val');
+
+      // Syncing writes management header preserving the adopted credentials
+      await syncDevVars(adopted as any, legacyDir);
+      const reRead = await readDevVars(legacyDir);
+      expect(reRead.jwt_secret).toBe('legacy_jwt_val');
+      expect(reRead.app_key).toBe('legacy_app_val');
+      expect(reRead.encryption_key).toBe('legacy_enc_val');
     });
   });
 
