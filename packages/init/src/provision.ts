@@ -213,7 +213,9 @@ export async function destroyAll(
     : queuePlan.allInTeardownOrder;
 
   // Step 1: Detach queue consumers BEFORE deleting Worker (Cloudflare code 10064 prevents Worker deletion while bound as consumer)
-  for (const q of queuesToTeardown) {
+  // Only primary queues have consumer workers attached; DLQs do not.
+  const consumerQueues = queuesToTeardown.filter((q) => !q.endsWith('-dlq'));
+  for (const q of consumerQueues) {
     onProgress?.('detach-queue-consumer', q);
     try {
       await removeQueueConsumer(q, config.deployment_name, accountId, _executor);

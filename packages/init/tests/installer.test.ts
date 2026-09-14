@@ -811,33 +811,31 @@ Current Version ID: abc-123
         _executor: mockExecutor,
       });
 
-      // Detach queue consumer must come first
+      // Detach queue consumer must come first (for primary queues only)
       expect(callLog[0]).toBe('detach-queue-consumer:test-dep-webhook-out');
-      expect(callLog[1]).toBe('detach-queue-consumer:test-dep-webhook-out-dlq');
 
       // Worker delete must happen before queue deletion
-      expect(callLog[2]).toBe('delete-worker:test-dep');
+      expect(callLog[1]).toBe('delete-worker:test-dep');
 
       // Primary queues must be deleted before DLQs
-      expect(callLog[3]).toBe('delete-queue:test-dep-webhook-out');
-      expect(callLog[4]).toBe('delete-queue:test-dep-webhook-out-dlq');
+      expect(callLog[2]).toBe('delete-queue:test-dep-webhook-out');
+      expect(callLog[3]).toBe('delete-queue:test-dep-webhook-out-dlq');
 
       // D1 must be deleted with UUID
-      expect(callLog[5]).toBe('delete-d1:d1-uuid-999');
+      expect(callLog[4]).toBe('delete-d1:d1-uuid-999');
 
       // KV and R2
-      expect(callLog[6]).toBe('delete-kv:0123456789abcdef0123456789abcdef');
-      expect(callLog[7]).toBe('delete-r2:test-dep-assets');
+      expect(callLog[5]).toBe('delete-kv:0123456789abcdef0123456789abcdef');
+      expect(callLog[6]).toBe('delete-r2:test-dep-assets');
 
       // Verify commands executed
       expect(executedCommands[0].args).toEqual(['queues', 'consumer', 'remove', 'test-dep-webhook-out', 'test-dep']);
-      expect(executedCommands[1].args).toEqual(['queues', 'consumer', 'remove', 'test-dep-webhook-out-dlq', 'test-dep']);
-      expect(executedCommands[2].args).toEqual(['delete', 'test-dep', '--force']);
-      expect(executedCommands[3].args).toEqual(['queues', 'delete', 'test-dep-webhook-out']);
-      expect(executedCommands[4].args).toEqual(['queues', 'delete', 'test-dep-webhook-out-dlq']);
-      expect(executedCommands[5].args).toEqual(['d1', 'delete', 'd1-uuid-999', '--skip-confirmation']);
-      expect(executedCommands[6].args).toEqual(['kv', 'namespace', 'delete', '--namespace-id', '0123456789abcdef0123456789abcdef']);
-      expect(executedCommands[7].args).toEqual(['r2', 'bucket', 'delete', 'test-dep-assets']);
+      expect(executedCommands[1].args).toEqual(['delete', 'test-dep', '--force']);
+      expect(executedCommands[2].args).toEqual(['queues', 'delete', 'test-dep-webhook-out']);
+      expect(executedCommands[3].args).toEqual(['queues', 'delete', 'test-dep-webhook-out-dlq']);
+      expect(executedCommands[4].args).toEqual(['d1', 'delete', 'd1-uuid-999', '--skip-confirmation']);
+      expect(executedCommands[5].args).toEqual(['kv', 'namespace', 'delete', '--namespace-id', '0123456789abcdef0123456789abcdef']);
+      expect(executedCommands[6].args).toEqual(['r2', 'bucket', 'delete', 'test-dep-assets']);
     });
   });
 
