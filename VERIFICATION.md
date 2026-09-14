@@ -4,17 +4,20 @@ This document records the empirical verification and raw evidence gathered to va
 
 ---
 
-## 1. Gitleaks CI Workflow Verification
+## 1. GitHub Actions CI Verification
 
-The Gitleaks Action workflow ([`.github/workflows/gitleaks.yml`](.github/workflows/gitleaks.yml)) was corrected to remove the invalid `args` input that caused GitHub Actions runner errors.
+The Gitleaks Action workflow ([`.github/workflows/gitleaks.yml`](.github/workflows/gitleaks.yml)) was corrected to remove the invalid `args` input that caused GitHub Actions runner errors. Additionally, `remoteBindings: false` was set in [`vitest.config.ts`](vitest.config.ts) so Vitest runs workerd tests locally without attempting to initiate a remote proxy session for Workers AI in unauthenticated CI environments.
 
-### Live Run Observed on GitHub Actions:
-- **Run ID**: `34811232959`
-- **Trigger**: Push to `main` (commit `217cfe7`)
-- **Status**: `completed`
-- **Conclusion**: `success` (Green checkmark)
-- **Step 1 (`Run gitleaks secret detection`)**: Executed without input errors, uploaded SARIF artifact (`10334099269`), logged `✅ No leaks detected`.
-- **Step 2 (`Block known secret variable names with live values`)**: Evaluated repository with zero matches, logged `No live secret assignments found`.
+### Live Runs Observed on GitHub Actions:
+- **Gitleaks Secret Scan**:
+  - **Run ID**: `34813042052` (and prior run `34811232959`)
+  - **Status**: `completed`, **Conclusion**: `success` (Green checkmark)
+  - **Step 1 (`Run gitleaks secret detection`)**: Executed cleanly, uploaded SARIF artifact (`10335740164`), logged `✅ No leaks detected`.
+  - **Step 2 (`Block known secret variable names with live values`)**: Evaluated repository with zero matches, logged `No live secret assignments found`.
+- **Audit Gate & Verification CI**:
+  - **Run ID**: `34813041941`
+  - **Status**: `completed`, **Conclusion**: `success` (Green checkmark)
+  - **Test Suite**: 40 files, 404 tests passed, 0 failures, lint and typecheck 100% clean.
 
 ---
 
