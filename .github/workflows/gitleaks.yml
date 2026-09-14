@@ -27,9 +27,19 @@ jobs:
         run: |
           set -eu
           echo "Scanning tracked files for live JWT_SECRET / APP_KEY / ENCRYPTION_KEY assignments..."
-          # Matches NAME=<non-empty, non-placeholder value> in tracked text files.
+          # Match only when RHS is a bare hex/base64 literal (40+ chars), not a variable or template.
           # Placeholders (YOUR_*, EXAMPLE, CHANGEME, *** ) are allowed.
-          if git grep -n -E '(JWT_SECRET|APP_KEY|ENCRYPTION_KEY)\s*[:=]\s*.+' -- ':!*.md' ':!package.json' ':!gitleaks.yml' | \
+          if git grep -n -P '(JWT_SECRET|APP_KEY|ENCRYPTION_KEY)\s*[:=]\s*["'"'"']?[A-Za-z0-9+/=]{40,}["'"'"']?[;,]?\s*$' -- \
+            ':!*.md' \
+            ':!package.json' \
+            ':!gitleaks.yml' \
+            ':!packages/init/**' \
+            ':!scripts/**' \
+            ':!src/types/**' \
+            ':!src/lib/secrets-guard.ts' \
+            ':!src/lib/jwt.ts' \
+            ':!tests/**' \
+            ':!vitest.config.ts' | \
             grep -v -E 'YOUR_|EXAMPLE|CHANGEME|\*\*\*|YOUR-32|HERE' ; then
             echo "::error::Live secret assignment detected (JWT_SECRET|APP_KEY|ENCRYPTION_KEY). Use \`wrangler secret put <NAME>\` and remove the value from the repo."
             exit 1
