@@ -1,0 +1,34 @@
+================================================================================
+Cloudflare Live Captured Not-Found Error Responses
+Account ID: 17347346d8cc54bbb820a0a0413d98c0
+Date Captured: 2026-09-14
+Wrangler Version: 4.127.1
+================================================================================
+
+1. D1 Database (wrangler d1 delete 00000000-0000-0000-0000-000000000000 --skip-confirmation)
+--------------------------------------------------------------------------------
+✘ [ERROR] Couldn't find a D1 DB with name or binding '00000000-0000-0000-0000-000000000000' in your config or the API. Run 'wrangler d1 create 00000000-0000-0000-0000-000000000000' to create it.
+Note: Cloudflare REST API v4 D1 endpoint returns: "database not found [code: 7000]"
+
+2. KV Namespace (wrangler kv namespace delete --namespace-id 0123456789abcdef0123456789abcdef)
+--------------------------------------------------------------------------------
+✘ [ERROR] A request to the Cloudflare API (/accounts/17347346d8cc54bbb820a0a0413d98c0/storage/kv/namespaces/0123456789abcdef0123456789abcdef) failed.
+  namespace not found [code: 10013]
+
+3. R2 Bucket (wrangler r2 bucket delete nonexistent-bucket-12345)
+--------------------------------------------------------------------------------
+✘ [ERROR] A request to the Cloudflare API (/accounts/17347346d8cc54bbb820a0a0413d98c0/r2/buckets/nonexistent-bucket-12345) failed.
+  The specified bucket does not exist. [code: 10006]
+
+4. Queues (wrangler queues delete nonexistent-queue-12345)
+--------------------------------------------------------------------------------
+✘ [ERROR] Queue "nonexistent-queue-12345" does not exist. To create it, run: wrangler queues create nonexistent-queue-12345
+
+5. Worker (wrangler delete nonexistent-worker-12345 --force)
+--------------------------------------------------------------------------------
+✘ [ERROR] A request to the Cloudflare API (/accounts/17347346d8cc54bbb820a0a0413d98c0/workers/services/nonexistent-worker-12345) failed.
+  This Worker does not exist on this account. [code: 10090]
+
+6. Queue Consumer (wrangler queues consumer remove nonexistent-queue-12345 nonexistent-worker-12345)
+--------------------------------------------------------------------------------
+✘ [ERROR] Queue "nonexistent-queue-12345" does not exist. To create it, run: wrangler queues create nonexistent-queue-12345

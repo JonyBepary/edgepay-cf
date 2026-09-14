@@ -90,6 +90,41 @@ describe('@edgepay/init - Installer Suite', () => {
       const fileExists = await fs.access(testStateFile).then(() => true).catch(() => false);
       expect(fileExists).toBe(false);
     }, 15000);
+
+    it('--preview mode skips cloud auth when existing state has auth_done and config', async () => {
+      const { runInstaller } = await import('../src/index.js');
+      const testStateFile = path.join(tmpDir, '.edgepay-init-preview.json');
+      await saveState(
+        {
+          version: 1,
+          started_at: '2026-09-14T00:00:00Z',
+          prereqs_done: true,
+          auth_done: true,
+          config: {
+            deployment_name: 'existing-preview-dep',
+            account_id: 'acc-123',
+            account_name: 'Existing Acc',
+            primary_currency: 'BDT',
+            merchant_name: 'Preview Store',
+            generate_secrets: false,
+            d1_name: 'existing-preview-dep-db',
+            kv_name: 'existing-preview-dep-kv',
+            r2_name: 'existing-preview-dep-r2',
+          },
+        },
+        testStateFile,
+      );
+
+      const beforeMtime = (await fs.stat(testStateFile)).mtimeMs;
+      await runInstaller([
+        '--preview',
+        '--yes',
+        `--statePath=${testStateFile}`,
+        `--projectRoot=${tmpDir}`,
+      ]);
+      const afterMtime = (await fs.stat(testStateFile)).mtimeMs;
+      expect(afterMtime).toBe(beforeMtime);
+    });
   });
 
   describe('Secret Generation & Storage', () => {
@@ -590,6 +625,15 @@ Current Version ID: abc-123
         isNotFound(
           new Error(
             '✘ [ERROR] Queue "nonexistent-queue-xyz-999" does not exist. To create it, run: wrangler queues create nonexistent-queue-xyz-999',
+          ),
+        ),
+      ).toBe(true);
+
+      // Live captured Worker error
+      expect(
+        isNotFound(
+          new Error(
+            '✘ [ERROR] A request to the Cloudflare API (/accounts/123/workers/services/nonexistent-worker) failed.\n\n  This Worker does not exist on this account. [code: 10090]',
           ),
         ),
       ).toBe(true);

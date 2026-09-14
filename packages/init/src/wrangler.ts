@@ -426,6 +426,7 @@ export function isNotFound(err: any): boolean {
     /The\s+specified\s+bucket\s+does\s+not\s+exist\.?\s*\[code:\s*10006\]/i,
     /Queue\s+["'].*?["']\s+does\s+not\s+exist/i,
     /could\s+not\s+find\s+(database|namespace|queue|bucket)/i,
+    /This\s+Worker\s+does\s+not\s+exist\s+on\s+this\s+account\.?\s*\[code:\s*10090\]/i,
   ];
   return capturedNotFoundPatterns.some((p) => p.test(msg));
 }

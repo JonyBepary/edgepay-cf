@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-09-14
 
 ### Security & Safety Incident Report: Pre-Release Queue Collision Near-Miss (Mitigated by External Validation, Root Cause Fixed)
-- **Incident Summary**: During automated verification of pre-release installer teardown routines, scratch testing passed un-scoped production queue names (`webhook-out`, `webhook-out-dlq`, `email-out`, `sms-parse`). `destroyAll` attempted to delete these queues on the active Cloudflare account.
-- **Mitigating Factor**: Cloudflare API error `11005` (`Cannot delete queue that serves as dead letter queue for consumers`) prevented the destructive deletion of production queues because teardown attempted to delete DLQs before primary consumers were unbound.
+- **Incident Summary**: During automated verification of pre-release installer teardown routines (`node packages/init/bin/edgepay-init.mjs --destroy`), scratch testing passed un-scoped production queue names (`webhook-out`, `webhook-out-dlq`, `email-out`, `sms-parse`). `destroyAll` attempted to execute `wrangler queues delete webhook-out-dlq` on the live Cloudflare account.
+- **Mitigating Factor**: Cloudflare API error `11005` (`Cannot delete queue that serves as dead letter queue for consumers`) aborted the destructive command because teardown attempted to delete DLQs while primary consumers were still referencing them.
 - **Root Causes**:
   1. Queues lacked mandatory deployment-name scoping and were not isolated per deployment.
   2. `ensureQueue` and `provisionAll` silently adopted foreign pre-existing account resources when names matched.
