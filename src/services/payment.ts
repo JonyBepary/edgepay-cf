@@ -84,7 +84,7 @@ export class PaymentService {
     if (input.gate_id) {
       // Direct gate reference — validate it belongs to this merchant and matches currency
       const { HierarchyService } = await import('./hierarchy');
-      const hierarchy = new HierarchyService(this.env);
+      const hierarchy = new HierarchyService(this.env.DB);
       const gate = await hierarchy.getGate(input.gate_id, input.merchant_id);
       if (!gate) {
         throw new NotFoundError(`Gate ${input.gate_id} not found or does not belong to merchant`);
@@ -143,7 +143,7 @@ export class PaymentService {
       if (gatewayId) {
         try {
           const { HierarchyService } = await import('./hierarchy');
-          const hierarchy = new HierarchyService(this.env);
+          const hierarchy = new HierarchyService(this.env.DB);
           const defaultGate = await hierarchy.resolveDefaultGate(input.merchant_id, gatewayId);
           if (defaultGate) {
             resolvedGateId = defaultGate.id;

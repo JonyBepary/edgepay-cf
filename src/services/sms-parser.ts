@@ -76,6 +76,11 @@ export function extractFallbackHeuristic(cleanBody: string, sender: string): Sms
   const gatewaySlug = senderToGatewaySlug(sender) || 'manual';
 
   // 1. Extract TrxID / TxnID / Ref
+  // TrxID pattern: alphanumeric, 5-32 chars, no underscores or hyphens.
+  // bKash, Nagad, Rocket, and Upay all emit alphanumeric-only TrxIDs, but
+  // this excludes some test authors' intuition. If a carrier ever emits
+  // a hyphenated TrxID, update this regex and the tests in
+  // tests/sms-store-scoping.test.ts and tests/sms-hardening.test.ts.
   const trxMatch = cleanBody.match(/(?:trx\s*id|transaction\s*id|txnid|txn\s*id|trans\s*id|ref\s*id|reference|invoice|id)\s*[:.\-#]?\s*([A-Za-z0-9]{5,32})/i);
   const trxId = trxMatch ? trxMatch[1].trim() : null;
 

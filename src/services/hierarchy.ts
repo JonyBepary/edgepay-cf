@@ -46,12 +46,7 @@ export interface Gate {
 }
 
 export class HierarchyService {
-  private db: D1Database;
-  constructor(dbOrEnv: D1Database | { DB: D1Database }) {
-    this.db = (dbOrEnv && typeof dbOrEnv === 'object' && 'DB' in dbOrEnv && dbOrEnv.DB)
-      ? (dbOrEnv as { DB: D1Database }).DB
-      : (dbOrEnv as D1Database);
-  }
+  constructor(private db: D1Database) {}
 
   async createBrand(input: {
     merchant_id: number;

@@ -6,6 +6,12 @@
  * test D1 exactly once per worker. Setup files run once per test FILE, so
  * the op_ledger_postings marker table (created by 0003, the LAST migration)
  * guards against double application across files.
+ *
+ * NOTE FOR TEST AUTHORS:
+ * Any test that creates payments or transactions must first call
+ * LedgerService.createDefaultChartOfAccounts(merchantId, currency)
+ * for the merchant. Otherwise the ledger post at completeTransaction
+ * throws UNKNOWN_ACCOUNT.
  */
 
 import { beforeAll } from 'vitest';
