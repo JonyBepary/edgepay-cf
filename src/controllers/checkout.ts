@@ -832,7 +832,7 @@ body {
 </div>
 
 <script>
-const csrfToken = '${escapeHtml(opts.csrfToken || '')}';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 let currentGateId = ${opts.gates[0]?.id || 0};
 let currentGatewayId = ${opts.gates[0]?.gateway_id || 0};
 let pollInterval = null;
