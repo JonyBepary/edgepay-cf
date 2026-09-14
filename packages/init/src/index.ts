@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
@@ -10,6 +11,7 @@ import { applyMigrations } from './migrate.js';
 import { pushAllSecrets } from './secrets.js';
 import { deploy } from './deploy.js';
 import { verify } from './verify.js';
+import { whoami } from './wrangler.js';
 import { loadState, saveState, clearState, type InitState } from './state.js';
 import { renderIntro } from './ui/intro.js';
 import { stepHeader, stepSuccess } from './ui/steps.js';
@@ -107,7 +109,62 @@ OPTIONS:
   // -------------------------------------------------------------
   if (flags.destroy) {
     if (!state.config) {
-      p.log.error('No configuration found in .edgepay-init.json to destroy.');
+      try {
+        const wranglerPath = path.join(projectRoot, 'wrangler.jsonc');
+        const rawWrangler = await fs.readFile(wranglerPath, 'utf-8');
+        const parsed = JSON.parse(
+          rawWrangler.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1'),
+        ) as any;
+        if (parsed?.name) {
+          const auth = await whoami();
+          const targetAccount = auth?.accounts?.[0];
+          if (targetAccount?.id) {
+            state.config = {
+              deployment_name: parsed.name,
+              account_id: targetAccount.id,
+              account_name: targetAccount.name || targetAccount.id,
+              primary_currency: parsed.vars?.DEFAULT_CURRENCY || 'BDT',
+              merchant_name: parsed.vars?.APP_NAME || parsed.name,
+              generate_secrets: false,
+              d1_name: parsed.d1_databases?.[0]?.database_name || `${parsed.name}-db`,
+              kv_name: parsed.kv_namespaces?.[0]?.binding || `${parsed.name}-kv`,
+              r2_name: parsed.r2_buckets?.[0]?.bucket_name || `${parsed.name}-assets`,
+            };
+            const extractedQueues: string[] = [];
+            if (Array.isArray(parsed.queues?.producers)) {
+              for (const p of parsed.queues.producers) {
+                if (p.queue && !extractedQueues.includes(p.queue)) {
+                  extractedQueues.push(p.queue);
+                }
+              }
+            }
+            if (Array.isArray(parsed.queues?.consumers)) {
+              for (const c of parsed.queues.consumers) {
+                if (c.queue && !extractedQueues.includes(c.queue)) {
+                  extractedQueues.push(c.queue);
+                }
+                if (c.dead_letter_queue && !extractedQueues.includes(c.dead_letter_queue)) {
+                  extractedQueues.push(c.dead_letter_queue);
+                }
+              }
+            }
+            state.resources = {
+              d1_id: parsed.d1_databases?.[0]?.database_id,
+              d1_name: parsed.d1_databases?.[0]?.database_name,
+              kv_id: parsed.kv_namespaces?.[0]?.id,
+              kv_name: parsed.kv_namespaces?.[0]?.binding,
+              r2_name: parsed.r2_buckets?.[0]?.bucket_name,
+              queues: extractedQueues.length > 0 ? extractedQueues : undefined,
+            };
+          }
+        }
+      } catch {
+        // failed to recover from wrangler.jsonc
+      }
+    }
+
+    if (!state.config) {
+      p.log.error('No configuration found in .edgepay-init.json or wrangler.jsonc to destroy.');
       process.exitCode = 1;
       return;
     }
