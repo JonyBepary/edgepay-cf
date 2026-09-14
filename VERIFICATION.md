@@ -9,13 +9,24 @@ This document records the empirical verification and raw evidence gathered to va
 The Gitleaks Action workflow ([`.github/workflows/gitleaks.yml`](.github/workflows/gitleaks.yml)) was corrected to remove the invalid `args` input that caused GitHub Actions runner errors. Additionally, `remoteBindings: false` was set in [`vitest.config.ts`](vitest.config.ts) so Vitest runs workerd tests locally without attempting to initiate a remote proxy session for Workers AI in unauthenticated CI environments.
 
 ### Live Runs Observed on GitHub Actions:
-- **Gitleaks Secret Scan**:
-  - **Run ID**: `34813042052` (and prior run `34811232959`)
+- **Installer Live Verification (Timed Destroy→Install Regression Loop)**:
+  - **Run ID**: `34819181558`
   - **Status**: `completed`, **Conclusion**: `success` (Green checkmark)
-  - **Step 1 (`Run gitleaks secret detection`)**: Executed cleanly, uploaded SARIF artifact (`10335740164`), logged `✅ No leaks detected`.
+  - **Duration**: 2m 40s (under 300s budget)
+  - **Pre-run Teardown**: Cleaned any lingering state.
+  - **Fresh Installation**: Provisioned isolated scoped deployment `edgepay-fresh` with D1, KV, R2, and Queues using the minimal 8-permission scoped token.
+  - **Health Probes**:
+    - Primary (`/api/v1/health`): `{"status":"ok","durable_objects":true,"workflows":true,"workers_ai":true}`
+    - Alias (`/health`): `{"status":"ok","durable_objects":true,"workflows":true,"workers_ai":true}`
+    - Dashboard (`/merchant`): HTTP 200 OK
+  - **Post-run Teardown**: Detached queue consumers, deleted worker, deleted scoped queues, deleted D1 database, deleted KV namespace, deleted R2 bucket. Zero remote resources remaining.
+- **Gitleaks Secret Scan**:
+  - **Run ID**: `34819179929` (and prior `34815584710`, `34813042052`)
+  - **Status**: `completed`, **Conclusion**: `success` (Green checkmark)
+  - **Step 1 (`Run gitleaks secret detection`)**: Executed cleanly, logged `✅ No leaks detected`.
   - **Step 2 (`Block known secret variable names with live values`)**: Evaluated repository with zero matches, logged `No live secret assignments found`.
 - **Audit Gate & Verification CI**:
-  - **Run ID**: `34813041941`
+  - **Run ID**: `34819179923` (and prior `34815584753`, `34813041941`)
   - **Status**: `completed`, **Conclusion**: `success` (Green checkmark)
   - **Test Suite**: 40 files, 404 tests passed, 0 failures, lint and typecheck 100% clean.
 
