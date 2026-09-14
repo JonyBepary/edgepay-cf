@@ -196,3 +196,22 @@ To adhere to least-privilege security and prevent blast-radius propagation acros
 - HTTP 200 with `status: ok` and all 3 subsystems (`durable_objects`, `workflows`, `workers_ai`) true.
 - Zero untracked or unscoped resources remaining on the account.
 
+---
+
+## 6. Checkout Operations & Phase Verification Invariants
+
+### A. Phase Verification Standing Item: Browser Testing for State-Changing Pages
+> [!IMPORTANT]
+> **Standing Invariant**: Every user-facing page that POSTs (e.g. `/checkout/:token`, payment verification, merchant/admin forms) must be opened and exercised in a real browser at least once per phase.
+> Unit and integration tests that mock HTTP requests or inject headers manually cannot detect discrepancies between server-side CSRF validation middleware and client-side HTML/JS token emission (such as missing CSRF `<meta>` tags or unsent `X-CSRF-Token` headers).
+
+### B. Checkout Operations: "Payment Unavailable" / "Contact Merchant"
+> [!NOTE]
+> If a customer reports "Payment Unavailable" or "Contact merchant," the merchant has no active gates configured.
+> Check:
+> ```sql
+> SELECT * FROM op_gates WHERE merchant_id = ? AND status = 'active';
+> ```
+> If empty, either the merchant's onboarding didn't create a gate, or all gates were archived. The `checkout_no_gates` metric fires on every occurrence — alerting on it in Cloudflare Analytics Engine catches this misconfiguration before the merchant does.
+
+
