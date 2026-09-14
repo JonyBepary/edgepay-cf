@@ -1,2 +1,0 @@
-# Gitleaks ignore list for test fixture fingerprints
-packages/init/tests/installer.test.ts:generic-api-key

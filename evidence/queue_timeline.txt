@@ -1,6 +1,9 @@
-# EdgePay-CF Cloudflare Queue Audit & Reconstruction Timeline (2026-09-14 UTC)
+# Forensic timeline of all Cloudflare queue operations on account
+# 17347346d8cc54bbb820a0a0413d98c0 between 2026-09-14 02:00 and 06:00 UTC.
+#
+# Regenerate with: python3 scripts/extract-queue-timeline.py
 
-Total Wrangler log files inspected: 397
+Total Wrangler log files inspected: 407
 Total Queue events recorded: 197
 
 | Log Timestamp (UTC) | Log File | Action | Target / Queue Name | Details |

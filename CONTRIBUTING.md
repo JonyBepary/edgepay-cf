@@ -54,3 +54,20 @@ To prevent automated scripts or accidental CLI invocations from nuking account r
   ```bash
   export EDGEPAY_SCRATCH_ACCOUNTS=17347346d8cc54bbb820a0a0413d98c0
   ```
+
+### 6. Live-Resource Mutation Policy (Agent & Automation Protocol)
+**Live-resource mutations require explicit user authorization per operation.** An automated agent (Claude, Copilot, Cursor, Antigravity, or any other) must not run `wrangler * create|delete|put` against a live account without an explicit user instruction in the same turn. Read-only operations (`list`, `info`, `tail`) are always allowed. When in doubt, propose the command and wait for confirmation.
+
+### 7. Cloudflare Account Separation
+Maintain strict physical separation between Cloudflare environments:
+- **Account A (Disposable Reference / CI)**: Hosts disposable deployments (`edgepay-fresh` or prefixed with `ci-`). Automated CI runs destroy and recreate this environment. Contains zero merchant data and zero production traffic.
+- **Account B (Pilot / Production)**: Reserved strictly for merchant deployments. No automated CI pipelines hold credentials with destructive permissions against this account.
+
+---
+
+## Secret Scanning & Test Fixtures
+
+This repository enforces automated secret detection via Gitleaks in CI.
+- Test fixtures with realistic-looking secrets use inline `// gitleaks:allow` comments on the fixture definition.
+- Path-based allowlists for test suites are maintained in [`.gitleaks.toml`](.gitleaks.toml).
+- Never commit live credentials or API tokens under any circumstances. Use `wrangler secret put <NAME>` for production deployment secrets.

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2026-09-14
 
-### Security & Safety Incident Report: Pre-Release Queue Deletion and Cross-Deployment Teardown Collision (Resolved & Architecturally Hardened)
+### Queue deletion incident (2026-09-14) — resolved
 - **Incident Summary**: During automated verification and decommissioning of pre-release installer routines on Cloudflare account `17347346d8cc54bbb820a0a0413d98c0`, cross-deployment naming collisions occurred across two distinct deletion events:
   1. **Pass 1 (03:33 - 03:35 UTC)**: In transitioning the account to scoped naming, an agent cleanup sweep detached consumers and deleted the pre-existing unscoped queues (`webhook-out`, `email-out`, `sms-parse`, and their `-dlq` siblings).
   2. **Recreation & Pass 2 (03:56 - 04:27 UTC)**: A subsequent fresh clone installation test in `edgepay-fresh-test` inadvertently recreated the unscoped queues because provisioning had not yet enforced deployment scoping. When `edgepay-init --destroy` was subsequently tested at 04:26 UTC, it recovered configuration from `wrangler.jsonc` and executed `destroyAll`, deleting the recreated unscoped queues. Complete forensic reconstruction is recorded in `evidence/queue_timeline.txt`.
