@@ -158,11 +158,13 @@ export async function login(): Promise<void> {
   });
 }
 
+export type WranglerExecutor = (args: string[], opts?: any) => Promise<any>;
+
 export interface EnsureResourceOpts {
   accountId?: string;
   expectedExistingId?: string;
   adoptExisting?: boolean;
-  _executor?: (args: string[], opts?: any) => Promise<any>;
+  _executor?: WranglerExecutor;
 }
 
 export async function ensureD1(name: string, opts: EnsureResourceOpts = {}): Promise<string> {
@@ -428,9 +430,13 @@ export function isNotFound(err: any): boolean {
   return capturedNotFoundPatterns.some((p) => p.test(msg));
 }
 
-export async function deleteD1(name: string, accountId?: string): Promise<void> {
+export async function deleteD1(
+  name: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
   try {
-    await wrangler(['d1', 'delete', name, '--skip-confirmation'], {
+    await _executor(['d1', 'delete', name, '--skip-confirmation'], {
       silent: true,
       accountId,
     });
@@ -439,11 +445,15 @@ export async function deleteD1(name: string, accountId?: string): Promise<void> 
   }
 }
 
-export async function deleteKv(idOrTitle: string, accountId?: string): Promise<void> {
+export async function deleteKv(
+  idOrTitle: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
   let id = idOrTitle;
   if (!/^[a-f0-9]{32}$/i.test(idOrTitle)) {
     try {
-      const rawList = (await wrangler(['kv', 'namespace', 'list'], {
+      const rawList = (await _executor(['kv', 'namespace', 'list'], {
         silent: true,
         accountId,
       })) as string;
@@ -460,7 +470,7 @@ export async function deleteKv(idOrTitle: string, accountId?: string): Promise<v
   }
 
   try {
-    await wrangler(['kv', 'namespace', 'delete', '--namespace-id', id], {
+    await _executor(['kv', 'namespace', 'delete', '--namespace-id', id], {
       silent: true,
       accountId,
     });
@@ -469,9 +479,13 @@ export async function deleteKv(idOrTitle: string, accountId?: string): Promise<v
   }
 }
 
-export async function deleteR2(name: string, accountId?: string): Promise<void> {
+export async function deleteR2(
+  name: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
   try {
-    await wrangler(['r2', 'bucket', 'delete', name], {
+    await _executor(['r2', 'bucket', 'delete', name], {
       silent: true,
       accountId,
     });
@@ -480,13 +494,72 @@ export async function deleteR2(name: string, accountId?: string): Promise<void> 
   }
 }
 
-export async function deleteQueue(name: string, accountId?: string): Promise<void> {
+export async function deleteQueue(
+  name: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
   try {
-    await wrangler(['queues', 'delete', name], {
+    await _executor(['queues', 'delete', name], {
       silent: true,
       accountId,
     });
   } catch (err) {
     if (!isNotFound(err)) throw err;
+  }
+}
+
+export async function removeQueueConsumer(
+  queueName: string,
+  scriptName: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
+  try {
+    await _executor(['queues', 'consumer', 'remove', queueName, scriptName], {
+      silent: true,
+      accountId,
+    });
+  } catch (err: any) {
+    if (isNotFound(err)) return;
+    const msg = `${err?.message ?? ''} ${err?.stderr ?? ''}`;
+    if (/not a consumer|no consumer found|cannot find consumer/i.test(msg)) return;
+    throw err;
+  }
+}
+
+export async function deleteWorker(
+  scriptName: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
+  try {
+    await _executor(['delete', scriptName, '--force'], {
+      silent: true,
+      accountId,
+    });
+  } catch (err: any) {
+    if (isNotFound(err)) return;
+    const msg = `${err?.message ?? ''} ${err?.stderr ?? ''}`;
+    if (/does not exist/i.test(msg)) return;
+    throw err;
+  }
+}
+
+export async function deleteWorkflow(
+  workflowName: string,
+  accountId?: string,
+  _executor: WranglerExecutor = wrangler,
+): Promise<void> {
+  try {
+    await _executor(['workflows', 'delete', workflowName], {
+      silent: true,
+      accountId,
+    });
+  } catch (err: any) {
+    if (isNotFound(err)) return;
+    const msg = `${err?.message ?? ''} ${err?.stderr ?? ''}`;
+    if (/does not exist|not found|no deployed workflows/i.test(msg)) return;
+    throw err;
   }
 }

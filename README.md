@@ -12,7 +12,7 @@ It operates **100% on the Cloudflare Free Tier** (~3.3K payments/day practical c
 
 ---
 
-## Quickstart — Self-Host in 1 Minute
+## Quickstart — Self-Host Under 3 Minutes
 
 ### Option A: Modern Terminal Installer (Recommended)
 

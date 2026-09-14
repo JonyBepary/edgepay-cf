@@ -222,7 +222,7 @@ describe('@edgepay/init - Installer Suite', () => {
 
       const written = JSON.parse(await fs.readFile(targetConfig, 'utf-8')) as {
         name: string;
-        vars: { DEFAULT_CURRENCY: string; APP_NAME: string };
+        vars: { DEFAULT_CURRENCY: string; APP_NAME: string; APP_DOMAIN: string; APP_URL: string; ALLOWED_ORIGINS: string };
         d1_databases: Array<{ binding: string; database_id: string; database_name: string }>;
         kv_namespaces: Array<{ binding: string; id: string }>;
         r2_buckets: Array<{ binding: string; bucket_name: string }>;
@@ -231,6 +231,9 @@ describe('@edgepay/init - Installer Suite', () => {
       expect(written.name).toBe('prod-pay');
       expect(written.vars.DEFAULT_CURRENCY).toBe('BDT');
       expect(written.vars.APP_NAME).toBe('My New Store');
+      expect(written.vars.APP_DOMAIN).toBe('prod-pay.workers.dev');
+      expect(written.vars.APP_URL).toBe('https://prod-pay.workers.dev');
+      expect(written.vars.ALLOWED_ORIGINS).toBe('https://prod-pay.workers.dev');
       expect(written.d1_databases[0].database_id).toBe('d1-uuid-12345');
       expect(written.kv_namespaces[0].id).toBe('kv-id-67890');
       expect(written.r2_buckets[0].bucket_name).toBe('prod-pay-assets');
@@ -605,12 +608,12 @@ Current Version ID: abc-123
   });
 
   describe('Queue Scoping & Teardown Ordering', () => {
-    it('scopes queue names for non-default deployments to prevent account collisions', async () => {
+    it('scopes queue names for deployments to prevent account collisions', async () => {
       const { getDeploymentQueueNames } = await import('../src/provision.js');
 
       const defaultQueues = getDeploymentQueueNames('edgepay-cf');
-      expect(defaultQueues.webhookOut).toBe('webhook-out');
-      expect(defaultQueues.webhookOutDlq).toBe('webhook-out-dlq');
+      expect(defaultQueues.webhookOut).toBe('edgepay-cf-webhook-out');
+      expect(defaultQueues.webhookOutDlq).toBe('edgepay-cf-webhook-out-dlq');
 
       const scopedQueues = getDeploymentQueueNames('my-shop');
       expect(scopedQueues.webhookOut).toBe('my-shop-webhook-out');
@@ -634,12 +637,12 @@ Current Version ID: abc-123
       const plan = getDeploymentQueueNames('edgepay-cf');
 
       const teardownOrder = plan.allInTeardownOrder;
-      expect(teardownOrder.indexOf('webhook-out')).toBeLessThan(teardownOrder.indexOf('webhook-out-dlq'));
-      expect(teardownOrder.indexOf('email-out')).toBeLessThan(teardownOrder.indexOf('email-out-dlq'));
-      expect(teardownOrder.indexOf('sms-parse')).toBeLessThan(teardownOrder.indexOf('sms-parse-dlq'));
+      expect(teardownOrder.indexOf('edgepay-cf-webhook-out')).toBeLessThan(teardownOrder.indexOf('edgepay-cf-webhook-out-dlq'));
+      expect(teardownOrder.indexOf('edgepay-cf-email-out')).toBeLessThan(teardownOrder.indexOf('edgepay-cf-email-out-dlq'));
+      expect(teardownOrder.indexOf('edgepay-cf-sms-parse')).toBeLessThan(teardownOrder.indexOf('edgepay-cf-sms-parse-dlq'));
     });
 
-    it('detects legacy queue bindings in existing wrangler.jsonc and preserves unscoped names', async () => {
+    it('detects legacy queue bindings only when deployment name matches existing config', async () => {
       const { detectLegacyQueueBindings, getDeploymentQueueNames } = await import('../src/provision.js');
 
       const legacyConfig = `
@@ -653,7 +656,11 @@ Current Version ID: abc-123
   }
 }
 `;
-      expect(detectLegacyQueueBindings(legacyConfig)).toBe(true);
+      // Matching deployment name returns true
+      expect(detectLegacyQueueBindings(legacyConfig, 'my-legacy-deployment')).toBe(true);
+
+      // Non-matching deployment name (e.g. fresh clone) returns false
+      expect(detectLegacyQueueBindings(legacyConfig, 'edgepay-fresh')).toBe(false);
 
       const scopedConfig = `
 {
@@ -665,14 +672,21 @@ Current Version ID: abc-123
   }
 }
 `;
-      expect(detectLegacyQueueBindings(scopedConfig)).toBe(false);
+      expect(detectLegacyQueueBindings(scopedConfig, 'my-new-deployment')).toBe(false);
 
-      // When existingWranglerContent has legacy bindings, getDeploymentQueueNames keeps them unscoped
+      // When existingWranglerContent has legacy bindings for the same deployment name, unscoped queues are preserved
       const queues = getDeploymentQueueNames('my-legacy-deployment', {
         existingWranglerContent: legacyConfig,
       });
       expect(queues.webhookOut).toBe('webhook-out');
       expect(queues.webhookOutDlq).toBe('webhook-out-dlq');
+
+      // For a fresh/different deployment name, queues are scoped even if template had legacy queues
+      const freshQueues = getDeploymentQueueNames('edgepay-fresh', {
+        existingWranglerContent: legacyConfig,
+      });
+      expect(freshQueues.webhookOut).toBe('edgepay-fresh-webhook-out');
+      expect(freshQueues.webhookOutDlq).toBe('edgepay-fresh-webhook-out-dlq');
     });
   });
 
@@ -758,6 +772,72 @@ Current Version ID: abc-123
 
       delete process.env.EDGEPAY_SCRATCH_ACCOUNTS;
       delete process.env.EDGEPAY_DESTROY_CONFIRMED;
+    });
+
+    it('executes destroyAll in correct dependency order: detach consumers, delete worker, delete queues, delete D1 by UUID, delete KV, delete R2', async () => {
+      const { destroyAll } = await import('../src/provision.js');
+      const callLog: string[] = [];
+      const executedCommands: Array<{ args: string[]; opts?: any }> = [];
+      const mockExecutor = async (args: string[], opts?: any) => {
+        executedCommands.push({ args, opts });
+        return '';
+      };
+
+      const config = {
+        deployment_name: 'test-dep',
+        account_id: '12345',
+        account_name: 'Test Acc',
+        primary_currency: 'BDT',
+        merchant_name: 'Test Store',
+        generate_secrets: false,
+        d1_name: 'test-dep-db',
+        kv_name: 'test-dep-kv',
+        r2_name: 'test-dep-assets',
+      };
+
+      const resources = {
+        d1_id: 'd1-uuid-999',
+        d1_name: 'test-dep-db',
+        kv_id: '0123456789abcdef0123456789abcdef',
+        kv_name: 'test-dep-kv',
+        r2_name: 'test-dep-assets',
+        queues: ['test-dep-webhook-out', 'test-dep-webhook-out-dlq'],
+      };
+
+      await destroyAll(config, resources, {
+        onProgress: (step, resourceName) => {
+          callLog.push(`${step}:${resourceName}`);
+        },
+        _executor: mockExecutor,
+      });
+
+      // Detach queue consumer must come first
+      expect(callLog[0]).toBe('detach-queue-consumer:test-dep-webhook-out');
+      expect(callLog[1]).toBe('detach-queue-consumer:test-dep-webhook-out-dlq');
+
+      // Worker delete must happen before queue deletion
+      expect(callLog[2]).toBe('delete-worker:test-dep');
+
+      // Primary queues must be deleted before DLQs
+      expect(callLog[3]).toBe('delete-queue:test-dep-webhook-out');
+      expect(callLog[4]).toBe('delete-queue:test-dep-webhook-out-dlq');
+
+      // D1 must be deleted with UUID
+      expect(callLog[5]).toBe('delete-d1:d1-uuid-999');
+
+      // KV and R2
+      expect(callLog[6]).toBe('delete-kv:0123456789abcdef0123456789abcdef');
+      expect(callLog[7]).toBe('delete-r2:test-dep-assets');
+
+      // Verify commands executed
+      expect(executedCommands[0].args).toEqual(['queues', 'consumer', 'remove', 'test-dep-webhook-out', 'test-dep']);
+      expect(executedCommands[1].args).toEqual(['queues', 'consumer', 'remove', 'test-dep-webhook-out-dlq', 'test-dep']);
+      expect(executedCommands[2].args).toEqual(['delete', 'test-dep', '--force']);
+      expect(executedCommands[3].args).toEqual(['queues', 'delete', 'test-dep-webhook-out']);
+      expect(executedCommands[4].args).toEqual(['queues', 'delete', 'test-dep-webhook-out-dlq']);
+      expect(executedCommands[5].args).toEqual(['d1', 'delete', 'd1-uuid-999', '--skip-confirmation']);
+      expect(executedCommands[6].args).toEqual(['kv', 'namespace', 'delete', '--namespace-id', '0123456789abcdef0123456789abcdef']);
+      expect(executedCommands[7].args).toEqual(['r2', 'bucket', 'delete', 'test-dep-assets']);
     });
   });
 

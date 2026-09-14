@@ -6,6 +6,8 @@ export interface RenderConfigOptions {
   baseConfigPath?: string;
   targetConfigPath?: string;
   projectRoot?: string;
+  deploymentUrl?: string;
+  domain?: string;
 }
 
 export async function renderWranglerConfig(
@@ -48,6 +50,29 @@ export async function renderWranglerConfig(
   vars.APP_NAME = config.merchant_name;
   vars.DEFAULT_CURRENCY = config.primary_currency;
   vars.ENVIRONMENT = 'production';
+
+  // Compute deployment domain and URL
+  let targetDomain = opts.domain;
+  if (!targetDomain) {
+    if (opts.deploymentUrl) {
+      try {
+        targetDomain = new URL(opts.deploymentUrl).host;
+      } catch {
+        // invalid URL: fallback below
+      }
+    }
+  }
+  if (!targetDomain) {
+    // Extract account workers.dev subdomain suffix from existing config
+    const existingDomain = typeof vars.APP_DOMAIN === 'string' ? vars.APP_DOMAIN : '';
+    const domainMatch = existingDomain.match(/^[a-zA-Z0-9_-]+\.([a-zA-Z0-9_.-]+\.workers\.dev)$/i);
+    const domainSuffix = domainMatch ? domainMatch[1] : 'workers.dev';
+    targetDomain = `${config.deployment_name}.${domainSuffix}`;
+  }
+
+  vars.APP_DOMAIN = targetDomain;
+  vars.APP_URL = opts.deploymentUrl || `https://${targetDomain}`;
+  vars.ALLOWED_ORIGINS = opts.deploymentUrl || `https://${targetDomain}`;
   parsed.vars = vars;
 
   // Update D1 database binding

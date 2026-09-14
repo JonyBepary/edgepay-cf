@@ -47,3 +47,10 @@ To prevent automated scripts or accidental CLI invocations from nuking account r
 
 ### 4. Synthetic Resource Naming
 - Any test provisioning live Cloudflare resources must use dynamically generated, synthetic, prefixed names (e.g. `scratch-${Date.now()}-${uuid}-*`) and must never use default production names like `edgepay-cf`, `webhook-out`, `email-out`, or `sms-parse`.
+
+### 5. Reserved Fresh-Install Deployment
+- The `edgepay-fresh` deployment on the test account (`17347346d8cc54bbb820a0a0413d98c0`) is reserved for fresh-install testing. Do not manually modify its resources.
+- For authorized teardown testing on this account, set:
+  ```bash
+  export EDGEPAY_SCRATCH_ACCOUNTS=17347346d8cc54bbb820a0a0413d98c0
+  ```

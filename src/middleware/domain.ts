@@ -59,7 +59,12 @@ export const domainMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: App
 
   // Master domain → no brand context
   const masterDomain = (c.env.APP_DOMAIN ?? '').toLowerCase();
-  if (hostname === masterDomain || hostname === 'localhost' || hostname === '127.0.0.1') {
+  if (
+    hostname === masterDomain ||
+    hostname.endsWith('.workers.dev') ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1'
+  ) {
     c.set('customDomain', null);
     c.set('domainType', null);
     c.set('merchantId', null);
@@ -67,10 +72,12 @@ export const domainMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: App
     return await next();
   }
 
-  // Safe bypass: fresh installs and static assets must never 404 on unknown hosts
+  // Safe bypass: health probes, fresh installs, and static assets must never 404 on unknown hosts
   // Must run before any KV/D1 work and before the install-flag gate.
   const earlyPath = c.req.path;
   if (
+    earlyPath === '/api/v1/health' ||
+    earlyPath === '/health' ||
     earlyPath.startsWith('/install') ||
     earlyPath.startsWith('/assets/') ||
     earlyPath.startsWith('/storage/') ||

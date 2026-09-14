@@ -364,6 +364,10 @@ OPTIONS:
     s.stop('Published to Cloudflare network');
     state.deployed = true;
     state.deployment_url = url;
+    await renderWranglerConfig(state.config, state.resources!, {
+      projectRoot,
+      deploymentUrl: url,
+    });
     await persistState();
     stepSuccess('Deployed Worker', url);
   } else {
