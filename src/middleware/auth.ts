@@ -17,7 +17,7 @@
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../types/env';
 import { sha256, timingSafeEqual } from '../lib/crypto';
-import { UnauthorizedError, ForbiddenError } from '../lib/error';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/error';
 
 export interface ApiVariables {
   merchantId: number | null;
@@ -182,3 +182,39 @@ export function requireScope(scope: string): MiddlewareHandler<{ Bindings: Env; 
     await next();
   };
 }
+
+/**
+ * Resolves the authenticated merchant ID or throws UnauthorizedError.
+ * Guarantees fail-closed behavior across all authenticated tenant routes,
+ * preventing any fallback to default or foreign tenant IDs.
+ */
+export function getAuthenticatedMerchantId(c: { get: (key: string) => unknown }): number {
+  const merchantId = c.get('merchantId');
+  if (typeof merchantId !== 'number' || merchantId <= 0) {
+    throw new UnauthorizedError('Merchant context not resolved');
+  }
+  return merchantId;
+}
+
+/**
+ * Resolves the target merchant ID for cross-tenant operator/admin audits
+ * (e.g. GET /api/admin/v1/ledger/trial-balance).
+ *
+ * Checks query param `?merchant_id=...` or header `X-Target-Merchant-Id`.
+ * If missing or invalid, throws ValidationError to prevent fallback to the caller's own tenant.
+ */
+export function getTargetMerchantId(c: {
+  get: (key: string) => unknown;
+  req: { query: (name: string) => string | undefined; header: (name: string) => string | undefined };
+}): number {
+  const raw = c.req.query('merchant_id') ?? c.req.header('x-target-merchant-id');
+  if (!raw) {
+    throw new ValidationError('Target merchant_id is required for operator audit');
+  }
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ValidationError('Invalid target merchant_id');
+  }
+  return id;
+}
+

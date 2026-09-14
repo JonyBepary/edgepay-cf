@@ -128,7 +128,11 @@ describe('route wiring (SELF worker — ENABLED_GATEWAYS unset = P0-7 default ce
   });
 
   it('GET /install surfaces the gateway selection + secret posture', async () => {
-    await (env as unknown as { KV: KVNamespace }).KV.delete('system:installed');
+    const kv = (env as unknown as { KV: KVNamespace }).KV;
+    // Allow any in-flight cold-start bootstrap triggered by earlier requests to settle
+    await new Promise((r) => setTimeout(r, 150));
+    await kv.delete('system:installed');
+    await kv.put('system:bootstrapped', 'true');
     // Unique per-call client IP: the /install/* surface is rate limited at
     // 3/hour per IP — unique IPs keep the test deterministic across runs.
     const ip = `203.0.113.${(Math.random() * 254 + 1) | 0}`;

@@ -128,7 +128,24 @@ export async function reconcilePendingPostings(
       result.healed++;
       metric(env, 'ledger_posting_healed', { merchant_id: row.merchant_id });
     } else {
+      // Outbox model: drain outbox to D1 so the row flips to 'posted'
+      await getLedgerDO(env, row.merchant_id).drainOutbox();
       result.replayed++;
+    }
+  }
+
+  // Poison guard check: if D1 has 'rejected' status for a tx_id that exists in DO's posted_transactions
+  const rejectedRows = await env.DB
+    .prepare(`SELECT tx_id, merchant_id FROM op_ledger_postings WHERE status = 'rejected' ORDER BY created_at DESC LIMIT 50`)
+    .all<{ tx_id: string; merchant_id: number }>();
+  for (const r of rejectedRows.results) {
+    try {
+      const status = await getLedgerDO(env, r.merchant_id).getTransactionStatus(r.tx_id);
+      if (status.exists) {
+        page(env, 'LEDGER_POISON_DETECTED', { tx_id: r.tx_id, merchant_id: r.merchant_id });
+      }
+    } catch {
+      // Ignore DO retrieval errors
     }
   }
 
@@ -340,12 +357,54 @@ export async function triggerDailySweep(env: Env, dateStr?: string): Promise<Tri
 // manual ops endpoint. Writes an op_reconciliation_runs audit row.
 // ------------------------------------------------------------------
 
+export interface OutboxStatsSummary {
+  outbox_lag_max_seconds: number;
+  outbox_pending_total: number;
+  outbox_stuck_total: number;
+}
+
+/** Collect outbox lag and health stats across all active merchants. */
+export async function collectOutboxStats(env: Env): Promise<OutboxStatsSummary> {
+  const merchants = await env.DB
+    .prepare(`SELECT id FROM op_merchants WHERE status = 'active' AND is_platform = 0`)
+    .all<{ id: number }>();
+
+  let outbox_lag_max_seconds = 0;
+  let outbox_pending_total = 0;
+  let outbox_stuck_total = 0;
+
+  for (const m of merchants.results) {
+    try {
+      const stats = await getLedgerDO(env, m.id).outboxStats();
+      if (stats.max_age_seconds > outbox_lag_max_seconds) {
+        outbox_lag_max_seconds = stats.max_age_seconds;
+      }
+      outbox_pending_total += stats.pending;
+      outbox_stuck_total += stats.stuck;
+      if (stats.stuck > 0 || stats.max_age_seconds > 300) {
+        page(env, 'OUTBOX_STUCK', {
+          merchant_id: m.id,
+          pending: stats.pending,
+          stuck: stats.stuck,
+          max_age_seconds: stats.max_age_seconds,
+          max_retry: stats.max_retry,
+        });
+      }
+    } catch {
+      // Ignore DO retrieval errors for idle merchants
+    }
+  }
+
+  return { outbox_lag_max_seconds, outbox_pending_total, outbox_stuck_total };
+}
+
 export interface ReconciliationRunSummary {
   ran_at: string;
   trigger: 'hourly' | 'daily' | 'manual';
   pending: PendingReconcileResult;
   consistency: ConsistencyVerifyResult | null;
   refunds: RefundSweepResult | null;
+  outbox?: OutboxStatsSummary;
 }
 
 export async function runReconciliation(
@@ -358,16 +417,18 @@ export async function runReconciliation(
 
   const consistency = trigger === 'hourly' ? null : await verifyAllMerchants(env);
   const refunds = trigger === 'hourly' ? null : await sweepStuckRefunds(env);
+  const outbox = await collectOutboxStats(env);
 
-  const summary: ReconciliationRunSummary = { ran_at: ranAt, trigger, pending, consistency, refunds };
+  const summary: ReconciliationRunSummary = { ran_at: ranAt, trigger, pending, consistency, refunds, outbox };
 
   await env.DB
     .prepare(
       `INSERT INTO op_reconciliation_runs
          (ran_at, trigger, pending_replayed, pending_healed, pending_rejected,
           pending_failed, pending_remaining, merchants_checked, drift_count,
-          refunds_retriggered, details_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          refunds_retriggered, details_json,
+          outbox_lag_max_seconds, outbox_pending_total, outbox_stuck_total)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       ranAt,
@@ -381,6 +442,9 @@ export async function runReconciliation(
       consistency?.drift_count ?? 0,
       refunds?.retriggered ?? 0,
       JSON.stringify({ drifts: consistency?.drifts ?? [], stuck_refunds: refunds?.stuck ?? 0 }),
+      outbox.outbox_lag_max_seconds,
+      outbox.outbox_pending_total,
+      outbox.outbox_stuck_total,
     )
     .run();
 

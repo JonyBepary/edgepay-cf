@@ -130,6 +130,9 @@ describe('LedgerDO posting protocol — happy path + D1 convergence', () => {
     expect(trial.total_debit_minor).toBe(AMOUNT + FEE);
     expect(trial.total_credit_minor).toBe(AMOUNT + FEE);
 
+    // Drain outbox to D1 so audit mirror converges
+    await stub.drainOutbox();
+
     // D1 write-ahead row flipped to posted
     const posting = await db
       .prepare(`SELECT status, payload_json FROM op_ledger_postings WHERE tx_id = ?`)
@@ -157,6 +160,8 @@ describe('LedgerDO posting protocol — happy path + D1 convergence', () => {
     const second = await ledger.post(paymentInput('pay-dup-1', 50_00, 0), { idempotency_key: `m${MERCHANT}:payment:pay-dup-1` });
     expect(second.status).toBe('duplicate');
     expect(second.posted_at).toBe(first.posted_at);
+
+    await stub.drainOutbox();
 
     // No double-post: exactly one posted D1 transaction for this tx_id
     const rows = await db
@@ -248,30 +253,8 @@ describe('LedgerDO validation guards (fix #1/#2 — the guard v0.2.0 shipped dis
   });
 });
 
-describe('Posting protocol failure matrix (crash-window injection)', () => {
-  it('D fails (D1 pending write): nothing changed anywhere; a clean retry posts', async () => {
-    const key = 'inj-d1-pending';
-    await stub.__testInjectFault({ fail_d1_pending: true });
-
-    await expect(
-      ledger.post(paymentInput(key), { idempotency_key: `m${MERCHANT}:payment:${key}` }),
-    ).rejects.toThrow('INJECTED:fail_d1_pending');
-
-    // No pending row, DO untouched
-    const row = await db
-      .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
-      .bind(`m${MERCHANT}:payment:${key}`)
-      .first();
-    expect(row).toBeNull();
-    const status = await stub.getTransactionStatus(`m${MERCHANT}:payment:${key}`);
-    expect(status.exists).toBe(false);
-
-    // Fault is one-shot: retrying the SAME tx_id posts cleanly
-    const retry = await ledger.post(paymentInput(key), { idempotency_key: `m${MERCHANT}:payment:${key}` });
-    expect(retry.status).toBe('posted');
-  });
-
-  it('E fails (DO writes): pending row survives, DO stays clean, reconciliation replays to posted', async () => {
+describe('Posting protocol failure matrix (transactional outbox & crash windows)', () => {
+  it('DO commit failure (fail_do_writes): nothing committed locally, transaction not posted', async () => {
     const key = 'inj-do-writes';
     const txId = `m${MERCHANT}:payment:${key}`;
     await stub.__testInjectFault({ fail_do_writes: true });
@@ -280,56 +263,36 @@ describe('Posting protocol failure matrix (crash-window injection)', () => {
       ledger.post(paymentInput(key), { idempotency_key: txId }),
     ).rejects.toThrow('INJECTED:fail_do_writes');
 
-    // D1 keeps the write-ahead pending row; the DO never applied it
-    const row = await db
-      .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
-      .bind(txId)
-      .first<{ status: string }>();
-    expect(row?.status).toBe('pending');
+    // DO clean: transaction was not posted
     expect((await stub.getTransactionStatus(txId)).exists).toBe(false);
 
-    // Reconciliation replays the exact payload — idempotent, converges
-    const result = await reconcilePendingPostings(tenv, { graceMs: -2000 }) // cutoff 2s ahead: immune to same-millisecond insert/cutoff races;
-    expect(result.replayed).toBeGreaterThanOrEqual(1);
-
-    const after = await db
-      .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
-      .bind(txId)
-      .first<{ status: string }>();
-    expect(after?.status).toBe('posted');
-    expect((await stub.getTransactionStatus(txId)).exists).toBe(true);
+    // Retrying without fault succeeds
+    const retry = await ledger.post(paymentInput(key), { idempotency_key: txId });
+    expect(retry.status).toBe('posted');
   });
 
-  it('F fails (D1 audit/posted flip): pending row survives, replay heals both sides', async () => {
-    const key = 'inj-d1-posted';
+  it('outbox drain failure: DO commits locally, drain retries with backoff and converges', async () => {
+    const key = 'inj-drain-failure';
     const txId = `m${MERCHANT}:payment:${key}`;
-    await stub.__testInjectFault({ fail_d1_posted: true });
 
-    await expect(
-      ledger.post(paymentInput(key), { idempotency_key: txId }),
-    ).rejects.toThrow('INJECTED:fail_d1_posted');
+    // Injected drain fault before post so background alarm cannot drain ahead of test
+    await stub.__testInjectFault({ fail_outbox_drain: true });
 
-    // The DO event COMPLETED (with a structured failure, not a throw — throws
-    // break the input gate), so the DO's own writes COMMITTED while the D1
-    // row stayed pending. This is exactly the state the dedup+heal path
-    // exists for.
-    const row = await db
+    const posted = await ledger.post(paymentInput(key), { idempotency_key: txId });
+    expect(posted.status).toBe('posted');
+    expect((await stub.getTransactionStatus(txId)).exists).toBe(true);
+
+    // Drain (or alarm) encounters failure and retries
+    await stub.drainOutbox();
+
+    // Subsequent drain succeeds and converges D1 audit mirror
+    await stub.drainOutbox();
+
+    const postingAfter = await db
       .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
       .bind(txId)
       .first<{ status: string }>();
-    expect(row?.status).toBe('pending');
-    expect((await stub.getTransactionStatus(txId)).exists).toBe(true); // DO applied
-
-    // Reconciliation replays -> DO dedup returns 'duplicate' -> the audit
-    // trail is rewritten and the posting row flips to posted (the heal path).
-    const healed = await reconcilePendingPostings(tenv, { graceMs: -2000 }) // cutoff 2s ahead: immune to same-millisecond insert/cutoff races;
-    expect(healed.healed).toBeGreaterThanOrEqual(1);
-
-    const after = await db
-      .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
-      .bind(txId)
-      .first<{ status: string }>();
-    expect(after?.status).toBe('posted');
+    expect(postingAfter?.status).toBe('posted');
   });
 
   it('heal path: DO committed while the D1 row was left pending -> duplicate + audit-trail rewrite', async () => {
@@ -339,6 +302,8 @@ describe('Posting protocol failure matrix (crash-window injection)', () => {
     const txId = `m${MERCHANT}:payment:${key}`;
     const posted = await ledger.post(paymentInput(key, 25_00, 0), { idempotency_key: txId });
     expect(posted.status).toBe('posted');
+
+    await stub.drainOutbox();
 
     await db
       .prepare(`UPDATE op_ledger_postings SET status = 'pending' WHERE tx_id = ?`)

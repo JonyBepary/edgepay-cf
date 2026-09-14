@@ -43,6 +43,7 @@ import { apiRoutes } from './controllers/api';
 import { mobileRoutes } from './controllers/mobile';
 import { adminApiRoutes } from './controllers/admin-api';
 import { checkoutRoutes } from './controllers/checkout';
+import { resolveIntentStatus } from './services/checkout-status';
 import { webhookRoutes } from './controllers/webhooks';
 import { installRoutes } from './controllers/install';
 
@@ -51,6 +52,7 @@ import { scheduledHandler } from './cron/handler';
 import { webhookQueueHandler } from './queues/webhook-consumer';
 import { emailQueueHandler } from './queues/email-consumer';
 import { smsQueueHandler } from './queues/sms-consumer';
+import { dlqConsumer } from './queues/dlq-consumer';
 import { accessAuthMiddleware } from './middleware/cloudflare-access';
 import { csrfMiddleware } from './middleware/csrf';
 import { requireSecrets, SECRETS_ERROR_CODE } from './lib/secrets-guard';
@@ -622,12 +624,13 @@ app.get('/checkout/:token/status', async (c) => {
   const token = c.req.param('token');
   try {
     const payment = await c.env.DB.prepare(
-      `SELECT pi.status FROM op_payment_intents pi WHERE pi.token = ? LIMIT 1`
-    ).bind(token).first<{ status: string }>();
+      `SELECT pi.id, pi.merchant_id, pi.status FROM op_payment_intents pi WHERE pi.token = ? LIMIT 1`
+    ).bind(token).first<{ id: number; merchant_id: number; status: string }>();
     if (!payment) {
       return c.json({ success: false, error: { code: 'INTENT_NOT_FOUND', message: 'Invalid checkout token' }, status: 'pending' }, 404);
     }
-    return c.json({ status: payment.status });
+    const finalStatus = await resolveIntentStatus(c.env, payment);
+    return c.json({ status: finalStatus });
   } catch {
     return c.json({ success: false, error: { code: 'INTENT_NOT_FOUND', message: 'Invalid checkout token' }, status: 'pending' }, 404);
   }
@@ -876,6 +879,8 @@ export default {
       await smsQueueHandler.process(
         batch as unknown as Parameters<typeof smsQueueHandler.process>[0], env, _ctx,
       );
+    } else if (queueName.endsWith('-dlq')) {
+      await dlqConsumer.process(batch, env, _ctx);
     }
   },
 } satisfies ExportedHandler<Env>;

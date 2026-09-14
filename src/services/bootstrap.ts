@@ -70,7 +70,8 @@ export async function ensureSystemBootstrapped(env: Env): Promise<BootstrapResul
     const row = await env.DB.prepare(
       `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
     ).bind(merchantUuid).first<{ id: number }>();
-    merchantId = row?.id ?? 1;
+    if (!row?.id) throw new Error('Failed to retrieve seeded platform merchant ID');
+    merchantId = row.id;
   }
 
   // 1.5. Ensure default admin user for platform merchant

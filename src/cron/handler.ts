@@ -76,6 +76,7 @@ export class ScheduledHandler {
       this.updateExchangeRates(env),
       this.reverifyDomains(env),
       this.replayPendingPostings(env),
+      this.cleanupExpiredDeviceNonces(env),
     ]);
   }
 
@@ -270,6 +271,34 @@ export class ScheduledHandler {
       }));
     } catch (err) {
       console.error('Update check failed:', err);
+    }
+  }
+
+  /**
+   * Purge expired device nonces (older than 2x freshness window = 600s / 10m).
+   * Prevents unbounded growth of op_device_nonces table in D1.
+   */
+  async cleanupExpiredDeviceNonces(env: Env): Promise<number> {
+    try {
+      const res = await env.DB.prepare(
+        `DELETE FROM op_device_nonces WHERE created_at < datetime('now', '-10 minutes')`
+      ).run();
+      const deleted = res.meta?.changes ?? 0;
+      console.log(JSON.stringify({
+        level: 'info',
+        event: 'device_nonces_purged',
+        deleted_count: deleted,
+        timestamp: new Date().toISOString(),
+      }));
+      return deleted;
+    } catch (err) {
+      console.error(JSON.stringify({
+        level: 'error',
+        event: 'device_nonces_purge_failed',
+        error: err instanceof Error ? err.message : String(err),
+        timestamp: new Date().toISOString(),
+      }));
+      return 0;
     }
   }
 

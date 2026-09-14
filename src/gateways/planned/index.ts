@@ -28,17 +28,9 @@ import {
 } from '../base';
 import { GATEWAY_CATALOG, type CatalogEntry } from '../catalog.data';
 import { gatewayRegistry } from '../base';
+import { GatewayNotPortedError } from '../../lib/error';
 
-export class GatewayNotPortedError extends Error {
-  constructor(slug: string) {
-    super(
-      `Gateway "${slug}" is listed in the catalog but its adapter port is not ` +
-      `complete in this build. It cannot process payments yet — see ` +
-      `docs/GATEWAYS.md (planned gateways).`,
-    );
-    this.name = 'GatewayNotPortedError';
-  }
-}
+export { GatewayNotPortedError };
 
 class PlannedGatewayStub extends BaseGatewayAdapter {
   constructor(private readonly entry: CatalogEntry) {

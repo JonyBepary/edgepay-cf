@@ -27,6 +27,7 @@ import {
   reconcilePendingPostings,
   verifyAllMerchants,
   sweepStuckRefunds,
+  collectOutboxStats,
 } from '../services/reconciliation';
 import { page } from '../lib/observability';
 
@@ -41,6 +42,7 @@ export class ReconciliationSweepWorkflow extends WorkflowEntrypoint<Env, SweepPa
     pending: { replayed: number; healed: number; rejected: number; failed: number; remaining: number };
     consistency: { checked: number; drift_count: number };
     refunds: { retriggered: number; stuck: number };
+    outbox: { outbox_lag_max_seconds: number; outbox_pending_total: number; outbox_stuck_total: number };
   }> {
     const env = this.env;
 
@@ -72,6 +74,12 @@ export class ReconciliationSweepWorkflow extends WorkflowEntrypoint<Env, SweepPa
         async () => sweepStuckRefunds(env),
       );
 
+      const outbox = await step.do(
+        'collect-outbox-stats',
+        { retries: STEP_RETRIES, timeout: '2 minutes' },
+        async () => collectOutboxStats(env),
+      );
+
       // op_reconciliation_runs audit row is written by runReconciliation's
       // wrapper when triggered via cron/ops; the workflow records it again
       // with trigger='daily' so the run is attributable to the workflow.
@@ -85,8 +93,9 @@ export class ReconciliationSweepWorkflow extends WorkflowEntrypoint<Env, SweepPa
               `INSERT INTO op_reconciliation_runs
                  (ran_at, trigger, pending_replayed, pending_healed, pending_rejected,
                   pending_failed, pending_remaining, merchants_checked, drift_count,
-                  refunds_retriggered, details_json)
-               VALUES (?, 'daily', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  refunds_retriggered, details_json,
+                  outbox_lag_max_seconds, outbox_pending_total, outbox_stuck_total)
+               VALUES (?, 'daily', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
             .bind(
               ranAt,
@@ -99,12 +108,15 @@ export class ReconciliationSweepWorkflow extends WorkflowEntrypoint<Env, SweepPa
               consistency.drift_count,
               refunds.retriggered,
               JSON.stringify({ drifts: consistency.drifts, stuck_refunds: refunds.stuck }),
+              outbox.outbox_lag_max_seconds,
+              outbox.outbox_pending_total,
+              outbox.outbox_stuck_total,
             )
             .run();
         },
       );
 
-      return { pending, consistency, refunds };
+      return { pending, consistency, refunds, outbox };
     } catch (err) {
       // Terminal failure observability: a step exhausted retries and the
       // instance will halt as `errored`. Page here so the DLQ is visible

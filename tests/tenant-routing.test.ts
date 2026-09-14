@@ -275,3 +275,87 @@ describe('avoid blocking every request on bootstrap', () => {
     await testEnv.KV.put('system:installed', 'true');
   });
 });
+
+describe('GET /api/v1/payments tenant isolation (no merchant 1 leak)', () => {
+  it('strictly isolates payments per tenant and rejects unauthenticated requests with 401', async () => {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const merchantX = await createMerchant(`TenantX-${suffix}`);
+    const merchantY = await createMerchant(`TenantY-${suffix}`);
+    const keyX = await createApiKey(merchantX);
+    const keyY = await createApiKey(merchantY);
+
+    // Create payment under merchant X
+    const postRes = await SELF.fetch('http://localhost/api/v1/payments', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${keyX}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ amount: '450.00', currency: 'BDT', description: `TenantX order ${suffix}` }),
+    });
+    expect(postRes.status).toBe(201);
+
+    // Query payments as Merchant Y — MUST NOT see Merchant X's payment
+    const resY = await SELF.fetch('http://localhost/api/v1/payments', {
+      headers: { Authorization: `Bearer ${keyY}` },
+    });
+    expect(resY.status).toBe(200);
+    const bodyY = await resY.json<{ payments: Array<{ id: string }> }>();
+    expect(bodyY.payments).toEqual([]);
+
+    // Query payments as Merchant X — MUST see Merchant X's payment
+    const resX = await SELF.fetch('http://localhost/api/v1/payments', {
+      headers: { Authorization: `Bearer ${keyX}` },
+    });
+    expect(resX.status).toBe(200);
+    const bodyX = await resX.json<{ payments: Array<{ id: string; amount: number }> }>();
+    expect(bodyX.payments.length).toBeGreaterThanOrEqual(1);
+    expect(bodyX.payments[0].amount).toBe(450);
+
+    // Unauthenticated GET /api/v1/payments must fail closed with 401 (never default to merchant 1)
+    const resNoAuth = await SELF.fetch('http://localhost/api/v1/payments');
+    expect(resNoAuth.status).toBe(401);
+  });
+});
+
+describe('GET /api/admin/v1/ledger/trial-balance target scoping', () => {
+  it('rejects requests without target merchant_id and correctly scopes to specified merchant', async () => {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const adminMerchant = await createMerchant(`Admin-${suffix}`);
+    const targetMerchant = await createMerchant(`Target-${suffix}`);
+    const adminKey = await createApiKey(adminMerchant, ['admin']);
+
+    // 1. Unauthenticated request -> 401
+    const resNoAuth = await SELF.fetch('http://localhost/api/admin/v1/ledger/trial-balance');
+    expect(resNoAuth.status).toBe(401);
+
+    // 2. Authenticated admin request without target merchant_id -> 400 Validation Error
+    const resNoTarget = await SELF.fetch('http://localhost/api/admin/v1/ledger/trial-balance', {
+      headers: { Authorization: `Bearer ${adminKey}` },
+    });
+    expect(resNoTarget.status).toBe(400);
+    const errBody = await resNoTarget.json<{ error: { code: string; message: string } }>();
+    expect(errBody.error.code).toBe('VALIDATION_ERROR');
+
+    // 3. Authenticated admin request with valid target merchant_id query param -> 200 OK
+    const resWithQuery = await SELF.fetch(`http://localhost/api/admin/v1/ledger/trial-balance?merchant_id=${targetMerchant}`, {
+      headers: { Authorization: `Bearer ${adminKey}` },
+    });
+    expect(resWithQuery.status).toBe(200);
+    const bodyQuery = await resWithQuery.json<{ success: boolean; data: { trial_balance: unknown } }>();
+    expect(bodyQuery.success).toBe(true);
+    expect(bodyQuery.data.trial_balance).toBeDefined();
+
+    // 4. Authenticated admin request with X-Target-Merchant-Id header -> 200 OK
+    const resWithHeader = await SELF.fetch('http://localhost/api/admin/v1/ledger/trial-balance', {
+      headers: {
+        Authorization: `Bearer ${adminKey}`,
+        'X-Target-Merchant-Id': String(targetMerchant),
+      },
+    });
+    expect(resWithHeader.status).toBe(200);
+    const bodyHeader = await resWithHeader.json<{ success: boolean; data: { trial_balance: unknown } }>();
+    expect(bodyHeader.success).toBe(true);
+  });
+});
+

@@ -96,6 +96,19 @@ export class GatewayDisabledError extends HttpError {
   }
 }
 
+export class GatewayNotPortedError extends HttpError {
+  constructor(slug: string) {
+    super(
+      422,
+      `Gateway "${slug}" is listed in the catalog but its adapter port is not ` +
+      `complete in this build. It cannot process payments yet — see ` +
+      `docs/GATEWAYS.md (planned gateways).`,
+      'GATEWAY_NOT_PORTED',
+    );
+    this.name = 'GatewayNotPortedError';
+  }
+}
+
 // ---------------------------------------------------------------
 // Hono error handler — converts errors to JSON responses
 // ---------------------------------------------------------------

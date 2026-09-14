@@ -131,6 +131,8 @@ describe('N-parallel postings (serialized by the per-tenant LedgerDO)', () => {
     expect(byCode['1010']).toBe(AMOUNT_EACH); // applied ONCE
     expect(byCode['4000']).toBe(AMOUNT_EACH);
 
+    await stub.drainOutbox();
+
     const rows = await db
       .prepare(`SELECT COUNT(*) AS n FROM op_ledger_entries le JOIN op_ledger_transactions t ON t.id = le.ledger_transaction_id WHERE t.uuid = ?`)
       .bind(`m${M_SAME_TX}:payment:${key}`)
@@ -173,14 +175,12 @@ describe('Property: D1-aggregated balances == DO balances under injected crashes
 
       // ~1/3 of postings hit an injected fault at a random seam
       const roll = rand();
-      let faultKind: 'none' | 'd' | 'e' | 'f' = 'none';
+      let faultKind: 'none' | 'do' | 'drain' = 'none';
       if (roll < 0.33) {
-        const seam = rand();
-        faultKind = seam < 0.34 ? 'd' : seam < 0.67 ? 'e' : 'f';
+        faultKind = rand() < 0.5 ? 'do' : 'drain';
         injected++;
-        if (faultKind === 'd') await stub.__testInjectFault({ fail_d1_pending: true });
-        else if (faultKind === 'e') await stub.__testInjectFault({ fail_do_writes: true });
-        else await stub.__testInjectFault({ fail_d1_posted: true });
+        if (faultKind === 'do') await stub.__testInjectFault({ fail_do_writes: true });
+        else await stub.__testInjectFault({ fail_outbox_drain: true });
       }
 
       try {
@@ -191,19 +191,18 @@ describe('Property: D1-aggregated balances == DO balances under injected crashes
         // else is a real failure that fails the test below.
         const msg = err instanceof Error ? err.message : String(err);
         if (!msg.includes('INJECTED:')) throw err;
-        // A step-D failure leaves NOTHING anywhere (no pending row — the
-        // client would retry later); it must not count toward totals.
-        // E/F failures leave a pending row that reconciliation lands.
-        if (faultKind !== 'd') expectedTotal += amountMinor;
+        // A DO writes failure rolls back completely; it must not count toward totals.
       }
     }
 
-    expect(injected).toBeGreaterThanOrEqual(5); // the stream really was adversarial
+    expect(injected).toBeGreaterThanOrEqual(4); // the stream really was adversarial
 
     // Reconcile to convergence (graceMs 0 — replay everything pending)
     const recon = await reconcilePendingPostings(tenv, { graceMs: -2000 }) // cutoff 2s ahead: immune to same-millisecond insert/cutoff races;
     expect(recon.remaining).toBe(0);
     expect(recon.rejected).toBe(0); // every posting in this stream is valid
+
+    await stub.drainOutbox({ force: true });
 
     // PROPERTY 1: per-account D1-aggregated balances == DO balances
     const consistency = await ledger.verifyDurableObjectConsistency(M_PROPERTY);

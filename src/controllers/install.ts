@@ -129,7 +129,8 @@ installRoutes.post('/', async (c) => {
   const merchantRow = await c.env.DB.prepare(
     `SELECT id FROM op_merchants WHERE uuid = ? LIMIT 1`
   ).bind(merchantUuid).first<{ id: number }>();
-  const merchantId = merchantRow?.id ?? 1;
+  if (!merchantRow?.id) throw new Error('Failed to retrieve newly created platform merchant ID');
+  const merchantId = merchantRow.id;
 
   // 2. Create super-admin user.
   //    PBKDF2 cost is env-configurable (PBKDF2_ITERATIONS): strictly-free-tier
@@ -158,7 +159,8 @@ installRoutes.post('/', async (c) => {
   const userRow = await c.env.DB.prepare(
     `SELECT id FROM op_merchant_users WHERE uuid = ? LIMIT 1`
   ).bind(adminUuid).first<{ id: number }>();
-  const adminUserId = userRow?.id ?? 1;
+  if (!userRow?.id) throw new Error('Failed to retrieve newly created super-admin user ID');
+  const adminUserId = userRow.id;
 
   // 3. Create default ledger chart of accounts
   const { LedgerService } = await import('../services/ledger');

@@ -327,6 +327,7 @@ describe('Ledger posting before completion + atomic batch + recoverable pending'
     expect(afterPi?.completed_at).not.toBeNull();
 
     // Ledger posting exists and is posted (not pending)
+    await getLedgerDO(tenv, M_LEDGER).drainOutbox();
     const txId = `m${M_LEDGER}:payment:${res.intent_id}`;
     const posting = await db
       .prepare(`SELECT status, tx_id FROM op_ledger_postings WHERE tx_id = ?`)
@@ -337,6 +338,7 @@ describe('Ledger posting before completion + atomic batch + recoverable pending'
 
     // Idempotent retry: second call should not double-post ledger, still succeed, via duplicate
     await svc.completeTransaction(txRow!.id, res.intent_id, gatewayTrxId);
+    await getLedgerDO(tenv, M_LEDGER).drainOutbox();
     const posting2 = await db
       .prepare(`SELECT status FROM op_ledger_postings WHERE tx_id = ?`)
       .bind(txId)

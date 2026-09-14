@@ -7,6 +7,7 @@
 import { Hono, type Context } from 'hono';
 import type { Env } from '../types/env';
 import { PaymentService } from '../services/payment';
+import { resolveIntentStatus } from '../services/checkout-status';
 
 type CheckoutContext = Context<{ Bindings: Env; Variables: Record<string, unknown> }>;
 
@@ -359,20 +360,22 @@ checkoutRoutes.get('/:token/status', async (c) => {
   const token = c.req.param('token');
 
   const intent = await c.env.DB.prepare(
-    `SELECT pi.status, pi.amount, pi.currency, t.gateway_trx_id
+    `SELECT pi.id, pi.merchant_id, pi.status, pi.amount, pi.currency, t.gateway_trx_id
      FROM op_payment_intents pi
      LEFT JOIN op_transactions t ON t.payment_intent_id = pi.id
      WHERE pi.token = ? LIMIT 1`
-  ).bind(token).first<{ status: string; amount: string; currency: string; gateway_trx_id: string | null }>();
+  ).bind(token).first<{ id: number; merchant_id: number; status: string; amount: string; currency: string; gateway_trx_id: string | null }>();
 
   if (!intent) {
     return c.json({ success: false, error: { code: 'NOT_FOUND' } }, 404);
   }
 
+  const finalStatus = await resolveIntentStatus(c.env, intent);
+
   return c.json({
     success: true,
     data: {
-      status: intent.status,
+      status: finalStatus,
       amount: intent.amount,
       currency: intent.currency,
       trx_id: intent.gateway_trx_id ?? null,

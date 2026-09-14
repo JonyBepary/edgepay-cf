@@ -83,6 +83,23 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   // Gateway-plugin selector — comma-separated gateway slugs/aliases.
   ENABLED_GATEWAYS?: string;
+  // Feature flag for ledger outbox protocol (revert window switch). Default: 'true'.
+  LEDGER_OUTBOX_ENABLED?: string;
+  // Feature flag for hardware-backed device signatures on SMS forwarding.
+  // When 'true', pairing requires public_key and keyless devices get 422 DEVICE_MUST_REPAIR.
+  // When undefined/'false' (rollout window), unsigned SMS from keyless devices is accepted with signature_verified=0.
+  SIGNATURE_REQUIRED?: string;
+
+  // Android Key Attestation policy flags (Phase 4)
+  ATTESTATION_REQUIRED?: string;              // Reject un-attested devices when true
+  STRONGBOX_REQUIRED?: string;                // Require StrongBox hardware backing
+  ATTESTATION_ALLOW_UNVERIFIED_BOOT?: string; // Allow unverified boot (defaults to false)
+  ATTESTATION_ALLOW_UNLOCKED?: string;        // Allow unlocked bootloader/device (defaults to false)
+  ATTESTATION_MAX_AGE_DAYS?: string;          // Attestation freshness window in days (default '30')
+
+  // Device policy enforcement — global cap over per-merchant mode.
+  // Values: 'off' | 'audit' | 'enforce' | undefined
+  DEVICE_POLICY_GLOBAL_MODE?: string;
 
   // Optional bootstrap configuration overrides (defaults used if absent)
   DEFAULT_MFS_NUMBER?: string;
@@ -192,6 +209,8 @@ export interface SmsMessage {
   sender: string;
   body: string;
   received_at: string;
+  signature_verified?: boolean;
+  raw_sender?: string;
 }
 
 // Minimal shapes of the platform bindings we use (kept local so this

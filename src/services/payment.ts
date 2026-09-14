@@ -23,7 +23,7 @@ import { isZero } from '../lib/money';
 import { randomUuid, randomToken } from '../lib/crypto';
 import { decrypt } from '../lib/crypto';
 import { gatewayRegistry } from '../gateways';
-import { assertGatewayEnabled } from '../gateways/enabled';
+import { assertGatewayEnabled, assertGatewayPorted } from '../gateways/enabled';
 import { postPaymentLedgerEntry } from './ledger';
 import { WebhookDispatcher } from './webhook-dispatcher';
 import { HttpError, NotFoundError, ValidationError } from '../lib/error';
@@ -76,6 +76,10 @@ export class PaymentService {
     let gatewayId = input.gateway_id;
     if (!gatewayId && (input.gateway || input.gateway_slug)) {
       const slug = input.gateway || input.gateway_slug;
+      if (slug && slug !== 'manual') {
+        assertGatewayEnabled(this.env, slug);
+        assertGatewayPorted(slug);
+      }
       const gwRow = await this.env.DB.prepare(
         `SELECT id FROM op_gateways WHERE merchant_id = ? AND slug = ? LIMIT 1`
       ).bind(input.merchant_id, slug).first<{ id: number }>();
@@ -197,6 +201,7 @@ export class PaymentService {
 
     if (gateway.type !== 'manual') {
       assertGatewayEnabled(this.env, gateway.slug);
+      assertGatewayPorted(gateway.slug);
     }
 
     // Load + decrypt credentials

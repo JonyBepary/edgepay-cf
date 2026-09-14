@@ -7,10 +7,11 @@
 
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { Env } from '../types/env';
-import { requireBearerApiAuth, requireScope, type ApiVariables } from '../middleware/auth';
+import { requireBearerApiAuth, requireScope, getAuthenticatedMerchantId, getTargetMerchantId, type ApiVariables } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 import { RefundService } from '../services/refund';
 import { runReconciliation } from '../services/reconciliation';
+import { grantDeviceOverride, revokeDeviceOverride } from '../services/device-policy';
 
 export const adminApiRoutes = new Hono<{ Bindings: Env; Variables: ApiVariables }>();
 
@@ -119,11 +120,174 @@ adminApiRoutes.delete('/devices/:id', requireScope('admin'), async (c) => {
   const id = parseInt(c.req.param('id'), 10);
 
   await c.env.DB.prepare(
-
     `DELETE FROM op_paired_devices WHERE id = ? AND merchant_id = ?`
-).bind(id, merchantId).run();
+  ).bind(id, merchantId).run();
 
   return c.json({ success: true });
+});
+
+// Merchant Device Policy (Admin override)
+adminApiRoutes.get('/merchants/:id/device-policy', async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const row = await c.env.DB.prepare(
+    `SELECT min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by
+     FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{
+    min_tier: string;
+    min_patch_level: string | null;
+    strict_pairing: number;
+    enforcement_mode: string | null;
+    updated_at: string;
+    updated_by: number | null;
+  }>();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: row?.min_tier ?? 'basic',
+      min_patch_level: row?.min_patch_level ?? null,
+      strict_pairing: row ? row.strict_pairing === 1 : false,
+      enforcement_mode: row?.enforcement_mode ?? 'audit',
+      updated_at: row?.updated_at ?? null,
+      updated_by: row?.updated_by ?? null,
+    },
+  });
+});
+
+adminApiRoutes.put('/merchants/:id/device-policy/enforcement-mode', requireScope('admin'), async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const body = await c.req.json<{ mode?: string }>();
+
+  const validModes = ['off', 'audit', 'enforce'];
+  if (!body.mode || !validModes.includes(body.mode)) {
+    return c.json({
+      success: false,
+      error: { code: 'INVALID_MODE', message: `mode must be one of: ${validModes.join(', ')}` },
+    }, 400);
+  }
+
+  const mode = body.mode;
+  const now = new Date().toISOString();
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  const previousRow = await c.env.DB.prepare(
+    `SELECT enforcement_mode FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{ enforcement_mode: string }>();
+  const previousMode = previousRow?.enforcement_mode ?? 'audit';
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_merchant_device_policies (merchant_id, min_tier, enforcement_mode, updated_at, updated_by)
+     VALUES (?, 'basic', ?, ?, ?)
+     ON CONFLICT(merchant_id) DO UPDATE SET
+       enforcement_mode = excluded.enforcement_mode,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`
+  ).bind(merchantId, mode, now, authSubject || null).run();
+
+  if (previousMode !== mode) {
+    const { metric, page } = await import('../lib/observability');
+    metric(c.env, 'device_policy_mode_changed', {
+      merchant_id: merchantId,
+      value: 1,
+      extra: `${previousMode}->${mode}`,
+    });
+    if (previousMode === 'enforce' && mode === 'audit') {
+      page(c.env, 'DEVICE_POLICY_ENFORCE_REVERTED', {
+        merchant_id: merchantId,
+        previous_mode: previousMode,
+        new_mode: mode,
+      });
+    }
+  }
+
+  const updated = await c.env.DB.prepare(
+    `SELECT min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by
+     FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{
+    min_tier: string;
+    min_patch_level: string | null;
+    strict_pairing: number;
+    enforcement_mode: string;
+    updated_at: string;
+    updated_by: number | null;
+  }>();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: updated?.min_tier ?? 'basic',
+      min_patch_level: updated?.min_patch_level ?? null,
+      strict_pairing: updated ? updated.strict_pairing === 1 : false,
+      enforcement_mode: updated?.enforcement_mode ?? mode,
+      updated_at: updated?.updated_at ?? now,
+      updated_by: updated?.updated_by ?? (authSubject || null),
+    },
+  });
+});
+
+adminApiRoutes.put('/merchants/:id/device-policy', requireScope('admin'), async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const body = await c.req.json<{
+    min_tier?: string;
+    min_patch_level?: string | null;
+    strict_pairing?: boolean;
+    enforcement_mode?: string;
+  }>();
+
+  const validTiers = ['basic', 'attested', 'strongbox'];
+  const minTier = body.min_tier ?? 'basic';
+  if (!validTiers.includes(minTier)) {
+    return c.json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: `min_tier must be one of: ${validTiers.join(', ')}` },
+    }, 400);
+  }
+
+  if (body.min_patch_level !== undefined && body.min_patch_level !== null) {
+    if (typeof body.min_patch_level !== 'string' || !/^\d{4}-\d{2}$/.test(body.min_patch_level)) {
+      return c.json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'min_patch_level must be in YYYY-MM format or null' },
+      }, 400);
+    }
+  }
+
+  const validModes = ['off', 'audit', 'enforce'];
+  const enforcementMode = body.enforcement_mode ?? 'audit';
+  if (body.enforcement_mode !== undefined && !validModes.includes(body.enforcement_mode)) {
+    return c.json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: `enforcement_mode must be one of: ${validModes.join(', ')}` },
+    }, 400);
+  }
+
+  const strictPairing = body.strict_pairing ? 1 : 0;
+  const now = new Date().toISOString();
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_merchant_device_policies (merchant_id, min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(merchant_id) DO UPDATE SET
+       min_tier = excluded.min_tier,
+       min_patch_level = excluded.min_patch_level,
+       strict_pairing = excluded.strict_pairing,
+       enforcement_mode = excluded.enforcement_mode,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`
+  ).bind(merchantId, minTier, body.min_patch_level ?? null, strictPairing, enforcementMode, now, authSubject || null).run();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: minTier,
+      min_patch_level: body.min_patch_level ?? null,
+      strict_pairing: body.strict_pairing ?? false,
+      enforcement_mode: enforcementMode,
+      updated_at: now,
+      updated_by: authSubject || null,
+    },
+  });
 });
 
 // SMS queues
@@ -194,7 +358,7 @@ async function verifyDnsTxt(record: string): Promise<string[]> {
 // (`refund-{id}`) that polls until terminal and posts the idempotent
 // ledger reversal.
 adminApiRoutes.post('/refunds', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId') as number | null;
+  const merchantId = getAuthenticatedMerchantId(c);
   const body = await c.req.json<{ transaction_id?: number; amount?: string; reason?: string }>();
 
   if (!body.transaction_id || !body.amount) {
@@ -207,7 +371,7 @@ adminApiRoutes.post('/refunds', requireScope('admin'), async (c) => {
   const service = new RefundService(c.env);
   try {
     const result = await service.createRefund({
-      merchant_id: merchantId ?? 0,
+      merchant_id: merchantId,
       transaction_id: body.transaction_id,
       amount: body.amount,
       reason: body.reason,
@@ -230,10 +394,7 @@ adminApiRoutes.post('/reconcile', requireScope('admin'), async (c) => {
 
 // Ledger state inspection for operators.
 adminApiRoutes.get('/ledger/trial-balance', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId') as number | null;
-  if (!merchantId) {
-    return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'merchant context required' } }, 400);
-  }
+  const merchantId = getTargetMerchantId(c);
   const { LedgerService } = await import('../services/ledger');
   const ledger = new LedgerService(c.env);
   const [trial, consistency] = await Promise.all([
@@ -362,7 +523,8 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     const adminUserRow = await c.env.DB.prepare(
       `SELECT id FROM op_merchant_users WHERE uuid = ? LIMIT 1`
     ).bind(adminUserUuid).first<{ id: number }>();
-    const adminUserId = adminUserRow?.id ?? 1;
+    if (!adminUserRow?.id) throw new Error('Failed to retrieve newly created merchant admin user ID');
+    const adminUserId = adminUserRow.id;
 
     // 2. Provision default ledger chart of accounts
     const { LedgerService } = await import('../services/ledger');
@@ -473,4 +635,137 @@ adminApiRoutes.post('/merchants', requireScope('admin'), requirePlatformAdmin, a
     console.error('Merchant provisioning error:', err);
     return c.json({ success: false, error: { code: 'PROVISION_ERROR', message: msg } }, 500);
   }
+});
+
+// ---------------------------------------------------------------
+// GET /api/admin/v1/merchants/:id/devices/:deviceId/policy-override
+// ---------------------------------------------------------------
+adminApiRoutes.get('/merchants/:id/devices/:deviceId/policy-override', requireScope('admin'), async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const deviceId = parseInt(c.req.param('deviceId'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT id, authorized_by, authorized_at, reason, acknowledged_tier,
+            required_tier, expires_at, revoked_at, revoked_by, revocation_reason
+     FROM op_device_policy_overrides
+     WHERE merchant_id = ? AND device_id = ?
+     ORDER BY id DESC
+     LIMIT 1`
+  ).bind(merchantId, deviceId).first();
+  return c.json({ success: true, data: row ?? null });
+});
+
+// ---------------------------------------------------------------
+// POST /api/admin/v1/merchants/:id/devices/:deviceId/policy-override
+// ---------------------------------------------------------------
+adminApiRoutes.post('/merchants/:id/devices/:deviceId/policy-override', requireScope('admin'), async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const deviceId = parseInt(c.req.param('deviceId'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { reason?: unknown; expires_in_days?: unknown };
+  const authType = c.get('authType');
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  let authorizedBy: number | null = null;
+  if (authType === 'bearer' && authSubject > 0) {
+    const keyRow = await c.env.DB.prepare(
+      `SELECT created_by FROM op_api_keys WHERE id = ? LIMIT 1`
+    ).bind(authSubject).first<{ created_by: number | null }>();
+    authorizedBy = keyRow?.created_by ?? null;
+  } else {
+    authorizedBy = authSubject || null;
+  }
+
+  if (!authorizedBy) {
+    return c.json({
+      success: false,
+      error: { code: 'NO_ACTOR_RESOLVED', message: 'Cannot attribute this action to a user' },
+    }, 400);
+  }
+
+  const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || null;
+  const userAgent = c.req.header('user-agent') || null;
+
+  const res = await grantDeviceOverride(c.env.DB, c.env, {
+    merchantId,
+    deviceId,
+    authorizedBy,
+    actorType: 'admin',
+    reason: body.reason,
+    expiresInDays: body.expires_in_days,
+    ipAddress,
+    userAgent,
+  });
+
+  if (!res.success) {
+    return c.json({ success: false, error: res.error }, res.status as 400 | 403 | 404 | 409 | 429 | 500);
+  }
+
+  return c.json({ success: true, data: res.data }, 201);
+});
+
+// ---------------------------------------------------------------
+// POST /api/admin/v1/merchants/:id/devices/:deviceId/policy-override/revoke
+// ---------------------------------------------------------------
+adminApiRoutes.post('/merchants/:id/devices/:deviceId/policy-override/revoke', requireScope('admin'), async (c) => {
+  const merchantId = parseInt(c.req.param('id'), 10);
+  const deviceId = parseInt(c.req.param('deviceId'), 10);
+  if (!Number.isInteger(merchantId) || merchantId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_MERCHANT_ID', message: 'merchant_id must be a positive integer' } }, 400);
+  }
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { reason?: unknown };
+  const authType = c.get('authType');
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  let revokedBy: number | null = null;
+  if (authType === 'bearer' && authSubject > 0) {
+    const keyRow = await c.env.DB.prepare(
+      `SELECT created_by FROM op_api_keys WHERE id = ? LIMIT 1`
+    ).bind(authSubject).first<{ created_by: number | null }>();
+    revokedBy = keyRow?.created_by ?? null;
+  } else {
+    revokedBy = authSubject || null;
+  }
+
+  if (!revokedBy) {
+    return c.json({
+      success: false,
+      error: { code: 'NO_ACTOR_RESOLVED', message: 'Cannot attribute this action to a user' },
+    }, 400);
+  }
+
+  const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || null;
+  const userAgent = c.req.header('user-agent') || null;
+
+  const res = await revokeDeviceOverride(c.env.DB, c.env, {
+    merchantId,
+    deviceId,
+    revokedBy,
+    actorType: 'admin',
+    reason: body.reason,
+    ipAddress,
+    userAgent,
+  });
+
+  if (!res.success) {
+    return c.json({ success: false, error: res.error }, res.status as 400 | 403 | 404 | 409 | 429 | 500);
+  }
+
+  return c.json({ success: true, data: res.data }, 200);
 });

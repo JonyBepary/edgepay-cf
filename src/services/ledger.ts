@@ -214,6 +214,9 @@ export class LedgerService {
     consistent: boolean;
     discrepancies: Array<{ account_id: number; code: string; d1_balance: Money; do_balance: Money }>;
   }> {
+    const stub = getLedgerDO(this.env, merchantId);
+    await stub.drainOutbox().catch(() => {});
+
     const [accounts, entries, doBalances, doTrial] = await Promise.all([
       this.env.DB
         .prepare(`SELECT id, code FROM op_ledger_accounts WHERE merchant_id = ?`)
@@ -228,8 +231,8 @@ export class LedgerService {
         )
         .bind(merchantId)
         .all<{ account_id: number; direction: LedgerDirection; amount: Money }>(),
-      getLedgerDO(this.env, merchantId).getBalances(),
-      getLedgerDO(this.env, merchantId).trialBalance(),
+      stub.getBalances(),
+      stub.trialBalance(),
     ]);
 
     const codeById = new Map(accounts.results.map(a => [a.id, a.code]));

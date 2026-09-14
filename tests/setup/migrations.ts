@@ -16,6 +16,12 @@ import m2 from '../../migrations/0002_cf_native_v2.sql?raw';
 import m3 from '../../migrations/0003_ledger_posting_protocol.sql?raw';
 import m4 from '../../migrations/0004_payment_integrity.sql?raw';
 import m5 from '../../migrations/0005_otp_hardening.sql?raw';
+import m6 from '../../migrations/0006_outbox_protocol.sql?raw';
+import m7 from '../../migrations/0007_device_attestation_and_sms_hardening.sql?raw';
+import m8 from '../../migrations/0008_device_attestation.sql?raw';
+import m9 from '../../migrations/0009_merchant_device_policies.sql?raw';
+import m10 from '../../migrations/0010_device_policy_modes.sql?raw';
+import m11 from '../../migrations/0011_device_policy_overrides.sql?raw';
 
 function splitStatements(sql: string): string[] {
   return sql
@@ -29,13 +35,13 @@ beforeAll(async () => {
 
   const marker = await db
     .prepare(
-      `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'op_ledger_postings'`,
+      `SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_overrides_active'`,
     )
     .first<{ name: string }>();
 
   if (marker) return; // already migrated by an earlier test file
 
-  const statements = [m1, m2, m3, m4, m5]
+  const statements = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11]
     .flatMap(sql => splitStatements(sql))
     .map(sql => db.prepare(sql));
 

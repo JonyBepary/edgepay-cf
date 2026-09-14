@@ -1,29 +1,20 @@
 /**
- * D1 side of the ledger posting protocol — write-ahead row + audit trail.
+ * D1 side of the ledger posting protocol — outbox drain + audit trail.
  *
- * Both functions are IDEMPOTENT and are intentionally usable from BOTH
- * the LedgerDO (normal posting, steps D and F) and the reconciliation
- * service (replay / heal path). They never touch DO state.
+ * In the outbox model, the DO is the authoritative book of record.
+ * D1 is an asynchronously drained audit mirror and read model.
  *
- * The audit mirror keeps the existing op_ledger_transactions /
- * op_ledger_entries tables (TEXT Money) so existing reporting keeps
- * working; op_ledger_postings is the protocol's book of record.
+ * Both buildLedgerAuditStatements and writeLedgerAuditTrail are IDEMPOTENT
+ * and safe to retry without double-inserting.
  */
 
-import type { Env } from '../types/env';
+import type { Env, D1PreparedStatement } from '../types/env';
 import type { PostingPayload } from '../types/ledger';
 
 /**
- * Step D — insert the write-ahead posting row with status='pending'.
+ * Step D (legacy / replay) — insert the write-ahead posting row with status='pending'.
  *
- * ON CONFLICT DO NOTHING: a pending row from a crashed earlier attempt
- * (same tx_id) is exactly the state reconciliation will replay, so the
- * insert must not fail. Returns the existing row's status when a row
- * was already present (null when freshly inserted):
- *   - 'pending'  → stale attempt or in-flight replay: proceed
- *   - 'posted'   → D1 ahead of DO (hard-crash window): proceed and heal
- *   - 'rejected' → poison guard: this tx_id was already deterministically
- *                  rejected; refuse rather than silently resurrect it
+ * Retained for reconciliation replay of legacy or un-migrated pending postings.
  */
 export async function insertPendingPosting(
   env: Env,
@@ -61,24 +52,45 @@ export async function insertPendingPosting(
 }
 
 /**
- * Step F — write the D1 audit trail and flip the posting row to 'posted'.
+ * Build (but do not execute) the D1 statements that mirror a posting
+ * into the audit read-model. Callers batch these across many postings
+ * so the outbox drain is a single atomic D1 round-trip.
  *
- * Everything is one D1 batch (atomic) and every statement is idempotent:
- *   1. transaction header — ON CONFLICT(uuid = tx_id) DO NOTHING
- *   2. one entry insert per journal line — guarded by NOT EXISTS on
- *      (ledger_transaction_id, account_id, direction, amount)
- *   3. UPDATE op_ledger_postings → status='posted'
- *
- * Replay safety: re-running this batch after a partial failure is a no-op
- * for statements that already landed, and completes the ones that didn't.
+ * Idempotent: every statement uses INSERT OR IGNORE / ON CONFLICT keyed on tx_id
+ * (or (tx_id, account_code, direction) for entries). Re-running the
+ * drain after a partial success is safe.
  */
-export async function writeLedgerAuditTrail(
+export function buildLedgerAuditStatements(
   env: Env,
+  merchantId: number,
   payload: PostingPayload,
   postedAtIso: string,
-): Promise<{ ledger_transaction_id: number }> {
-  const statements = [
-    // 1. Header (uuid doubles as the protocol tx_id → natural dedup)
+): D1PreparedStatement[] {
+  const statements: D1PreparedStatement[] = [
+    // 1. Audit registry: written as 'posted' directly (no 'pending' phase).
+    // If a legacy pending row exists, update it to posted.
+    env.DB
+      .prepare(
+        `INSERT INTO op_ledger_postings
+           (tx_id, merchant_id, reference_type, reference_id, currency, payload_json, status, created_at, posted_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'posted', ?, ?)
+         ON CONFLICT(tx_id) DO UPDATE SET
+           status = 'posted',
+           posted_at = excluded.posted_at,
+           error = NULL`,
+      )
+      .bind(
+        payload.tx_id,
+        merchantId,
+        payload.reference_type,
+        payload.reference_id ?? null,
+        payload.currency,
+        JSON.stringify(payload),
+        postedAtIso,
+        postedAtIso,
+      ),
+
+    // 2. Transaction header: uuid doubles as tx_id for dedup
     env.DB
       .prepare(
         `INSERT INTO op_ledger_transactions
@@ -87,32 +99,33 @@ export async function writeLedgerAuditTrail(
          ON CONFLICT(uuid) DO NOTHING`,
       )
       .bind(
-        payload.merchant_id,
+        merchantId,
         payload.tx_id,
         payload.reference_type,
-        payload.reference_id,
-        payload.description,
+        payload.reference_id ?? null,
+        payload.description ?? '',
         postedAtIso,
         postedAtIso,
       ),
   ];
 
-  // 2. Journal entries — each guarded so a replay never double-inserts
-  for (const e of payload.entries) {
+  // 3. Journal entries: guarded by entry_order so legitimate duplicate legs
+  // (e.g. two separate debits to 1010 of the same amount) are preserved,
+  // while replay of the entire drain batch remains strictly idempotent.
+  payload.entries.forEach((e, entryIndex) => {
+    const entryOrder = entryIndex + 1;
     statements.push(
       env.DB
         .prepare(
           `INSERT INTO op_ledger_entries
-             (merchant_id, ledger_transaction_id, account_id, direction, amount, currency, created_at)
-           SELECT t.merchant_id, t.id, ?, ?, ?, ?, ?
+             (merchant_id, ledger_transaction_id, account_id, direction, amount, currency, entry_order, created_at)
+           SELECT t.merchant_id, t.id, ?, ?, ?, ?, ?, ?
            FROM op_ledger_transactions t
            WHERE t.uuid = ?
              AND NOT EXISTS (
                SELECT 1 FROM op_ledger_entries le
                WHERE le.ledger_transaction_id = t.id
-                 AND le.account_id = ?
-                 AND le.direction = ?
-                 AND le.amount = ?
+                 AND le.entry_order = ?
              )`,
         )
         .bind(
@@ -120,26 +133,27 @@ export async function writeLedgerAuditTrail(
           e.direction,
           e.amount,
           payload.currency,
+          entryOrder,
           postedAtIso,
           payload.tx_id,
-          e.d1_account_id,
-          e.direction,
-          e.amount,
+          entryOrder,
         ),
     );
-  }
+  });
 
-  // 3. Flip the write-ahead row
-  statements.push(
-    env.DB
-      .prepare(
-        `UPDATE op_ledger_postings
-         SET status = 'posted', posted_at = ?, attempts = attempts + 1, error = NULL
-         WHERE tx_id = ?`,
-      )
-      .bind(postedAtIso, payload.tx_id),
-  );
+  return statements;
+}
 
+/**
+ * Legacy / helper: write the D1 audit trail and flip the posting row to 'posted'.
+ * Composes buildLedgerAuditStatements into an atomic env.DB.batch call.
+ */
+export async function writeLedgerAuditTrail(
+  env: Env,
+  payload: PostingPayload,
+  postedAtIso: string,
+): Promise<{ ledger_transaction_id: number }> {
+  const statements = buildLedgerAuditStatements(env, payload.merchant_id, payload, postedAtIso);
   await env.DB.batch(statements);
 
   const row = await env.DB

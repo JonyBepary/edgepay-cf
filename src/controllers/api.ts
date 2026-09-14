@@ -8,7 +8,7 @@
 
 import { Hono } from 'hono';
 import type { Env } from '../types/env';
-import { requireBearerApiAuth, requireScope, type ApiVariables } from '../middleware/auth';
+import { requireBearerApiAuth, requireScope, getAuthenticatedMerchantId, type ApiVariables } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 import { createIdempotencyMiddleware, idempotencyMiddleware } from '../middleware/idempotency';
 import { PaymentService } from '../services/payment';
@@ -20,6 +20,13 @@ import { RefundNotSupportedError } from '../services/refund';
 import type { WebhookMessage } from '../types/env';
 import { zValidator } from '@hono/zod-validator';
 import { randomToken } from '../lib/crypto';
+import {
+  resolvePolicy,
+  computeDeviceTier,
+  TIER_RANK,
+  grantDeviceOverride,
+  revokeDeviceOverride,
+} from '../services/device-policy';
 
 export const apiRoutes = new Hono<{ Bindings: Env; Variables: ApiVariables }>();
 
@@ -52,8 +59,7 @@ apiRoutes.post(
     }
   }),
   async (c) => {
-  const merchantId = c.get('merchantId');
-  if (!merchantId) throw new Error('Merchant context not resolved');
+  const merchantId = getAuthenticatedMerchantId(c);
 
   const body = c.req.valid('json');
 
@@ -85,7 +91,7 @@ apiRoutes.post(
 // GET /api/v1/payments — list payments for merchant console
 // ---------------------------------------------------------------
 apiRoutes.get('/payments', async (c) => {
-  const merchantId = c.get('merchantId') ?? 1;
+  const merchantId = getAuthenticatedMerchantId(c);
   const limit = Math.min(parseInt(c.req.query('limit') ?? '20', 10), 100);
   const offset = parseInt(c.req.query('offset') ?? '0', 10);
   const status = c.req.query('status');
@@ -132,7 +138,7 @@ apiRoutes.get('/payments', async (c) => {
 // GET /api/v1/payments/{payment_id} — fetch a payment intent
 // ---------------------------------------------------------------
 apiRoutes.get('/payments/:payment_id', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const paymentId = parseInt(c.req.param('payment_id'), 10);
 
   const intent = await c.env.DB.prepare(
@@ -155,7 +161,7 @@ apiRoutes.get('/payments/:payment_id', async (c) => {
 // GET /api/v1/transactions — list transactions
 // ---------------------------------------------------------------
 apiRoutes.get('/transactions', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const limit = Math.min(parseInt(c.req.query('limit') ?? '20', 10), 100);
   const offset = parseInt(c.req.query('offset') ?? '0', 10);
   const status = c.req.query('status');
@@ -180,7 +186,7 @@ apiRoutes.get('/transactions', async (c) => {
 // GET /api/v1/transactions/{trx_id} — fetch a transaction
 // ---------------------------------------------------------------
 apiRoutes.get('/transactions/:trx_id', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const trxId = c.req.param('trx_id');
 
   const tx = await c.env.DB.prepare(
@@ -213,7 +219,7 @@ apiRoutes.post(
     }
   }),
   async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const body = c.req.valid('json');
 
   const tx = await c.env.DB.prepare(
@@ -307,7 +313,7 @@ apiRoutes.post(
 // GET /api/v1/refunds/:id — refund status (bearer-scoped to merchant)
 // ---------------------------------------------------------------
 apiRoutes.get('/refunds/:id', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const refundId = c.req.param('id');
 
   const row = await c.env.DB.prepare(
@@ -331,7 +337,7 @@ apiRoutes.get('/refunds/:id', async (c) => {
 // GET /api/v1/customers — list customers
 // ---------------------------------------------------------------
 apiRoutes.get('/customers', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const limit = Math.min(parseInt(c.req.query('limit') ?? '20', 10), 100);
 
   const rows = await c.env.DB.prepare(
@@ -346,7 +352,7 @@ apiRoutes.get('/customers', async (c) => {
 // GET /api/v1/api-keys — list current merchant's API keys
 // ---------------------------------------------------------------
 apiRoutes.get('/api-keys', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const rows = await c.env.DB.prepare(
 
     `SELECT id, name, key_prefix, scopes, status, last_used_at, expires_at, created_at
@@ -362,7 +368,7 @@ apiRoutes.get('/api-keys', async (c) => {
 // POST /api/v1/api-keys — generate a new API key (returns the secret ONCE)
 // ---------------------------------------------------------------
 apiRoutes.post('/api-keys', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const body = await c.req.json<{ name?: string; scopes?: string[] }>();
 
   if (!body.name) throw new ValidationError('name is required');
@@ -403,7 +409,7 @@ apiRoutes.post('/api-keys', requireScope('admin'), async (c) => {
 // Idempotent: revoking an already-revoked key succeeds.
 // ---------------------------------------------------------------
 apiRoutes.patch('/api-keys/:id', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const id = parseInt(c.req.param('id'), 10);
   if (!Number.isFinite(id)) throw new ValidationError('Invalid API key id');
 
@@ -431,7 +437,7 @@ apiRoutes.patch('/api-keys/:id', requireScope('admin'), async (c) => {
 // when the key does not belong to this merchant.
 // ---------------------------------------------------------------
 apiRoutes.delete('/api-keys/:id', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const id = parseInt(c.req.param('id'), 10);
   if (!Number.isFinite(id)) throw new ValidationError('Invalid API key id');
 
@@ -462,7 +468,7 @@ apiRoutes.delete('/api-keys/:id', requireScope('admin'), async (c) => {
 // schema has no replaced_by column for a grace window.
 // ---------------------------------------------------------------
 apiRoutes.post('/api-keys/:id/rotate', requireScope('admin'), async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const id = parseInt(c.req.param('id'), 10);
   if (!Number.isFinite(id)) throw new ValidationError('Invalid API key id');
 
@@ -530,7 +536,7 @@ apiRoutes.post('/api-keys/:id/rotate', requireScope('admin'), async (c) => {
 // GET /api/v1/webhooks — list merchant webhooks
 // ---------------------------------------------------------------
 apiRoutes.get('/webhooks', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const rows = await c.env.DB.prepare(
     `SELECT id, url, events, status, created_at, updated_at
      FROM op_webhooks
@@ -544,7 +550,7 @@ apiRoutes.get('/webhooks', async (c) => {
 // POST /api/v1/webhooks — register a webhook
 // ---------------------------------------------------------------
 apiRoutes.post('/webhooks', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const body = await c.req.json<{ url?: string; events?: string[] }>();
   if (!body.url) {
     return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'url is required' } }, 400);
@@ -578,7 +584,7 @@ apiRoutes.post('/webhooks', async (c) => {
 // DELETE /api/v1/webhooks/{id} — delete a webhook
 // ---------------------------------------------------------------
 apiRoutes.delete('/webhooks/:id', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const id = parseInt(c.req.param('id'), 10);
   await c.env.DB.prepare(
     `DELETE FROM op_webhooks WHERE id = ? AND merchant_id = ?`
@@ -590,7 +596,7 @@ apiRoutes.delete('/webhooks/:id', async (c) => {
 // POST /api/v1/webhooks/tests — send a test webhook
 // ---------------------------------------------------------------
 apiRoutes.post('/webhooks/tests', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   let body: { url?: string } = {};
   try { body = await c.req.json(); } catch { /* optional body */ }
 
@@ -611,7 +617,7 @@ apiRoutes.post('/webhooks/tests', async (c) => {
 // GET /api/v1/webhooks/deliveries — recent webhook deliveries
 // ---------------------------------------------------------------
 apiRoutes.get('/webhooks/deliveries', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
 
   const rows = await c.env.DB.prepare(
@@ -633,7 +639,7 @@ apiRoutes.get('/webhooks/deliveries', async (c) => {
 // can be retried; the delivery flips to 'retrying' with attempt + 1.
 // ---------------------------------------------------------------
 apiRoutes.post('/webhooks/deliveries/:id/retry', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
   const id = parseInt(c.req.param('id'), 10);
   if (!Number.isFinite(id)) throw new ValidationError('Invalid delivery id');
 
@@ -761,7 +767,7 @@ apiRoutes.get('/gateways', async (c) => {
 // recent transactions. Reuses the mobile dashboard SQL.
 // ---------------------------------------------------------------
 apiRoutes.get('/merchant/summary', async (c) => {
-  const merchantId = c.get('merchantId')!;
+  const merchantId = getAuthenticatedMerchantId(c);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -790,3 +796,429 @@ apiRoutes.get('/merchant/summary', async (c) => {
     },
   });
 });
+
+// ---------------------------------------------------------------
+// GET /api/v1/devices — merchant-scoped devices with security tier
+// ---------------------------------------------------------------
+apiRoutes.get('/devices', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const devices = await c.env.DB.prepare(
+    `SELECT d.id, d.uuid, d.device_name, d.status, d.public_key, d.key_algorithm,
+            d.attestation_verified_at, d.attestation_strong, d.attestation_verified_boot,
+            d.device_os_version, d.device_patch_level, d.last_heartbeat_at, d.created_at,
+            p.min_tier, p.min_patch_level, p.strict_pairing
+     FROM op_paired_devices d
+     LEFT JOIN op_merchant_device_policies p ON p.merchant_id = d.merchant_id
+     WHERE d.merchant_id = ?
+     ORDER BY d.created_at DESC`
+  ).bind(merchantId).all<{
+    id: number;
+    uuid: string;
+    device_name: string;
+    status: string;
+    public_key: string | null;
+    key_algorithm: string | null;
+    attestation_verified_at: string | null;
+    attestation_strong: number;
+    attestation_verified_boot: number;
+    device_os_version: number | null;
+    device_patch_level: string | null;
+    last_heartbeat_at: string;
+    created_at: string;
+    min_tier: string | null;
+    min_patch_level: string | null;
+    strict_pairing: number | null;
+  }>();
+
+  const maxAttestationAgeMs = parseInt(c.env.ATTESTATION_MAX_AGE_DAYS || '30', 10) * 86400000;
+  const allowUnverifiedBoot = c.env.ATTESTATION_ALLOW_UNVERIFIED_BOOT === 'true';
+
+  const enriched = (devices.results ?? []).map((d) => {
+    const policy = resolvePolicy(c.env, d);
+    const tierInfo = computeDeviceTier(d, policy, { maxAttestationAgeMs, allowUnverifiedBoot });
+    const satisfied = TIER_RANK[tierInfo.tier] >= TIER_RANK[policy.min_tier];
+    return {
+      id: d.id,
+      device_name: d.device_name,
+      tier: tierInfo.tier,
+      tier_reason: tierInfo.reason ?? null,
+      policy_required_tier: policy.min_tier,
+      policy_satisfied: satisfied,
+      attestation: {
+        verified_at: d.attestation_verified_at,
+        strong: d.attestation_strong === 1,
+        verified_boot: d.attestation_verified_boot === 1,
+        patch_level: d.device_patch_level,
+        os_version: d.device_os_version,
+      },
+      last_heartbeat_at: d.last_heartbeat_at,
+      status: d.status,
+    };
+  });
+
+  return c.json({ success: true, data: enriched });
+});
+
+// ---------------------------------------------------------------
+// GET /api/v1/device-policy — merchant-scoped trust policy
+// ---------------------------------------------------------------
+apiRoutes.get('/device-policy', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const row = await c.env.DB.prepare(
+    `SELECT min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by
+     FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{
+    min_tier: string;
+    min_patch_level: string | null;
+    strict_pairing: number;
+    enforcement_mode: string | null;
+    updated_at: string;
+    updated_by: number | null;
+  }>();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: row?.min_tier ?? 'basic',
+      min_patch_level: row?.min_patch_level ?? null,
+      strict_pairing: row ? row.strict_pairing === 1 : false,
+      enforcement_mode: row?.enforcement_mode ?? 'audit',
+      updated_at: row?.updated_at ?? null,
+      updated_by: row?.updated_by ?? null,
+    },
+  });
+});
+
+// ---------------------------------------------------------------
+// GET /api/v1/device-policy/compliance — compliance aggregation
+// ---------------------------------------------------------------
+apiRoutes.get('/device-policy/compliance', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const daysParam = parseInt(c.req.query('days') ?? '30', 10);
+  const days = Math.min(Math.max(isNaN(daysParam) ? 30 : daysParam, 1), 90);
+
+  const stats = await c.env.DB.prepare(
+    `SELECT required_tier, achieved_tier, compliant, SUM(evaluation_count) AS count
+     FROM op_device_policy_daily_stats
+     WHERE merchant_id = ?
+       AND day >= date('now', '-' || ? || ' days')
+     GROUP BY required_tier, achieved_tier, compliant
+     ORDER BY count DESC`
+  ).bind(merchantId, String(days)).all<{
+    required_tier: string;
+    achieved_tier: string;
+    compliant: number;
+    count: number;
+  }>();
+
+  const byTier = (stats.results ?? []).map((r) => ({
+    required_tier: r.required_tier,
+    achieved_tier: r.achieved_tier,
+    compliant: r.compliant,
+    count: Number(r.count),
+  }));
+
+  const totalEvaluations = byTier.reduce((sum, r) => sum + r.count, 0);
+  const compliantEvaluations = byTier.filter((r) => r.compliant === 1).reduce((sum, r) => sum + r.count, 0);
+  const complianceRate = totalEvaluations > 0 ? Number((compliantEvaluations / totalEvaluations).toFixed(4)) : null;
+
+  return c.json({
+    success: true,
+    data: {
+      window_days: days,
+      by_tier: byTier,
+      compliance_rate: complianceRate,
+      compliant_evaluations: compliantEvaluations,
+      total_evaluations: totalEvaluations,
+    },
+  });
+});
+
+// ---------------------------------------------------------------
+// PUT /api/v1/device-policy/enforcement-mode — update enforcement mode
+// ---------------------------------------------------------------
+apiRoutes.put('/device-policy/enforcement-mode', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const body = await c.req.json<{ mode?: string }>();
+
+  const validModes = ['off', 'audit', 'enforce'];
+  if (!body.mode || !validModes.includes(body.mode)) {
+    return c.json({
+      success: false,
+      error: { code: 'INVALID_MODE', message: `mode must be one of: ${validModes.join(', ')}` },
+    }, 400);
+  }
+
+  const mode = body.mode;
+  const now = new Date().toISOString();
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  const previousRow = await c.env.DB.prepare(
+    `SELECT enforcement_mode FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{ enforcement_mode: string }>();
+  const previousMode = previousRow?.enforcement_mode ?? 'audit';
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_merchant_device_policies (merchant_id, min_tier, enforcement_mode, updated_at, updated_by)
+     VALUES (?, 'basic', ?, ?, ?)
+     ON CONFLICT(merchant_id) DO UPDATE SET
+       enforcement_mode = excluded.enforcement_mode,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`
+  ).bind(merchantId, mode, now, authSubject || null).run();
+
+  if (previousMode !== mode) {
+    const { metric, page } = await import('../lib/observability');
+    metric(c.env, 'device_policy_mode_changed', {
+      merchant_id: merchantId,
+      value: 1,
+      extra: `${previousMode}->${mode}`,
+    });
+    if (previousMode === 'enforce' && mode === 'audit') {
+      page(c.env, 'DEVICE_POLICY_ENFORCE_REVERTED', {
+        merchant_id: merchantId,
+        previous_mode: previousMode,
+        new_mode: mode,
+      });
+    }
+  }
+
+  const updated = await c.env.DB.prepare(
+    `SELECT min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by
+     FROM op_merchant_device_policies WHERE merchant_id = ? LIMIT 1`
+  ).bind(merchantId).first<{
+    min_tier: string;
+    min_patch_level: string | null;
+    strict_pairing: number;
+    enforcement_mode: string;
+    updated_at: string;
+    updated_by: number | null;
+  }>();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: updated?.min_tier ?? 'basic',
+      min_patch_level: updated?.min_patch_level ?? null,
+      strict_pairing: updated ? updated.strict_pairing === 1 : false,
+      enforcement_mode: updated?.enforcement_mode ?? mode,
+      updated_at: updated?.updated_at ?? now,
+      updated_by: updated?.updated_by ?? (authSubject || null),
+    },
+  });
+});
+
+// ---------------------------------------------------------------
+// PUT /api/v1/device-policy — configure merchant trust policy
+// ---------------------------------------------------------------
+apiRoutes.put('/device-policy', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const body = await c.req.json<{
+    min_tier?: string;
+    min_patch_level?: string | null;
+    strict_pairing?: boolean;
+    enforcement_mode?: string;
+  }>();
+
+  const validTiers = ['basic', 'attested', 'strongbox'];
+  const minTier = body.min_tier ?? 'basic';
+  if (!validTiers.includes(minTier)) {
+    return c.json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: `min_tier must be one of: ${validTiers.join(', ')}` },
+    }, 400);
+  }
+
+  if (body.min_patch_level !== undefined && body.min_patch_level !== null) {
+    if (typeof body.min_patch_level !== 'string' || !/^\d{4}-\d{2}$/.test(body.min_patch_level)) {
+      return c.json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'min_patch_level must be in YYYY-MM format or null' },
+      }, 400);
+    }
+  }
+
+  const validModes = ['off', 'audit', 'enforce'];
+  const enforcementMode = body.enforcement_mode ?? 'audit';
+  if (body.enforcement_mode !== undefined && !validModes.includes(body.enforcement_mode)) {
+    return c.json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: `enforcement_mode must be one of: ${validModes.join(', ')}` },
+    }, 400);
+  }
+
+  const strictPairing = body.strict_pairing ? 1 : 0;
+  const now = new Date().toISOString();
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  await c.env.DB.prepare(
+    `INSERT INTO op_merchant_device_policies (merchant_id, min_tier, min_patch_level, strict_pairing, enforcement_mode, updated_at, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(merchant_id) DO UPDATE SET
+       min_tier = excluded.min_tier,
+       min_patch_level = excluded.min_patch_level,
+       strict_pairing = excluded.strict_pairing,
+       enforcement_mode = excluded.enforcement_mode,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`
+  ).bind(merchantId, minTier, body.min_patch_level ?? null, strictPairing, enforcementMode, now, authSubject || null).run();
+
+  return c.json({
+    success: true,
+    data: {
+      min_tier: minTier,
+      min_patch_level: body.min_patch_level ?? null,
+      strict_pairing: body.strict_pairing ?? false,
+      enforcement_mode: enforcementMode,
+      updated_at: now,
+      updated_by: authSubject || null,
+    },
+  });
+});
+
+// ---------------------------------------------------------------
+// GET /api/v1/devices/:id/policy-override
+// ---------------------------------------------------------------
+apiRoutes.get('/devices/:id/policy-override', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const deviceId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+  const row = await c.env.DB.prepare(
+    `SELECT id, authorized_by, authorized_at, reason, acknowledged_tier,
+            required_tier, expires_at, revoked_at, revoked_by, revocation_reason
+     FROM op_device_policy_overrides
+     WHERE merchant_id = ? AND device_id = ?
+     ORDER BY id DESC
+     LIMIT 1`
+  ).bind(merchantId, deviceId).first();
+  return c.json({ success: true, data: row ?? null });
+});
+
+// ---------------------------------------------------------------
+// POST /api/v1/devices/:id/policy-override
+// ---------------------------------------------------------------
+apiRoutes.post('/devices/:id/policy-override', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const deviceId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+
+  // Caller role check: owner or admin required
+  // EdgePay-CF does not model owner/admin/read/write as user roles; authorization
+  // is scope-based (op_api_keys.scopes). Override management requires the `admin`
+  // scope, which is the closest equivalent to an "owner or admin" role. A future
+  // role model can replace this check without changing the endpoint contract.
+  const scopes = c.get('authScopes') ?? [];
+  if (!scopes.includes('*') && !scopes.includes('admin')) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin role required' } }, 403);
+  }
+
+  const authType = c.get('authType'); // 'bearer' | 'jwt' | ...
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  let authorizedBy: number | null = null;
+  if (authType === 'bearer' && authSubject > 0) {
+    // API key ID → creator user ID
+    const keyRow = await c.env.DB.prepare(
+      `SELECT created_by FROM op_api_keys WHERE id = ? LIMIT 1`
+    ).bind(authSubject).first<{ created_by: number | null }>();
+    authorizedBy = keyRow?.created_by ?? null;
+  } else {
+    authorizedBy = authSubject || null;
+  }
+
+  if (!authorizedBy) {
+    return c.json({
+      success: false,
+      error: { code: 'NO_ACTOR_RESOLVED', message: 'Cannot attribute this action to a user' },
+    }, 400);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { reason?: unknown; expires_in_days?: unknown };
+  const actorType = c.get('authType') === 'bearer' ? 'api_key' : 'admin';
+  const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || null;
+  const userAgent = c.req.header('user-agent') || null;
+
+  const res = await grantDeviceOverride(c.env.DB, c.env, {
+    merchantId,
+    deviceId,
+    authorizedBy,
+    actorType,
+    reason: body.reason,
+    expiresInDays: body.expires_in_days,
+    ipAddress,
+    userAgent,
+  });
+
+  if (!res.success) {
+    return c.json({ success: false, error: res.error }, res.status as 400 | 403 | 404 | 409 | 429 | 500);
+  }
+
+  return c.json({ success: true, data: res.data }, 201);
+});
+
+// ---------------------------------------------------------------
+// POST /api/v1/devices/:id/policy-override/revoke
+// ---------------------------------------------------------------
+apiRoutes.post('/devices/:id/policy-override/revoke', async (c) => {
+  const merchantId = getAuthenticatedMerchantId(c);
+  const deviceId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(deviceId) || deviceId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_DEVICE_ID', message: 'deviceId must be a positive integer' } }, 400);
+  }
+
+  // Caller role check: owner or admin required
+  // EdgePay-CF does not model owner/admin/read/write as user roles; authorization
+  // is scope-based (op_api_keys.scopes). Override management requires the `admin`
+  // scope, which is the closest equivalent to an "owner or admin" role. A future
+  // role model can replace this check without changing the endpoint contract.
+  const scopes = c.get('authScopes') ?? [];
+  if (!scopes.includes('*') && !scopes.includes('admin')) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin role required' } }, 403);
+  }
+
+  const authType = c.get('authType');
+  const authSubject = Number(c.get('authSubject') ?? 0);
+
+  let revokedBy: number | null = null;
+  if (authType === 'bearer' && authSubject > 0) {
+    const keyRow = await c.env.DB.prepare(
+      `SELECT created_by FROM op_api_keys WHERE id = ? LIMIT 1`
+    ).bind(authSubject).first<{ created_by: number | null }>();
+    revokedBy = keyRow?.created_by ?? null;
+  } else {
+    revokedBy = authSubject || null;
+  }
+
+  if (!revokedBy) {
+    return c.json({
+      success: false,
+      error: { code: 'NO_ACTOR_RESOLVED', message: 'Cannot attribute this action to a user' },
+    }, 400);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { reason?: unknown };
+  const actorType = c.get('authType') === 'bearer' ? 'api_key' : 'admin';
+  const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || null;
+  const userAgent = c.req.header('user-agent') || null;
+
+  const res = await revokeDeviceOverride(c.env.DB, c.env, {
+    merchantId,
+    deviceId,
+    revokedBy,
+    actorType,
+    reason: body.reason,
+    ipAddress,
+    userAgent,
+  });
+
+  if (!res.success) {
+    return c.json({ success: false, error: res.error }, res.status as 400 | 403 | 404 | 409 | 429 | 500);
+  }
+
+  return c.json({ success: true, data: res.data }, 200);
+});
+

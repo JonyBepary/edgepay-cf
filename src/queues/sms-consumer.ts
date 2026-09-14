@@ -44,16 +44,57 @@ export class SmsQueueConsumer {
     const now = new Date().toISOString();
 
     try {
-      // Persist the SMS
+      let signatureVerified = sms.signature_verified ? 1 : 0;
+      // Defense-in-depth: if queue message claims signature_verified === true,
+      // ensure device_id is present and positive. Otherwise demote signature_verified to 0
+      // and emit a metric to detect rogue or buggy queue producers.
+      if (signatureVerified === 1 && (!sms.device_id || sms.device_id <= 0)) {
+        signatureVerified = 0;
+        metric(env, 'sms_signature_tampered', { merchant_id: sms.merchant_id });
+      }
+
+      // Persist the SMS with verification audit trail
       const result = await env.DB
         .prepare(
-          `INSERT INTO op_sms_data (merchant_id, sender, body, match_status, created_at)
-           VALUES (?, ?, ?, 'pending', ?)`,
+          `INSERT INTO op_sms_data (merchant_id, sender, body, raw_sender, signature_verified, device_id, match_status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
         )
-        .bind(sms.merchant_id, sms.sender, sms.body, now)
+        .bind(
+          sms.merchant_id,
+          sms.sender,
+          sms.body,
+          sms.raw_sender ?? sms.sender,
+          signatureVerified,
+          sms.device_id ?? null,
+          now,
+        )
         .run();
 
       const smsId = result.meta?.last_row_id ?? 0;
+
+      // Policy: if signatures are strictly required, unverified SMS is immediately rejected
+      if (env.SIGNATURE_REQUIRED === 'true' && signatureVerified === 0) {
+        metric(env, 'sms_unverified_rejected', { merchant_id: sms.merchant_id });
+        await env.DB
+          .prepare(`UPDATE op_sms_data SET match_status = 'failed' WHERE id = ?`)
+          .bind(smsId)
+          .run();
+        await msg.ack();
+        return;
+      }
+
+      // Server-side carrier shortcode check
+      const { validateCarrierSender } = await import('../services/carrier-verification');
+      const carrier = validateCarrierSender(sms.sender);
+      if (!carrier.trusted) {
+        metric(env, 'sms_untrusted_carrier', { merchant_id: sms.merchant_id, sender: sms.sender });
+        await env.DB
+          .prepare(`UPDATE op_sms_data SET match_status = 'failed' WHERE id = ?`)
+          .bind(smsId)
+          .run();
+        await msg.ack();
+        return;
+      }
 
       // --- Parse: regex templates first, Workers AI fallback on miss ---
       const { SmsParserService } = await import('../services/sms-parser');
@@ -81,7 +122,7 @@ export class SmsQueueConsumer {
 
       // --- Corroborate against OPEN transactions before confirming ---
       const openOrders = await this.loadOpenOrders(env, sms.merchant_id);
-      const verifiedGateway = senderToGatewaySlug(sms.sender);
+      const verifiedGateway = carrier.gatewaySlug ?? senderToGatewaySlug(sms.sender);
       const decision = corroborateSmsPayment(extraction, openOrders, verifiedGateway);
 
       if (decision.action === 'confirm') {

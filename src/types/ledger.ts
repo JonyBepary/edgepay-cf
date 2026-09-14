@@ -66,8 +66,8 @@ export interface PostingResult {
   status: PostingStatus;
   tx_id: string;
   posted_at: string;
-  /** D1 op_ledger_transactions.id (audit mirror row), when available */
-  ledger_transaction_id?: number;
+  /** D1 op_ledger_transactions.id (audit mirror row), when available or null if outbox drain pending */
+  ledger_transaction_id?: number | null;
   /** status === 'failed' only: structured code for routing/reconciliation */
   error_code?: PostingErrorCode;
   /** status === 'failed' only: human-readable detail (no [CODE] prefix) */
@@ -141,10 +141,34 @@ export interface LedgerDOStub {
     }>;
   }>;
   snapshotBalances(): Promise<{ snapshot_at: string; accounts: number }>;
+  drainOutbox(opts?: { force?: boolean }): Promise<{ drained: number; failed: number }>;
+  outboxStats(): Promise<{
+    pending: number;
+    stuck: number;
+    max_age_seconds: number;
+    max_retry: number;
+  }>;
+  recentPostedTxIds(sinceIso?: string): Promise<string[]>;
   /** TEST-ONLY: one-shot failure injection for the consistency property test */
   __testInjectFault(faults: {
     fail_d1_pending?: boolean;
     fail_do_writes?: boolean;
     fail_d1_posted?: boolean;
+    fail_outbox_drain?: boolean;
   }): Promise<void>;
+  __testInspectOutbox?(): Promise<Array<{
+    id: number;
+    event_id: string;
+    event_type: string;
+    status: string;
+    retry_count: number;
+    last_error: string | null;
+    next_retry_at: number | null;
+    synced_at: string | null;
+  }>>;
+  __testSetOutboxSynced?(id: number, syncedAt: string): Promise<void>;
+  __testGetAlarm?(): Promise<number | null>;
+  __testSetAlarm?(target: number): Promise<void>;
+  __testTriggerAlarm?(): Promise<void>;
+  alarm?(): Promise<void>;
 }

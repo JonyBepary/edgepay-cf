@@ -161,7 +161,8 @@ export interface GatewaySelectionEnv {
 
 /** Is the given registry slug enabled on this deployment? */
 export function isGatewayEnabled(env: GatewaySelectionEnv, slug: string): boolean {
-  return gatewaySelection(env.ENABLED_GATEWAYS).enabled.includes(slug);
+  const canonical = GATEWAY_ALIASES[slug.toLowerCase()] ?? slug;
+  return gatewaySelection(env.ENABLED_GATEWAYS).enabled.includes(canonical);
 }
 
 /**
@@ -192,7 +193,8 @@ export function suggestCanonical(token: string): string | undefined {
 
 /** Catalog status helper for gateways route + install readiness. */
 export function gatewayStatus(slug: string): string | undefined {
-  return catalogFind(slug)?.status;
+  const canonical = GATEWAY_ALIASES[slug.toLowerCase()] ?? slug;
+  return catalogFind(canonical)?.status;
 }
 
 /**
@@ -203,7 +205,8 @@ export function gatewayStatus(slug: string): string | undefined {
  * letting the call fall through to the planned stub.
  */
 export function assertGatewayPorted(slug: string): void {
-  if (catalogFind(slug)?.status === 'planned') {
-    throw new GatewayNotPortedError(slug);
+  const canonical = GATEWAY_ALIASES[slug.toLowerCase()] ?? slug;
+  if (catalogFind(canonical)?.status === 'planned') {
+    throw new GatewayNotPortedError(canonical);
   }
 }
