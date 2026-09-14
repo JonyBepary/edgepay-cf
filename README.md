@@ -12,6 +12,33 @@ It operates **100% on the Cloudflare Free Tier** (~3.3K payments/day practical c
 
 ---
 
+## Quickstart — Self-Host in 1 Minute
+
+### Option A: Modern Terminal Installer (Recommended)
+
+Run the single-command interactive TUI installer:
+
+```bash
+curl -fsSL https://get.edgepay.dev | bash
+```
+
+or directly via `npx`:
+
+```bash
+npx @edgepay/init
+```
+
+The interactive terminal installer automates the entire provisioning and deployment workflow:
+- **Prerequisites Check**: Verifies Node.js 20+, Wrangler CLI, and Git.
+- **Cloudflare Authentication**: Auto-detects session, assists login, and supports multi-account selection.
+- **Resource Provisioning**: Auto-provisions D1 SQLite, KV, R2, Queues, and Dead-Letter Queues.
+- **Cryptographic Security**: Generates high-entropy secrets (`JWT_SECRET`, `APP_KEY`, `ENCRYPTION_KEY`) and pushes them to Cloudflare without manual copy-pasting.
+- **Database Migrations**: Applies all 11 D1 schema migrations remotely.
+- **Worker Deployment & Health Check**: Publishes the Worker and verifies health check response before completion.
+- **Crash Resilience**: Saves intermediate progress to `.edgepay-init.json` to resume where you left off if interrupted.
+
+---
+
 ## Deploy in 1 click
 
 Copy-paste this button into any markdown file. It is the official snippet. Only the `url` parameter is supported — there are no custom parameters.

@@ -24,6 +24,7 @@ scripts/port-gateways/analysis-report.txt
 # Local companion & simulator runtime state
 **/.companion-state.json
 *-state.json
+.edgepay-init.json
 
 # Archived audit correspondence
 docs/Archive/

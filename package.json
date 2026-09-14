@@ -5,6 +5,9 @@
   "description": "EdgePay — self-hosted payment gateway rebuilt on HonoJS + Cloudflare Workers edge runtime",
   "main": "src/index.ts",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run db:migrations:apply && wrangler deploy",
@@ -18,6 +21,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:init": "npm --prefix packages/init test",
+    "build:init": "npm --prefix packages/init run build",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds.sql",

@@ -1,0 +1,34 @@
+{
+  "name": "@edgepay/init",
+  "version": "0.4.5",
+  "description": "Modern TUI Self-Hosted Installer for EdgePay on Cloudflare Workers",
+  "type": "module",
+  "bin": {
+    "edgepay-init": "./bin/edgepay-init.mjs"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node ./bin/edgepay-init.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.0",
+    "execa": "^9.5.2",
+    "picocolors": "^1.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
