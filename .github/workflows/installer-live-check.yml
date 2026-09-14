@@ -32,7 +32,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -95,5 +95,9 @@ jobs:
       - name: Post-run Teardown & Resource Isolation
         if: always()
         run: |
-          echo "Executing post-run cleanup to leave zero remote resources..."
-          node packages/init/bin/edgepay-init.mjs --destroy --i-know-what-im-doing --yes
+          if [ -f .edgepay-init.json ] || [ -f wrangler.jsonc ]; then
+            echo "Executing post-run cleanup to leave zero remote resources..."
+            node packages/init/bin/edgepay-init.mjs --destroy --i-know-what-im-doing --yes
+          else
+            echo "No deployment configuration found (.edgepay-init.json / wrangler.jsonc). Zero remote resources to clean up."
+          fi

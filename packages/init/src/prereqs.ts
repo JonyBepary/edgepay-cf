@@ -13,16 +13,17 @@ export async function checkPrereqs(): Promise<PrereqCheckResult> {
   const nodeVersion = process.version;
   const majorNode = parseInt(process.versions.node.split('.')[0], 10);
 
-  if (Number.isNaN(majorNode) || majorNode < 20) {
-    errors.push(`Node.js 20+ is required (detected ${nodeVersion}). Please upgrade Node.js.`);
+  if (Number.isNaN(majorNode) || majorNode < 22) {
+    errors.push(`Node.js 22+ is required (detected ${nodeVersion}). Please upgrade Node.js.`);
   }
 
   let wranglerVersion: string | undefined;
   try {
     const res = await execa('npx', ['wrangler', '--version'], { timeout: 15000 });
     wranglerVersion = res.stdout.trim().split('\n').pop()?.trim();
-  } catch {
-    errors.push('wrangler CLI is not available. Please ensure npm/npx is working.');
+  } catch (err: any) {
+    const detail = err?.shortMessage || err?.message || String(err);
+    errors.push(`wrangler CLI is not available or failed to execute (${detail}). Please ensure npm/npx is working and Node.js >= 22 is used.`);
   }
 
   let gitVersion: string | undefined;

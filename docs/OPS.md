@@ -151,12 +151,48 @@ The destroy→install cycle is automated in GitHub Actions via [`.github/workflo
 - **Manual Trigger**: Supports `workflow_dispatch` on demand.
 
 ### Pipeline Secrets Required:
-- `CLOUDFLARE_API_TOKEN`: Token with Workers, D1, KV, R2, and Queues permissions.
+- `CLOUDFLARE_API_TOKEN`: Minimal 8-permission scoped token (see below).
 - `CLOUDFLARE_ACCOUNT_ID`: `17347346d8cc54bbb820a0a0413d98c0`.
 - `EDGEPAY_SCRATCH_ACCOUNTS`: `17347346d8cc54bbb820a0a0413d98c0`.
 - `EDGEPAY_DESTROY_CONFIRMED`: `yes`.
+
+### CI Token Permissions (Least Privilege):
+
+To adhere to least-privilege security and prevent blast-radius propagation across Cloudflare resources, the `CLOUDFLARE_API_TOKEN` secret must **never** be an account-wide administrator token. It must be scoped strictly to the following 8 permission groups:
+
+| Permission Group | Level | Purpose |
+| :--- | :--- | :--- |
+| **Account · Account Settings** | Read | Account validation (`wrangler whoami`) |
+| **Account · Workers Scripts** | Edit | Deploy & delete worker scripts (`wrangler deploy`, `wrangler delete`) |
+| **Account · Workers KV Storage** | Edit | Namespace provisioning & teardown (`wrangler kv namespace`) |
+| **Account · Workers R2 Storage** | Edit | Bucket provisioning & teardown (`wrangler r2 bucket`) |
+| **Account · Workers Queues** | Edit | Queue provisioning, consumer attachment & teardown (`wrangler queues`) |
+| **Account · D1** | Edit | Database provisioning, schema migrations & teardown (`wrangler d1`) |
+| **Account · Workers AI** | Edit | Fallback SMS parsing AI model binding (`@cf/meta/llama-3.1-8b-instruct`) |
+| **User · User Details** | Read | User verification (`wrangler whoami`) |
+
+#### Token Configuration Rules:
+1. **Account Resources**: Set to `Include · <your scratch account only>` (e.g. `17347346d8cc54bbb820a0a0413d98c0`). Do **not** use wildcards (`*`) and do **not** grant any zone-level permissions.
+2. **TTL & Rotation**: Maximum validity of **90 days**. When the token expires, the CI job fails loudly to enforce a regular rotation discipline.
+3. **Pre-flight Local Verification**:
+   ```bash
+   export CLOUDFLARE_API_TOKEN="<new-token>"
+   export CLOUDFLARE_ACCOUNT_ID="17347346d8cc54bbb820a0a0413d98c0"
+
+   # Allowed operations (must succeed):
+   npx wrangler whoami
+   npx wrangler d1 list
+   npx wrangler kv namespace list
+   npx wrangler r2 bucket list
+   npx wrangler queues list
+
+   # Denied operations (must fail with permission denied):
+   npx wrangler pages project list 2>&1 || echo "correctly denied"
+   npx wrangler r2 bucket list --jurisdiction eu 2>&1 || echo "correctly denied"
+   ```
 
 ### Success Gates:
 - Total wall-clock time under 300 seconds (measured fresh install is ~2m 29s).
 - HTTP 200 with `status: ok` and all 3 subsystems (`durable_objects`, `workflows`, `workers_ai`) true.
 - Zero untracked or unscoped resources remaining on the account.
+
