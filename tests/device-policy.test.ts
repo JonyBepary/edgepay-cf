@@ -58,6 +58,22 @@ describe('Merchant Device Trust Policy & Graceful Degradation', () => {
       `INSERT INTO op_api_keys (merchant_id, name, key_prefix, key_hash, scopes, status, created_by, created_at)
        VALUES (?, 'policy-key', ?, ?, ?, 'active', 0, ?)`
     ).bind(merchantId, apiKeyPrefix, keyHash, JSON.stringify(['read', 'write', 'admin']), now).run();
+
+    await db.prepare(
+      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+       ON CONFLICT DO NOTHING`
+    ).bind(merchantId, crypto.randomUUID(), now, now).run();
+    const brand = await db.prepare(
+      `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+    ).bind(merchantId).first<{ id: number }>();
+    if (brand) {
+      await db.prepare(
+        `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+         ON CONFLICT DO NOTHING`
+      ).bind(brand.id, merchantId, crypto.randomUUID(), now, now).run();
+    }
   });
 
   it('1. default policy: merchant with no row has min_tier=basic, pairing succeeds with any device', async () => {

@@ -90,6 +90,24 @@ describe('Device Policy Enforcement Modes & Compliance Telemetry', () => {
       `INSERT INTO op_api_keys (merchant_id, name, key_prefix, key_hash, scopes, status, created_by, created_at)
        VALUES (?, 'comp-key', ?, ?, ?, 'active', 0, ?)`
     ).bind(complianceMerchantId, compKeyPrefix, compKeyHash, JSON.stringify(['read', 'write']), now).run();
+
+    for (const m of [merchantId, complianceMerchantId]) {
+      await db.prepare(
+        `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+         VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+         ON CONFLICT DO NOTHING`
+      ).bind(m, crypto.randomUUID(), now, now).run();
+      const brand = await db.prepare(
+        `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+      ).bind(m).first<{ id: number }>();
+      if (brand) {
+        await db.prepare(
+          `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+           VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+           ON CONFLICT DO NOTHING`
+        ).bind(brand.id, m, crypto.randomUUID(), now, now).run();
+      }
+    }
   });
 
   let keylessToken: string;

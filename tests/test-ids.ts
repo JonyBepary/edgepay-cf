@@ -28,4 +28,6 @@ export const TEST_MERCHANT_RANGES = {
   DEVICE_POLICY_OVERRIDES: { start: 900001, end: 909999, file: 'tests/device-policy-overrides.test.ts' },
   HIERARCHY: { start: 910100, end: 919999, file: 'tests/hierarchy.test.ts' },
   CHECKOUT_GATE_SELECTION: { start: 830001, end: 839999, file: 'tests/checkout-gate-selection.test.ts' },
+  PAIRING_STORE_SELECTION: { start: 820001, end: 824999, file: 'tests/pairing-store-selection.test.ts' },
+  GATE_ADMIN: { start: 825001, end: 829999, file: 'tests/gate-admin.test.ts' },
 } as const;

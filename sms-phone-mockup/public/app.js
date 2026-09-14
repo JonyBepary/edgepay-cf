@@ -209,6 +209,7 @@ const el = {
   authTokenInput: doc.getElementById('authTokenInput'),
   relayProxyCheckbox: doc.getElementById('relayProxyCheckbox'),
   pairingOtpInput: doc.getElementById('pairingOtpInput'),
+  pairingStoreIdInput: doc.getElementById('pairingStoreIdInput'),
   pairDeviceBtn: doc.getElementById('pairDeviceBtn'),
   pairingStatusMsg: doc.getElementById('pairingStatusMsg'),
 
@@ -247,6 +248,7 @@ const el = {
   cancelQuickPairBtn: doc.getElementById('cancelQuickPairBtn'),
   confirmQuickPairBtn: doc.getElementById('confirmQuickPairBtn'),
   modalPairingOtpInput: doc.getElementById('modalPairingOtpInput'),
+  modalPairingStoreIdInput: doc.getElementById('modalPairingStoreIdInput'),
   modalPairStatusMsg: doc.getElementById('modalPairStatusMsg'),
 
   // Mobile View Switcher
@@ -637,7 +639,7 @@ el.randomSendBtn?.addEventListener('click', () => {
 });
 
 // OTP Pairing Logic
-async function handlePairing(otpCode, statusEl) {
+async function handlePairing(otpCode, statusEl, storeId) {
   if (!otpCode || otpCode.length < 6) {
     statusEl.textContent = '❌ Please enter a valid 6-digit OTP';
     statusEl.style.color = 'var(--accent-primary)';
@@ -646,6 +648,16 @@ async function handlePairing(otpCode, statusEl) {
 
   statusEl.textContent = 'Pairing device...';
   statusEl.style.color = 'var(--text-secondary)';
+
+  const payload = {
+    token: otpCode,
+    device_name: 'Android SMS Simulator',
+    fingerprint: 'sim-dev-fp-01',
+  };
+  const parsedStoreId = storeId ? parseInt(String(storeId).trim(), 10) : NaN;
+  if (!isNaN(parsedStoreId) && parsedStoreId > 0) {
+    payload.store_id = parsedStoreId;
+  }
 
   try {
     const targetUrl = el.targetUrlInput.value.replace(/\/sms$/, '/pair');
@@ -656,11 +668,7 @@ async function handlePairing(otpCode, statusEl) {
         target_url: targetUrl,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        payload: {
-          token: otpCode,
-          device_name: 'Android SMS Simulator',
-          fingerprint: 'sim-dev-fp-01',
-        },
+        payload,
       }),
     });
 
@@ -685,11 +693,13 @@ async function handlePairing(otpCode, statusEl) {
 }
 
 el.pairDeviceBtn?.addEventListener('click', () => {
-  handlePairing(el.pairingOtpInput.value.trim(), el.pairingStatusMsg);
+  const storeId = el.pairingStoreIdInput?.value?.trim();
+  handlePairing(el.pairingOtpInput.value.trim(), el.pairingStatusMsg, storeId);
 });
 
 el.confirmQuickPairBtn?.addEventListener('click', () => {
-  handlePairing(el.modalPairingOtpInput.value.trim(), el.modalPairStatusMsg);
+  const storeId = el.modalPairingStoreIdInput?.value?.trim();
+  handlePairing(el.modalPairingOtpInput.value.trim(), el.modalPairStatusMsg, storeId);
 });
 
 // Modals Trigger Handlers

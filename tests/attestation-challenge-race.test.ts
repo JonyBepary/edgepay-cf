@@ -40,6 +40,22 @@ describe('Attestation Challenge Lifecycle & Race Conditions', () => {
        VALUES (?, ?, ?, 'Race User', 'race-user@test.local', ?, 'hash', 'active', ?, ?)
        ON CONFLICT(id) DO NOTHING`
     ).bind(userId, merchantId, userUuid, emailHash, now, now).run();
+
+    await db.prepare(
+      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+       ON CONFLICT DO NOTHING`
+    ).bind(merchantId, crypto.randomUUID(), now, now).run();
+    const brand = await db.prepare(
+      `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+    ).bind(merchantId).first<{ id: number }>();
+    if (brand) {
+      await db.prepare(
+        `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+         ON CONFLICT DO NOTHING`
+      ).bind(brand.id, merchantId, crypto.randomUUID(), now, now).run();
+    }
   });
 
   it('enforces single-use challenge consumption under concurrent pairing race', async () => {

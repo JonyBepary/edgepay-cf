@@ -211,6 +211,22 @@ describe('Device Pairing, Attestation & Key Management', () => {
        ON CONFLICT(id) DO NOTHING`
     ).bind(userId, merchantId, userUuid, emailHash, now, now).run();
 
+    await db.prepare(
+      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+       ON CONFLICT DO NOTHING`
+    ).bind(merchantId, crypto.randomUUID(), now, now).run();
+    const brand = await db.prepare(
+      `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+    ).bind(merchantId).first<{ id: number }>();
+    if (brand) {
+      await db.prepare(
+        `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+         ON CONFLICT DO NOTHING`
+      ).bind(brand.id, merchantId, crypto.randomUUID(), now, now).run();
+    }
+
     // Insert pairing OTP token
     const otpHash = await sha256(otpCode);
     const expiresAt = new Date(Date.now() + 600_000).toISOString();
@@ -782,6 +798,22 @@ describe('Keyless Device Migration Policy & Retention Sweeps', () => {
        VALUES (?, ?, ?, 'Keyless User', 'keyless-user@example.com', ?, 'hash', 'active', ?, ?)
        ON CONFLICT(id) DO NOTHING`
     ).bind(userId, merchantId, crypto.randomUUID(), emailHash, now, now).run();
+
+    await db.prepare(
+      `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+       VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+       ON CONFLICT DO NOTHING`
+    ).bind(merchantId, crypto.randomUUID(), now, now).run();
+    const brand = await db.prepare(
+      `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+    ).bind(merchantId).first<{ id: number }>();
+    if (brand) {
+      await db.prepare(
+        `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+         ON CONFLICT DO NOTHING`
+      ).bind(brand.id, merchantId, crypto.randomUUID(), now, now).run();
+    }
 
     // Create legacy pairing token
     const otpCode = '554433';

@@ -37,6 +37,22 @@ async function setupTestMerchant(mId: number, name = 'Override Merchant') {
      ON CONFLICT(id) DO NOTHING`
   ).bind(mId, crypto.randomUUID(), name, `slug-${mId}`, `m${mId}@test.local`, now, now).run();
 
+  await db.prepare(
+    `INSERT INTO op_brands (merchant_id, uuid, name, slug, status, created_at, updated_at)
+     VALUES (?, ?, 'Main', 'main', 'active', ?, ?)
+     ON CONFLICT DO NOTHING`
+  ).bind(mId, crypto.randomUUID(), now, now).run();
+  const brand = await db.prepare(
+    `SELECT id FROM op_brands WHERE merchant_id = ? AND slug = 'main'`
+  ).bind(mId).first<{ id: number }>();
+  if (brand) {
+    await db.prepare(
+      `INSERT INTO op_stores (brand_id, merchant_id, uuid, name, slug, default_currency, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'Main', 'main', 'BDT', 'active', ?, ?)
+       ON CONFLICT DO NOTHING`
+    ).bind(brand.id, mId, crypto.randomUUID(), now, now).run();
+  }
+
   const userId = mId + 50;
   const emailHash = await sha256(`user-${userId}@test.local`);
   await db.prepare(

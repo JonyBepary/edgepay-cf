@@ -26,6 +26,7 @@ import {
 import { recordPolicyEvaluation } from '../services/policy-telemetry';
 import { parseX509Certificate, equalBytes } from '../lib/x509';
 import { base64ToBytes, bytesToBase64 } from '../lib/crypto';
+import { HierarchyService } from '../services/hierarchy';
 
 type MobileContext = Context<{ Bindings: Env; Variables: Record<string, unknown> }>;
 
@@ -126,6 +127,7 @@ const handlePairing = async (c: MobileContext) => {
     key_algorithm?: string;
     attestation_statement?: string;
     cert_chain?: string[];
+    store_id?: number;
   }>();
   const otpCode = body.otp || body.token;
 
@@ -389,16 +391,48 @@ const handlePairing = async (c: MobileContext) => {
     }, 422);
   }
 
+  // Resolve store_id: caller-selected store, or default to Main store.
+  const hierarchy = new HierarchyService(c.env.DB);
+  let resolvedStoreId: number;
+  if (body.store_id !== undefined) {
+    if (!Number.isInteger(body.store_id) || body.store_id <= 0) {
+      return c.json({
+        success: false,
+        error: { code: 'INVALID_STORE_ID', message: 'store_id must be a positive integer' },
+      }, 400);
+    }
+    const store = await hierarchy.getStore(body.store_id, tokenRow.merchant_id);
+    if (!store) {
+      return c.json({
+        success: false,
+        error: { code: 'STORE_NOT_FOUND', message: 'Store not found for this merchant' },
+      }, 404);
+    }
+    resolvedStoreId = store.id;
+  } else {
+    const mainStore = await hierarchy.resolveMainStore(tokenRow.merchant_id);
+    if (!mainStore) {
+      // This should never happen — migration 0014 guarantees a Main store.
+      // If it does, the merchant's onboarding was interrupted.
+      return c.json({
+        success: false,
+        error: { code: 'NO_DEFAULT_STORE', message: 'Merchant has no default store; contact support' },
+      }, 400);
+    }
+    resolvedStoreId = mainStore.id;
+  }
+
   // Register the device with hardware-backed public key and attestation details
   const deviceUuid = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO op_paired_devices
-       (merchant_id, user_id, uuid, device_name, fingerprint, status, public_key, key_algorithm, attestation_statement,
+       (merchant_id, store_id, user_id, uuid, device_name, fingerprint, status, public_key, key_algorithm, attestation_statement,
         attestation_verified_at, attestation_method, attestation_strong, attestation_verified_boot, attestation_raw_json,
         device_os_version, device_patch_level, last_heartbeat_at, created_at)
-     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     tokenRow.merchant_id,
+    resolvedStoreId,
     tokenRow.user_id,
     deviceUuid,
     body.device_name ?? 'Android SMS Companion',

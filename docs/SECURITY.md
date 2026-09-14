@@ -142,6 +142,12 @@ The destination phone number for each gate is resolved as:
 
 If none of these are set, the checkout renders "Contact merchant" in place of a number. Merchants should populate `op_gates.mfs_number` via the admin API when adding new gates.
 
+#### Device Pairing Store Assignment (Phase 6d)
+
+`POST /api/mobile/v1/pair` accepts an optional `store_id`. If supplied, the store must belong to the OTP's merchant (404 otherwise). If omitted, the device is assigned to the merchant's Main store, which migration `0014` guarantees exists.
+
+The resolved `store_id` is written to `op_paired_devices.store_id`. All SMS forwarded by the device inherits this store via the `SmsMessage.store_id` field, which isolates corroboration to that store's open transactions.
+
 ## Device Policy Enforcement Modes & Telemetry
 
 EdgePay-CF serves emerging markets where merchants often operate on budget Android handsets (2016–2018 vintage, custom ROMs, or lacking discrete hardware security chips). Enforcing hardware attestation platform-wide would disenfranchise a significant portion of legitimate merchants.

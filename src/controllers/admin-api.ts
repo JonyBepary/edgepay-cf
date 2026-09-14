@@ -104,6 +104,88 @@ adminApiRoutes.put('/sms-templates/:id', requireScope('admin'), async (c) => {
   return c.json({ success: true });
 });
 
+// Gates — update destination number, label, status
+adminApiRoutes.patch('/gates/:id', requireScope('admin'), async (c) => {
+  const merchantId = c.get('merchantId')!;
+  const gateId = parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(gateId) || gateId <= 0) {
+    return c.json({ success: false, error: { code: 'INVALID_GATE_ID', message: 'Gate ID must be a positive integer' } }, 400);
+  }
+
+  interface GateUpdateBody {
+    label?: string;
+    mfs_number?: string | null;
+    status?: 'active' | 'paused' | 'archived';
+  }
+  const body: GateUpdateBody = await c.req.json<GateUpdateBody>().catch(() => ({}));
+
+  if (body.label === undefined && body.mfs_number === undefined && body.status === undefined) {
+    return c.json({ success: false, error: { code: 'NO_FIELDS', message: 'At least one field (label, mfs_number, status) must be provided' } }, 400);
+  }
+
+  if (body.label !== undefined) {
+    if (typeof body.label !== 'string' || body.label.trim().length === 0 || body.label.length > 200) {
+      return c.json({ success: false, error: { code: 'INVALID_LABEL', message: 'Label must be a string between 1 and 200 characters' } }, 400);
+    }
+  }
+
+  if (body.mfs_number !== undefined && body.mfs_number !== null) {
+    if (typeof body.mfs_number !== 'string' || !/^[+]?[0-9]{6,20}$/.test(body.mfs_number)) {
+      return c.json({ success: false, error: { code: 'INVALID_MFS_NUMBER', message: 'mfs_number must be 6-20 digits, optionally starting with +' } }, 400);
+    }
+  }
+
+  if (body.status !== undefined) {
+    if (!['active', 'paused', 'archived'].includes(body.status)) {
+      return c.json({ success: false, error: { code: 'INVALID_STATUS', message: "status must be one of 'active', 'paused', 'archived'" } }, 400);
+    }
+  }
+
+  const before = await c.env.DB.prepare(
+    `SELECT id, label, mfs_number, status FROM op_gates WHERE id = ? AND merchant_id = ? LIMIT 1`
+  ).bind(gateId, merchantId).first<{ id: number; label: string; mfs_number: string | null; status: string }>();
+
+  if (!before) {
+    return c.json({ success: false, error: { code: 'GATE_NOT_FOUND', message: 'Gate not found' } }, 404);
+  }
+
+  // Build the UPDATE dynamically from the provided fields only.
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  if (body.label !== undefined) { sets.push('label = ?'); binds.push(body.label.trim()); }
+  if (body.mfs_number !== undefined) { sets.push('mfs_number = ?'); binds.push(body.mfs_number); }
+  if (body.status !== undefined) { sets.push('status = ?'); binds.push(body.status); }
+  sets.push("updated_at = datetime('now')");
+  binds.push(gateId, merchantId);
+
+  await c.env.DB.prepare(
+    `UPDATE op_gates SET ${sets.join(', ')} WHERE id = ? AND merchant_id = ?`
+  ).bind(...binds).run();
+
+  const after = await c.env.DB.prepare(
+    `SELECT id, label, mfs_number, status FROM op_gates WHERE id = ? LIMIT 1`
+  ).bind(gateId).first();
+
+  // Audit log entry
+  await c.env.DB.prepare(
+    `INSERT INTO op_audit_logs (
+       merchant_id, actor_id, actor_type, action, entity_type, entity_id,
+       old_values, new_values, ip_address, user_agent, signature, created_at
+     ) VALUES (?, ?, ?, 'gate.updated', 'gate', ?, ?, ?, ?, ?, 'system', datetime('now'))`
+  ).bind(
+    merchantId,
+    c.get('authSubject') ?? 0,
+    'admin',
+    String(gateId),
+    JSON.stringify(before),
+    JSON.stringify(after),
+    c.req.header('cf-connecting-ip') ?? null,
+    c.req.header('user-agent') ?? null,
+  ).run();
+
+  return c.json({ success: true, data: after });
+});
+
 // Devices
 adminApiRoutes.get('/devices', async (c) => {
   const merchantId = c.get('merchantId')!;

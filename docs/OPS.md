@@ -214,4 +214,21 @@ To adhere to least-privilege security and prevent blast-radius propagation acros
 > ```
 > If empty, either the merchant's onboarding didn't create a gate, or all gates were archived. The `checkout_no_gates` metric fires on every occurrence — alerting on it in Cloudflare Analytics Engine catches this misconfiguration before the merchant does.
 
+### C. Gate Destination Number Administration
+
+Backfilled gates created by migration `0014` have `mfs_number = NULL` because `op_gateways` has no phone number column. Checkout resolves the destination number by fallback:
+
+    gate.mfs_number
+      ?? manualGateway.account_number
+      ?? manualGateway.payment_number
+      ?? "Contact merchant"
+
+To set the primary number for a gate, use:
+
+    PATCH /api/admin/v1/gates/:id
+    { "mfs_number": "01712345678" }
+
+This is the canonical fix when a merchant reports "Contact merchant" in checkout and they don't have an `op_manual_gateways` row configured.
+
+
 
